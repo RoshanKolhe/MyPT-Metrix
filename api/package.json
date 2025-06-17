@@ -1,0 +1,83 @@
+{
+  "name": "my-pt-metrix",
+  "version": "0.0.1",
+  "description": "MyPT Metrix",
+  "keywords": [
+    "loopback-application",
+    "loopback"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": "20 || 22 || 24"
+  },
+  "scripts": {
+    "build": "lb-tsc",
+    "build:watch": "lb-tsc --watch",
+    "lint": "npm run prettier:check",
+    "lint:fix": "npm run prettier:fix",
+    "prettier:cli": "lb-prettier \"**/*.ts\" \"**/*.js\"",
+    "prettier:check": "npm run prettier:cli -- -l",
+    "prettier:fix": "npm run prettier:cli -- --write",
+    "pretest": "npm run rebuild",
+    "test": "lb-mocha --allow-console-logs \"dist/__tests__\"",
+    "posttest": "npm run lint",
+    "test:dev": "lb-mocha --allow-console-logs dist/__tests__/**/*.js && npm run posttest",
+    "docker:build": "docker build -t my-pt-metrix .",
+    "docker:run": "docker run -p 3000:3000 -d my-pt-metrix",
+    "premigrate": "npm run build",
+    "migrate": "node ./dist/migrate",
+    "preopenapi-spec": "npm run build",
+    "openapi-spec": "node ./dist/openapi-spec",
+    "prestart": "npm run rebuild",
+    "start": "node -r source-map-support/register .",
+    "clean": "lb-clean dist *.tsbuildinfo .eslintcache",
+    "rebuild": "npm run clean && npm run build",
+    "start:watch": "tsc-watch --target es2017 --outDir ./dist --onSuccess \"node .\"",
+    "start:debug": "node --inspect ./dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "author": "RoshanKolhe <kolheroshan508@gmail.com>",
+  "license": "",
+  "files": [
+    "README.md",
+    "dist",
+    "src",
+    "!*/__tests__"
+  ],
+  "dependencies": {
+    "@loopback/authentication": "^12.0.0",
+    "@loopback/boot": "^8.0.2",
+    "@loopback/core": "^7.0.1",
+    "@loopback/cron": "^0.13.0",
+    "@loopback/repository": "^8.0.1",
+    "@loopback/rest": "^15.0.2",
+    "@loopback/rest-explorer": "^8.0.2",
+    "@loopback/service-proxy": "^8.0.1",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/multer": "^1.4.12",
+    "bcryptjs": "^2.4.3",
+    "crypto": "^1.0.1",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^16.4.7",
+    "isemail": "^3.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "loopback-connector-mysql": "^7.0.17",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.16",
+    "tslib": "^2.0.0"
+  },
+  "devDependencies": {
+    "@loopback/build": "^12.0.1",
+    "source-map-support": "^0.5.21",
+    "@loopback/testlab": "^8.0.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^6.4.17",
+    "tsc-watch": "^6.2.1",
+    "@types/node": "^16.18.126",
+    "typescript": "~5.2.2"
+  }
+}

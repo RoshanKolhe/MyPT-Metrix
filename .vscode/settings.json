@@ -1,0 +1,4 @@
+{
+  "eslint.workingDirectories": ["./api", "./ui"],
+  "cSpell.words": ["creatorpreneurs", "FANSEB", "iconify", "PHONEPE"]
+}
