@@ -1,0 +1,440 @@
+export const states = [
+  {
+    id: '64801d78b256d628c606f57c',
+    state_id: 1,
+    name: 'ANDAMAN AND NICOBAR ISLANDS',
+    code: 'ANI',
+    country: 'India',
+    gstCode: 35,
+    createdAt: '2023-06-07T06:02:32.583Z',
+    updatedAt: '2023-06-07T06:02:32.583Z',
+  },
+  {
+    id: '64801d78b256d628c606f57d',
+    state_id: 2,
+    name: 'ANDHRA PRADESH',
+    code: 'ANP',
+    country: 'India',
+    gstCode: 37,
+    createdAt: '2023-06-07T06:02:32.756Z',
+    updatedAt: '2023-06-07T06:02:32.756Z',
+  },
+  {
+    id: '64801d78b256d628c606f57e',
+    state_id: 3,
+    name: 'ARUNACHAL PRADESH',
+    code: 'ARP',
+    country: 'India',
+    gstCode: 12,
+    createdAt: '2023-06-07T06:02:32.931Z',
+    updatedAt: '2023-06-07T06:02:32.931Z',
+  },
+  {
+    id: '64801d79b256d628c606f57f',
+    state_id: 4,
+    name: 'ASSAM',
+    code: 'ASM',
+    country: 'India',
+    gstCode: 18,
+    createdAt: '2023-06-07T06:02:33.106Z',
+    updatedAt: '2023-06-07T06:02:33.106Z',
+  },
+  {
+    id: '64801d79b256d628c606f580',
+    state_id: 5,
+    name: 'BIHAR',
+    code: 'BIH',
+    country: 'India',
+    gstCode: 10,
+    createdAt: '2023-06-07T06:02:33.281Z',
+    updatedAt: '2023-06-07T06:02:33.281Z',
+  },
+  {
+    id: '64801d79b256d628c606f581',
+    state_id: 6,
+    name: 'CHHATTISGARH',
+    code: 'CHH',
+    country: 'India',
+    gstCode: 22,
+    createdAt: '2023-06-07T06:02:33.455Z',
+    updatedAt: '2023-06-07T06:02:33.455Z',
+  },
+  {
+    id: '64801d79b256d628c606f582',
+    state_id: 7,
+    name: 'CHANDIGARH',
+    code: 'CHA',
+    country: 'India',
+    gstCode: 4,
+    createdAt: '2023-06-07T06:02:33.630Z',
+    updatedAt: '2023-06-07T06:02:33.630Z',
+  },
+  {
+    id: '64801d79b256d628c606f583',
+    state_id: 8,
+    name: 'DAMAN AND DIU',
+    code: 'DAD',
+    country: 'India',
+    gstCode: 25,
+    createdAt: '2023-06-07T06:02:33.805Z',
+    updatedAt: '2023-06-07T06:02:33.805Z',
+  },
+  {
+    id: '64801d79b256d628c606f584',
+    state_id: 9,
+    name: 'DELHI',
+    code: 'DEL',
+    country: 'India',
+    gstCode: 7,
+    createdAt: '2023-06-07T06:02:33.979Z',
+    updatedAt: '2023-06-07T06:02:33.979Z',
+  },
+  {
+    id: '64801d7ab256d628c606f585',
+    state_id: 10,
+    name: 'DADRA AND NAGAR HAVELI',
+    code: 'DNH',
+    country: 'India',
+    gstCode: 26,
+    createdAt: '2023-06-07T06:02:34.157Z',
+    updatedAt: '2023-06-07T06:02:34.157Z',
+  },
+  {
+    id: '64801d7ab256d628c606f586',
+    state_id: 11,
+    name: 'GOA',
+    code: 'GOA',
+    country: 'India',
+    gstCode: 30,
+    createdAt: '2023-06-07T06:02:34.332Z',
+    updatedAt: '2023-06-07T06:02:34.332Z',
+  },
+  {
+    id: '64801d7ab256d628c606f587',
+    state_id: 12,
+    name: 'GUJARAT',
+    code: 'GUJ',
+    country: 'India',
+    gstCode: 24,
+    createdAt: '2023-06-07T06:02:34.507Z',
+    updatedAt: '2023-06-07T06:02:34.507Z',
+  },
+  {
+    id: '64801d7ab256d628c606f588',
+    state_id: 13,
+    name: 'HIMACHAL PRADESH',
+    code: 'HIP',
+    country: 'India',
+    gstCode: 2,
+    createdAt: '2023-06-07T06:02:34.682Z',
+    updatedAt: '2023-06-07T06:02:34.682Z',
+  },
+  {
+    id: '64801d7ab256d628c606f589',
+    state_id: 14,
+    name: 'HARYANA',
+    code: 'HAR',
+    country: 'India',
+    gstCode: 6,
+    createdAt: '2023-06-07T06:02:34.857Z',
+    updatedAt: '2023-06-07T06:02:34.857Z',
+  },
+  {
+    id: '64801d7bb256d628c606f58a',
+    state_id: 15,
+    name: 'JAMMU AND KASHMIR',
+    code: 'JAK',
+    country: 'India',
+    gstCode: 1,
+    createdAt: '2023-06-07T06:02:35.032Z',
+    updatedAt: '2023-06-07T06:02:35.032Z',
+  },
+  {
+    id: '64801d7bb256d628c606f58b',
+    state_id: 16,
+    name: 'JHARKHAND',
+    code: 'JHA',
+    country: 'India',
+    gstCode: 20,
+    createdAt: '2023-06-07T06:02:35.207Z',
+    updatedAt: '2023-06-07T06:02:35.207Z',
+  },
+  {
+    id: '64801d7bb256d628c606f58c',
+    state_id: 17,
+    name: 'KERALA',
+    code: 'KER',
+    country: 'India',
+    gstCode: 32,
+    createdAt: '2023-06-07T06:02:35.381Z',
+    updatedAt: '2023-06-07T06:02:35.381Z',
+  },
+  {
+    id: '64801d7bb256d628c606f58d',
+    state_id: 18,
+    name: 'KARNATAKA',
+    code: 'KAR',
+    country: 'India',
+    gstCode: 29,
+    createdAt: '2023-06-07T06:02:35.555Z',
+    updatedAt: '2023-06-07T06:02:35.555Z',
+  },
+  {
+    id: '64801d7bb256d628c606f58e',
+    state_id: 19,
+    name: 'LAKSHADWEEP',
+    code: 'LAK',
+    country: 'India',
+    gstCode: 31,
+    createdAt: '2023-06-07T06:02:35.729Z',
+    updatedAt: '2023-06-07T06:02:35.729Z',
+  },
+  {
+    id: '64801d7bb256d628c606f58f',
+    state_id: 20,
+    name: 'MEGHALAYA',
+    code: 'MEG',
+    country: 'India',
+    gstCode: 17,
+    createdAt: '2023-06-07T06:02:35.903Z',
+    updatedAt: '2023-06-07T06:02:35.903Z',
+  },
+  {
+    id: '64801d7cb256d628c606f590',
+    state_id: 21,
+    name: 'MAHARASHTRA',
+    code: 'MAH',
+    country: 'India',
+    gstCode: 27,
+    createdAt: '2023-06-07T06:02:36.078Z',
+    updatedAt: '2023-06-07T06:02:36.078Z',
+  },
+  {
+    id: '64801d7cb256d628c606f591',
+    state_id: 22,
+    name: 'MANIPUR',
+    code: 'MAN',
+    country: 'India',
+    gstCode: 14,
+    createdAt: '2023-06-07T06:02:36.253Z',
+    updatedAt: '2023-06-07T06:02:36.253Z',
+  },
+  {
+    id: '64801d7cb256d628c606f592',
+    state_id: 23,
+    name: 'MADHYA PRADESH',
+    code: 'MAP',
+    country: 'India',
+    gstCode: 23,
+    createdAt: '2023-06-07T06:02:36.428Z',
+    updatedAt: '2023-06-07T06:02:36.428Z',
+  },
+  {
+    id: '64801d7cb256d628c606f593',
+    state_id: 24,
+    name: 'MIZORAM',
+    code: 'MIZ',
+    country: 'India',
+    gstCode: 15,
+    createdAt: '2023-06-07T06:02:36.603Z',
+    updatedAt: '2023-06-07T06:02:36.603Z',
+  },
+  {
+    id: '64801d7cb256d628c606f594',
+    state_id: 25,
+    name: 'NAGALAND',
+    code: 'NAG',
+    country: 'India',
+    gstCode: 13,
+    createdAt: '2023-06-07T06:02:36.778Z',
+    updatedAt: '2023-06-07T06:02:36.778Z',
+  },
+  {
+    id: '64801d7cb256d628c606f595',
+    state_id: 26,
+    name: 'ODISHA',
+    code: 'ODI',
+    country: 'India',
+    gstCode: 21,
+    createdAt: '2023-06-07T06:02:36.954Z',
+    updatedAt: '2023-06-07T06:02:36.954Z',
+  },
+  {
+    id: '64801d7db256d628c606f596',
+    state_id: 27,
+    name: 'PUNJAB',
+    code: 'PUN',
+    country: 'India',
+    gstCode: 3,
+    createdAt: '2023-06-07T06:02:37.130Z',
+    updatedAt: '2023-06-07T06:02:37.130Z',
+  },
+  {
+    id: '64801d7db256d628c606f597',
+    state_id: 28,
+    name: 'PUDUCHERRY',
+    code: 'PUD',
+    country: 'India',
+    gstCode: 34,
+    createdAt: '2023-06-07T06:02:37.317Z',
+    updatedAt: '2023-06-07T06:02:37.317Z',
+  },
+  {
+    id: '64801d7db256d628c606f598',
+    state_id: 29,
+    name: 'RAJASTHAN',
+    code: 'RAJ',
+    country: 'India',
+    gstCode: 8,
+    createdAt: '2023-06-07T06:02:37.491Z',
+    updatedAt: '2023-06-07T06:02:37.491Z',
+  },
+  {
+    id: '64801d7db256d628c606f599',
+    state_id: 30,
+    name: 'SIKKIM',
+    code: 'SIK',
+    country: 'India',
+    gstCode: 11,
+    createdAt: '2023-06-07T06:02:37.666Z',
+    updatedAt: '2023-06-07T06:02:37.666Z',
+  },
+  {
+    id: '64801d7db256d628c606f59a',
+    state_id: 31,
+    name: 'TAMIL NADU',
+    code: 'TND',
+    country: 'India',
+    gstCode: 33,
+    createdAt: '2023-06-07T06:02:37.839Z',
+    updatedAt: '2023-06-07T06:02:37.839Z',
+  },
+  {
+    id: '64801d7eb256d628c606f59b',
+    state_id: 32,
+    name: 'TRIPURA',
+    code: 'TRI',
+    country: 'India',
+    gstCode: 16,
+    createdAt: '2023-06-07T06:02:38.014Z',
+    updatedAt: '2023-06-07T06:02:38.014Z',
+  },
+  {
+    id: '64801d7eb256d628c606f59c',
+    state_id: 33,
+    name: 'UTTARAKHAND',
+    code: 'UTT',
+    country: 'India',
+    gstCode: 5,
+    createdAt: '2023-06-07T06:02:38.189Z',
+    updatedAt: '2023-06-07T06:02:38.189Z',
+  },
+  {
+    id: '64801d7eb256d628c606f59d',
+    state_id: 34,
+    name: 'UTTAR PRADESH',
+    code: 'UTP',
+    country: 'India',
+    gstCode: 9,
+    createdAt: '2023-06-07T06:02:38.364Z',
+    updatedAt: '2023-06-07T06:02:38.364Z',
+  },
+  {
+    id: '64801d7eb256d628c606f59e',
+    state_id: 35,
+    name: 'WEST BENGAL',
+    code: 'WBL',
+    country: 'India',
+    gstCode: 19,
+    createdAt: '2023-06-07T06:02:38.539Z',
+    updatedAt: '2023-06-07T06:02:38.539Z',
+  },
+  {
+    id: '64801d7eb256d628c606f59f',
+    state_id: 36,
+    name: 'TELANGANA',
+    code: 'TEL',
+    country: 'India',
+    gstCode: 36,
+    createdAt: '2023-06-07T06:02:38.713Z',
+    updatedAt: '2023-06-07T06:02:38.713Z',
+  },
+];
+
+export const PERMISSION_KEY = 'permission';
+
+export const USER_STATUS_OPTIONS = [
+  { value: '1', label: 'Active' },
+  { value: '0', label: 'In-Active' },
+];
+
+export const INQUIRY_STATUS_OPTIONS = [
+  { value: 0, label: 'Incomplete' },
+  { value: 1, label: 'Complete' },
+  { value: 2, label: 'Converted' },
+];
+
+export const COMMON_STATUS_OPTIONS = [
+  { value: 1, label: 'Active' },
+  { value: 0, label: 'In-Active' },
+];
+
+export const RFQ_STATUS_OPTIONS = [
+  // { value: 0, label: 'Draft' },
+  { value: 1, label: 'Approved' },
+  { value: 2, label: 'Pending Approval' },
+  { value: 3, label: 'Rejected' },
+  { value: 4, label: 'Created' },
+];
+
+export const ORDER_STATUS_OPTIONS = [
+  { value: 0, label: 'Material Received' },
+  { value: 1, label: 'In Process' },
+  { value: 2, label: 'Material Ready' },
+  { value: 3, label: 'Ready To dispatch' },
+];
+
+export const QCREPORT_STATUS_OPTIONS = [
+  { value: 0, label: 'Pending' },
+  { value: 1, label: 'Completed' },
+];
+
+export const DISPATCH_STATUS_OPTIONS = [
+  { value: 0, label: 'Pending' },
+  { value: 1, label: 'Documents Uploaded' },
+  { value: 2, label: 'Completed' },
+];
+
+export const MATERIAL_STATUS_OPTIONS = [
+  { value: 0, label: 'Pending' },
+  { value: 1, label: 'In Process' },
+  { value: 2, label: 'Completed' },
+];
+
+export const INVOICE_STATUS_OPTIONS = [
+  { value: 1, label: 'Paid' },
+  { value: 0, label: 'Pending' },
+  { value: 2, label: 'Overdue' },
+  { value: 3, label: 'Pending Approval' },
+  { value: 4, label: 'Request Reupload' },
+];
+
+export const _roles = ['Admin', 'Worker', 'Qc Admin', 'Dispatch'];
+
+export const formatRFQId = (rfqId) => `RFQ${rfqId.toString().padStart(4, '0')}`;
+export const formatChallanId = (challanId) => `CHLN${challanId.toString().padStart(4, '0')}`;
+export const formatQcReportId = (rfqId) => `QCR${rfqId.toString().padStart(4, '0')}`;
+export const formatDispatchId = (dispatchId) => `DSP${dispatchId.toString().padStart(4, '0')}`;
+export const formatTime = (isoString) => {
+  const date = new Date(isoString);
+  const minutes = date.getMinutes();
+  const seconds = date.getSeconds();
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
+
+export function useUserRoles() {
+  const permissions = sessionStorage.getItem(PERMISSION_KEY).split(',');
+
+  return permissions;
+}
