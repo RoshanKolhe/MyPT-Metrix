@@ -1,8 +1,8 @@
 {
-  "name": "@minimal-kit/cra-js",
-  "author": "Minimals",
+  "name": "@mypt-metrix/cra",
+  "author": "MyPT Metrix",
   "version": "5.1.0",
-  "description": "Cra & JavaScript",
+  "description": "MyPT Metrix",
   "private": true,
   "scripts": {
     "start": "react-scripts start",

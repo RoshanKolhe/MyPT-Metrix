@@ -1,6 +1,6 @@
 {
-  "name": "Minimal UI",
-  "short_name": "Minimal UI",
+  "name": "MyPt Matrix",
+  "short_name": "MyPt Matrix",
   "display": "standalone",
   "start_url": "/",
   "theme_color": "#000000",
