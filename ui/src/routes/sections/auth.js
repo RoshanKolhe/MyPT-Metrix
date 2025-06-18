@@ -20,7 +20,7 @@ const AmplifyForgotPasswordPage = lazy(() => import('src/pages/auth/amplify/forg
 // JWT
 const JwtLoginPage = lazy(() => import('src/pages/auth/jwt/login'));
 const JwtRegisterPage = lazy(() => import('src/pages/auth/jwt/register'));
-
+const JwtForgotPasswordPage = lazy(() => import('src/pages/auth/jwt/forgot-password'));
 
 // ----------------------------------------------------------------------
 
@@ -91,9 +91,20 @@ const authJwt = {
         </AuthClassicLayout>
       ),
     },
+    {
+      element: (
+        <CompactLayout>
+          <Outlet />
+        </CompactLayout>
+      ),
+      children: [
+        { path: 'verify', element: <AmplifyVerifyPage /> },
+        { path: 'new-password', element: <AmplifyNewPasswordPage /> },
+        { path: 'forgot-password', element: <JwtForgotPasswordPage /> },
+      ],
+    },
   ],
 };
-
 
 export const authRoutes = [
   {
