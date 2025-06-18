@@ -104,27 +104,6 @@ export default function AuthClassicLayout({ children, image, title }) {
         src={image || '/assets/illustrations/illustration_dashboard.png'}
         sx={{ maxWidth: 720 }}
       />
-
-      <Stack direction="row" spacing={2}>
-        {METHODS.map((option) => (
-          <Tooltip key={option.label} title={option.label}>
-            <Link component={RouterLink} href={option.path}>
-              <Box
-                component="img"
-                alt={option.label}
-                src={option.icon}
-                sx={{
-                  width: 32,
-                  height: 32,
-                  ...(method !== option.id && {
-                    filter: 'grayscale(100%)',
-                  }),
-                }}
-              />
-            </Link>
-          </Tooltip>
-        ))}
-      </Stack>
     </Stack>
   );
 

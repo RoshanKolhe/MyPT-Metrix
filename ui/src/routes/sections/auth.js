@@ -21,15 +21,6 @@ const AmplifyForgotPasswordPage = lazy(() => import('src/pages/auth/amplify/forg
 const JwtLoginPage = lazy(() => import('src/pages/auth/jwt/login'));
 const JwtRegisterPage = lazy(() => import('src/pages/auth/jwt/register'));
 
-// FIREBASE
-const FirebaseLoginPage = lazy(() => import('src/pages/auth/firebase/login'));
-const FirebaseRegisterPage = lazy(() => import('src/pages/auth/firebase/register'));
-const FirebaseVerifyPage = lazy(() => import('src/pages/auth/firebase/verify'));
-const FirebaseForgotPasswordPage = lazy(() => import('src/pages/auth/firebase/forgot-password'));
-
-// AUTH0
-const Auth0LoginPage = lazy(() => import('src/pages/auth/auth0/login'));
-const Auth0Callback = lazy(() => import('src/pages/auth/auth0/callback'));
 
 // ----------------------------------------------------------------------
 
@@ -103,74 +94,10 @@ const authJwt = {
   ],
 };
 
-const authFirebase = {
-  path: 'firebase',
-  element: (
-    <GuestGuard>
-      <Suspense fallback={<SplashScreen />}>
-        <Outlet />
-      </Suspense>
-    </GuestGuard>
-  ),
-  children: [
-    {
-      path: 'login',
-      element: (
-        <AuthClassicLayout>
-          <FirebaseLoginPage />
-        </AuthClassicLayout>
-      ),
-    },
-    {
-      path: 'register',
-      element: (
-        <AuthClassicLayout title="Manage the job more effectively with Minimal">
-          <FirebaseRegisterPage />
-        </AuthClassicLayout>
-      ),
-    },
-    {
-      element: (
-        <CompactLayout>
-          <Outlet />
-        </CompactLayout>
-      ),
-      children: [
-        { path: 'verify', element: <FirebaseVerifyPage /> },
-        { path: 'forgot-password', element: <FirebaseForgotPasswordPage /> },
-      ],
-    },
-  ],
-};
-
-const authAuth0 = {
-  path: 'auth0',
-  element: (
-    <GuestGuard>
-      <Suspense fallback={<SplashScreen />}>
-        <Outlet />
-      </Suspense>
-    </GuestGuard>
-  ),
-  children: [
-    {
-      path: 'login',
-      element: (
-        <AuthClassicLayout>
-          <Auth0LoginPage />
-        </AuthClassicLayout>
-      ),
-    },
-    {
-      path: 'callback',
-      element: <Auth0Callback />,
-    },
-  ],
-};
 
 export const authRoutes = [
   {
     path: 'auth',
-    children: [authAmplify, authJwt, authFirebase, authAuth0],
+    children: [authAmplify, authJwt],
   },
 ];

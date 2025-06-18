@@ -55,10 +55,6 @@ export default function NavVertical({ openNav, onCloseNav }) {
           currentRole: user?.role || 'admin',
         }}
       />
-
-      <Box sx={{ flexGrow: 1 }} />
-
-      <NavUpgrade />
     </Scrollbar>
   );
 

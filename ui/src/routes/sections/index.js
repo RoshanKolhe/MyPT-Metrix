@@ -6,7 +6,6 @@ import { PATH_AFTER_LOGIN } from 'src/config-global';
 //
 import { mainRoutes, HomePage } from './main';
 import { authRoutes } from './auth';
-import { authDemoRoutes } from './auth-demo';
 import { dashboardRoutes } from './dashboard';
 import { componentsRoutes } from './components';
 
@@ -34,7 +33,6 @@ export default function Router() {
 
     // Auth routes
     ...authRoutes,
-    ...authDemoRoutes,
 
     // Dashboard routes
     ...dashboardRoutes,

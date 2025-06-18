@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary */
 import * as Yup from 'yup';
 import { useForm } from 'react-hook-form';
 import { useState } from 'react';
@@ -23,6 +24,7 @@ import { useAuthContext } from 'src/auth/hooks';
 // components
 import Iconify from 'src/components/iconify';
 import FormProvider, { RHFTextField } from 'src/components/hook-form';
+import { useSnackbar } from 'notistack';
 
 // ----------------------------------------------------------------------
 
@@ -31,13 +33,13 @@ export default function JwtLoginView() {
 
   const router = useRouter();
 
-  const [errorMsg, setErrorMsg] = useState('');
-
   const searchParams = useSearchParams();
 
   const returnTo = searchParams.get('returnTo');
 
   const password = useBoolean();
+
+  const { enqueueSnackbar } = useSnackbar();
 
   const LoginSchema = Yup.object().shape({
     email: Yup.string().required('Email is required').email('Email must be a valid email address'),
@@ -45,8 +47,8 @@ export default function JwtLoginView() {
   });
 
   const defaultValues = {
-    email: 'demo@minimals.cc',
-    password: 'demo1234',
+    email: '',
+    password: '',
   };
 
   const methods = useForm({
@@ -67,29 +69,33 @@ export default function JwtLoginView() {
       router.push(returnTo || PATH_AFTER_LOGIN);
     } catch (error) {
       console.error(error);
-      reset();
-      setErrorMsg(typeof error === 'string' ? error : error.message);
+      if (typeof error !== 'string' && error?.error?.statusCode === 500) {
+        enqueueSnackbar('Invalid Credentials', {
+          variant: 'error',
+        });
+      } else {
+        enqueueSnackbar(
+          typeof error === 'string'
+            ? error
+            : error?.error?.message
+            ? error?.error?.message
+            : error?.message,
+          {
+            variant: 'error',
+          }
+        );
+      }
     }
   });
 
   const renderHead = (
     <Stack spacing={2} sx={{ mb: 5 }}>
-      <Typography variant="h4">Sign in to Minimal</Typography>
-
-      <Stack direction="row" spacing={0.5}>
-        <Typography variant="body2">New user?</Typography>
-
-        <Link component={RouterLink} href={paths.auth.jwt.register} variant="subtitle2">
-          Create an account
-        </Link>
-      </Stack>
+      <Typography variant="h4">Sign in to MyPT</Typography>
     </Stack>
   );
 
   const renderForm = (
     <Stack spacing={2.5}>
-      {!!errorMsg && <Alert severity="error">{errorMsg}</Alert>}
-
       <RHFTextField name="email" label="Email address" />
 
       <RHFTextField
@@ -127,10 +133,6 @@ export default function JwtLoginView() {
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
       {renderHead}
-
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Use email : <strong>demo@minimals.cc</strong> / password :<strong> demo1234</strong>
-      </Alert>
 
       {renderForm}
     </FormProvider>
