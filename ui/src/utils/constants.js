@@ -368,57 +368,6 @@ export const USER_STATUS_OPTIONS = [
   { value: '0', label: 'In-Active' },
 ];
 
-export const INQUIRY_STATUS_OPTIONS = [
-  { value: 0, label: 'Incomplete' },
-  { value: 1, label: 'Complete' },
-  { value: 2, label: 'Converted' },
-];
-
-export const COMMON_STATUS_OPTIONS = [
-  { value: 1, label: 'Active' },
-  { value: 0, label: 'In-Active' },
-];
-
-export const RFQ_STATUS_OPTIONS = [
-  // { value: 0, label: 'Draft' },
-  { value: 1, label: 'Approved' },
-  { value: 2, label: 'Pending Approval' },
-  { value: 3, label: 'Rejected' },
-  { value: 4, label: 'Created' },
-];
-
-export const ORDER_STATUS_OPTIONS = [
-  { value: 0, label: 'Material Received' },
-  { value: 1, label: 'In Process' },
-  { value: 2, label: 'Material Ready' },
-  { value: 3, label: 'Ready To dispatch' },
-];
-
-export const QCREPORT_STATUS_OPTIONS = [
-  { value: 0, label: 'Pending' },
-  { value: 1, label: 'Completed' },
-];
-
-export const DISPATCH_STATUS_OPTIONS = [
-  { value: 0, label: 'Pending' },
-  { value: 1, label: 'Documents Uploaded' },
-  { value: 2, label: 'Completed' },
-];
-
-export const MATERIAL_STATUS_OPTIONS = [
-  { value: 0, label: 'Pending' },
-  { value: 1, label: 'In Process' },
-  { value: 2, label: 'Completed' },
-];
-
-export const INVOICE_STATUS_OPTIONS = [
-  { value: 1, label: 'Paid' },
-  { value: 0, label: 'Pending' },
-  { value: 2, label: 'Overdue' },
-  { value: 3, label: 'Pending Approval' },
-  { value: 4, label: 'Request Reupload' },
-];
-
 export const _roles = ['Admin', 'Worker', 'Qc Admin', 'Dispatch'];
 
 export const formatRFQId = (rfqId) => `RFQ${rfqId.toString().padStart(4, '0')}`;

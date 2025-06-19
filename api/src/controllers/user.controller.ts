@@ -26,7 +26,7 @@ import {PermissionKeys} from '../authorization/permission-keys';
 import {EmailManagerBindings} from '../keys';
 import {User} from '../models';
 import {Credentials, UserRepository} from '../repositories';
-import {EmailManager} from '../services/email.service';
+import {EmailManager, EmailService} from '../services/email.service';
 import {BcryptHasher} from '../services/hash.password.bcrypt';
 import {JWTService} from '../services/jwt-service';
 import {MyUserService} from '../services/user-service';
@@ -36,6 +36,7 @@ import SITE_SETTINGS from '../utils/config';
 import {CredentialsRequestBody} from './specs/user-controller-spec';
 import {MyptMetrixDataSource} from '../datasources';
 import generateResetPasswordTemplate from '../templates/reset-password.template';
+import {SendGridEmailService} from '../services/sendgrid-email.service';
 
 export class UserController {
   constructor(
@@ -51,6 +52,8 @@ export class UserController {
     public userService: MyUserService,
     @inject('service.jwt.service')
     public jwtService: JWTService,
+    @inject('services.SendGridEmailService')
+    private sendGridEmailService: SendGridEmailService,
   ) {}
 
   @post('/register', {
@@ -308,26 +311,26 @@ export class UserController {
     if (user) {
       const userProfile = this.userService.convertToUserProfile(user);
       const token = await this.jwtService.generate10MinToken(userProfile);
-      const resetPasswordLink = `${process.env.REACT_APP_ENDPOINT}/auth/admin/new-password?token=${token}`;
+      const resetPasswordLink = `${process.env.REACT_APP_ENDPOINT}/auth/jwt/new-password?token=${token}`;
       const template = generateResetPasswordTemplate({
         userData: userProfile,
         resetLink: resetPasswordLink,
       });
       console.log(template);
       const mailOptions = {
-        from: SITE_SETTINGS.fromMail,
         to: userData.email,
         subject: template.subject,
         html: template.html,
       };
 
       try {
-        await this.emailManager.sendMail(mailOptions);
+        await this.sendGridEmailService.sendMail(mailOptions);
         return {
           success: true,
           message: `Password reset link sent to ${userData.email}. Please check your inbox.`,
         };
       } catch (err) {
+        console.log('sendgrid', JSON.stringify(err));
         throw new HttpErrors.UnprocessableEntity(
           err.message || 'Mail sending failed',
         );

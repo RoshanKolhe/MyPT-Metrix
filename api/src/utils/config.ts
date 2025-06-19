@@ -15,3 +15,10 @@ const SITE_SETTINGS = {
   fromMail: 'thanepetfest@nimblenest.co',
 };
 export default SITE_SETTINGS;
+
+export const TWILIO_SITE_SETTINGS = {
+  sendgrid: {
+    apiKey: process.env.TWILIO_MAIL_API_KEY || '',
+    fromEmail: 'your@email.com',
+  },
+};

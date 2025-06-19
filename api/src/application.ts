@@ -25,6 +25,7 @@ import {
 } from '@loopback/authentication';
 import {CronComponent} from '@loopback/cron';
 import {JWTStrategy} from './authentication-strategy/jwt-strategy';
+import {SendGridEmailService} from './services/sendgrid-email.service';
 
 export {ApplicationConfig};
 
@@ -70,6 +71,7 @@ export class MyPtMetrixApplication extends BootMixin(
     this.bind('service.jwt.service').toClass(JWTService);
     this.bind('service.user.service').toClass(MyUserService);
     this.bind(EmailManagerBindings.SEND_MAIL).toClass(EmailService);
+    this.bind('services.SendGridEmailService').toClass(SendGridEmailService);
   }
 
   protected configureFileUpload(destination?: string) {

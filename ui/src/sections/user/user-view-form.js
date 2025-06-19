@@ -10,28 +10,18 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import Switch from '@mui/material/Switch';
 import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
-import FormControlLabel from '@mui/material/FormControlLabel';
 // utils
 import { fData } from 'src/utils/format-number';
 // routes
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hook';
-// assets
-import { countries } from 'src/assets/data';
 // components
 import Label from 'src/components/label';
 import Iconify from 'src/components/iconify';
 import { useSnackbar } from 'src/components/snackbar';
-import FormProvider, {
-  RHFSwitch,
-  RHFTextField,
-  RHFUploadAvatar,
-  RHFAutocomplete,
-  RHFSelect,
-} from 'src/components/hook-form';
+import FormProvider, { RHFTextField, RHFUploadAvatar, RHFSelect } from 'src/components/hook-form';
 import { IconButton, InputAdornment, MenuItem } from '@mui/material';
 import { states } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
@@ -39,7 +29,7 @@ import { useBoolean } from 'src/hooks/use-boolean';
 
 // ----------------------------------------------------------------------
 
-export default function UserNewEditForm({ currentUser }) {
+export default function UserViewForm({ currentUser }) {
   const router = useRouter();
 
   const { enqueueSnackbar } = useSnackbar();
@@ -50,7 +40,7 @@ export default function UserNewEditForm({ currentUser }) {
     firstName: Yup.string().required('First Name is required'),
     lastName: Yup.string().required('Last Name is required'),
     email: Yup.string().required('Email is required').email('Email must be a valid email address'),
-    country: Yup.string().required('Country is required'),
+    employeeId: Yup.string().required('Employee Id is required'),
     password: !currentUser
       ? Yup.string()
           .min(6, 'Password must be at least 6 characters')
@@ -80,9 +70,9 @@ export default function UserNewEditForm({ currentUser }) {
       lastName: currentUser?.lastName || '',
       role: currentUser?.permissions[0] || '',
       dob: currentUser?.dob || '',
-      country: currentUser?.country || '',
+      employeeId: currentUser?.employeeId || '',
       email: currentUser?.email || '',
-      isActive: currentUser?.isActive ?? 1,
+      isActive: !!currentUser?.isActive,
       avatarUrl: currentUser?.avatar?.fileUrl || null,
       phoneNumber: currentUser?.phoneNumber || '',
       address: currentUser?.fullAddress || '',
@@ -125,7 +115,7 @@ export default function UserNewEditForm({ currentUser }) {
         fullAddress: formData.address,
         city: formData.city,
         state: formData.state,
-        country: formData.country,
+        employeeId: formData.employeeId,
       };
       if (formData.avatarUrl) {
         inputData.avatar = {
@@ -192,6 +182,7 @@ export default function UserNewEditForm({ currentUser }) {
 
             <Box sx={{ mb: 5 }}>
               <RHFUploadAvatar
+                disabled
                 name="avatarUrl"
                 maxSize={3145728}
                 onDrop={handleDrop}
@@ -212,14 +203,6 @@ export default function UserNewEditForm({ currentUser }) {
                 }
               />
             </Box>
-
-            {currentUser && (
-              <Stack justifyContent="center" alignItems="center" sx={{ mt: 3 }}>
-                <Button variant="soft" color="error">
-                  Delete User
-                </Button>
-              </Stack>
-            )}
           </Card>
         </Grid>
 
@@ -234,10 +217,11 @@ export default function UserNewEditForm({ currentUser }) {
                 sm: 'repeat(2, 1fr)',
               }}
             >
-              <RHFTextField name="firstName" label="First Name" />
-              <RHFTextField name="lastName" label="Last Name" />
-              <RHFTextField name="email" label="Email Address" />
-              <RHFTextField type="number" name="phoneNumber" label="Phone Number" />
+              <RHFTextField name="firstName" label="First Name" disabled />
+              <RHFTextField name="lastName" label="Last Name" disabled />
+              <RHFTextField name="email" label="Email Address" disabled />
+              <RHFTextField type="number" name="phoneNumber" label="Phone Number" disabled />
+              <RHFTextField name="employeeId" label="Employee Id" disabled />
 
               {!currentUser ? (
                 <>
@@ -294,42 +278,21 @@ export default function UserNewEditForm({ currentUser }) {
                         helperText: error?.message,
                       },
                     }}
+                    disabled
                   />
                 )}
               />
 
-              <RHFAutocomplete
-                name="country"
-                label="Country"
-                options={countries.map((country) => country.label)}
-                getOptionLabel={(option) => option}
-                renderOption={(props, option) => {
-                  const { code, label, phone } = countries.filter(
-                    (country) => country.label === option
-                  )[0];
-
-                  if (!label) {
-                    return null;
-                  }
-
-                  return (
-                    <li {...props} key={label}>
-                      <Iconify
-                        key={label}
-                        icon={`circle-flags:${code.toLowerCase()}`}
-                        width={28}
-                        sx={{ mr: 1 }}
-                      />
-                      {label} ({code}) +{phone}
-                    </li>
-                  );
-                }}
-              />
-
-              <RHFTextField name="state" label="State/Region" />
-              <RHFTextField name="city" label="City" />
-              <RHFTextField name="address" label="Address" />
-              <RHFSelect fullWidth name="role" label="Role">
+              <RHFSelect fullWidth name="state" label="State" disabled>
+                {states.map((option) => (
+                  <MenuItem key={option.id} value={option.id}>
+                    {option.name}
+                  </MenuItem>
+                ))}
+              </RHFSelect>
+              <RHFTextField name="city" label="City" disabled />
+              <RHFTextField name="address" label="Address" disabled />
+              <RHFSelect fullWidth name="role" label="Role" disabled>
                 {[
                   { value: 'admin', name: 'Admin' },
                   { value: 'worker', name: 'Worker' },
@@ -342,12 +305,6 @@ export default function UserNewEditForm({ currentUser }) {
                 ))}
               </RHFSelect>
             </Box>
-
-            <Stack alignItems="flex-end" sx={{ mt: 3 }}>
-              <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
-                {!currentUser ? 'Create User' : 'Save Changes'}
-              </LoadingButton>
-            </Stack>
           </Card>
         </Grid>
       </Grid>
@@ -355,6 +312,6 @@ export default function UserNewEditForm({ currentUser }) {
   );
 }
 
-UserNewEditForm.propTypes = {
+UserViewForm.propTypes = {
   currentUser: PropTypes.object,
 };

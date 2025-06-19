@@ -6,6 +6,7 @@ import { AuthGuard } from 'src/auth/guard';
 import DashboardLayout from 'src/layouts/dashboard';
 // components
 import { LoadingScreen } from 'src/components/loading-screen';
+import { RolesAuthRoute } from './RolesAuthRoute';
 
 // ----------------------------------------------------------------------
 
@@ -13,11 +14,11 @@ import { LoadingScreen } from 'src/components/loading-screen';
 const IndexPage = lazy(() => import('src/pages/dashboard/ecommerce'));
 
 // USER
-const UserProfilePage = lazy(() => import('src/pages/dashboard/user/profile'));
 const UserListPage = lazy(() => import('src/pages/dashboard/user/list'));
 const UserAccountPage = lazy(() => import('src/pages/dashboard/user/account'));
 const UserCreatePage = lazy(() => import('src/pages/dashboard/user/new'));
 const UserEditPage = lazy(() => import('src/pages/dashboard/user/edit'));
+const UserViewPage = lazy(() => import('src/pages/dashboard/user/view'));
 
 // ----------------------------------------------------------------------
 
@@ -38,11 +39,14 @@ export const dashboardRoutes = [
       { path: 'profile', element: <UserAccountPage /> },
       {
         path: 'user',
+        element: <RolesAuthRoute roles={['super_admin', 'admin']} />,
         children: [
-          { element: <UserProfilePage />, index: true },
+          { element: <UserListPage />, index: true },
           { path: 'list', element: <UserListPage /> },
           { path: 'new', element: <UserCreatePage /> },
           { path: ':id/edit', element: <UserEditPage /> },
+          { path: ':id/view', element: <UserViewPage /> },
+          { path: 'account', element: <UserAccountPage /> },
         ],
       },
     ],
