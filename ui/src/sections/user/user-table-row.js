@@ -16,6 +16,8 @@ import Label from 'src/components/label';
 import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
 import { ConfirmDialog } from 'src/components/custom-dialog';
+//
+import UserQuickEditForm from './user-quick-edit-form';
 
 // ----------------------------------------------------------------------
 
@@ -26,13 +28,14 @@ export default function UserTableRow({
   onViewRow,
   onSelectRow,
   onDeleteRow,
-  quickEdit,
-  handleQuickEditRow,
+  onRefreshUsers,
+  isAdmin,
 }) {
-  const { firstName, lastName, avatar, permissions, isActive, email, phoneNumber, employeeId } =
-    row;
+  const { firstName, lastName, avatar, permissions, isActive, email, phoneNumber } = row;
 
   const confirm = useBoolean();
+
+  const quickEdit = useBoolean();
 
   const popover = usePopover();
 
@@ -54,8 +57,6 @@ export default function UserTableRow({
           />
         </TableCell>
 
-        <TableCell sx={{ whiteSpace: 'nowrap' }}>{employeeId}</TableCell>
-
         <TableCell sx={{ whiteSpace: 'nowrap' }}>{phoneNumber}</TableCell>
 
         <TableCell sx={{ whiteSpace: 'nowrap' }}>{permissions.toString()}</TableCell>
@@ -63,39 +64,45 @@ export default function UserTableRow({
         <TableCell>
           <Label
             variant="soft"
-            color={(isActive && 'success') || (!isActive && 'error') || 'default'}
+            color={(isActive && 'success') || (isActive && 'error') || 'default'}
           >
             {isActive ? 'Active' : 'In-Active'}
           </Label>
         </TableCell>
 
         <TableCell align="right" sx={{ px: 1, whiteSpace: 'nowrap' }}>
-          <Tooltip title="Quick Edit" placement="top" arrow>
-            <IconButton
-              color={quickEdit.value ? 'inherit' : 'default'}
-              onClick={() => {
-                handleQuickEditRow(row);
-              }}
-            >
-              <Iconify icon="solar:pen-bold" />
-            </IconButton>
-          </Tooltip>
+            <>
+              <Tooltip title="Quick Edit" placement="top" arrow>
+                <IconButton
+                  color={quickEdit.value ? 'inherit' : 'default'}
+                  onClick={quickEdit.onTrue}
+                >
+                  <Iconify icon="solar:pen-bold" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="View User" placement="top" arrow>
+                <IconButton
+                  onClick={() => {
+                    onViewRow();
+                  }}
+                >
+                  <Iconify icon="solar:eye-bold" />
+                </IconButton>
+              </Tooltip>
 
-          <Tooltip title="View" placement="top" arrow>
-            <IconButton
-              onClick={() => {
-                onViewRow();
-              }}
-            >
-              <Iconify icon="carbon:view-filled" />
-            </IconButton>
-          </Tooltip>
-
-          <IconButton color={popover.open ? 'inherit' : 'default'} onClick={popover.onOpen}>
-            <Iconify icon="eva:more-vertical-fill" />
-          </IconButton>
+              <IconButton color={popover.open ? 'inherit' : 'default'} onClick={popover.onOpen}>
+                <Iconify icon="eva:more-vertical-fill" />
+              </IconButton>
+            </>
         </TableCell>
       </TableRow>
+
+      <UserQuickEditForm
+        currentUser={row}
+        open={quickEdit.value}
+        onClose={quickEdit.onFalse}
+        onRefreshUsers={onRefreshUsers}
+      />
 
       <CustomPopover
         open={popover.open}
@@ -142,11 +149,11 @@ export default function UserTableRow({
 
 UserTableRow.propTypes = {
   onDeleteRow: PropTypes.func,
+  onRefreshUsers: PropTypes.func,
   onEditRow: PropTypes.func,
   onViewRow: PropTypes.func,
   onSelectRow: PropTypes.func,
   row: PropTypes.object,
   selected: PropTypes.bool,
-  quickEdit: PropTypes.any,
-  handleQuickEditRow: PropTypes.func,
+  isAdmin: PropTypes.bool,
 };

@@ -1,4 +1,13 @@
-import {Entity, model, property} from '@loopback/repository';
+import {
+  Entity,
+  model,
+  property,
+  belongsTo,
+  hasMany,
+} from '@loopback/repository';
+import {Branch} from './branch.model';
+import {Department} from './department.model';
+import {UserDepartment} from './user-department.model';
 
 @model()
 export class User extends Entity {
@@ -23,6 +32,11 @@ export class User extends Entity {
     type: 'string',
   })
   dob: string;
+
+  @property({
+    type: 'string',
+  })
+  country: string;
 
   @property({
     type: 'string',
@@ -106,6 +120,12 @@ export class User extends Entity {
     default: false,
   })
   isDeleted: boolean;
+
+  @belongsTo(() => Branch)
+  branchId: number;
+
+  @hasMany(() => Department, {through: {model: () => UserDepartment}})
+  departments: Department[];
 
   constructor(data?: Partial<User>) {
     super(data);

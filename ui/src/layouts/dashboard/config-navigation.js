@@ -114,7 +114,7 @@ export function useNavData() {
               },
               {
                 title: t('create'),
-                path: paths.dashboard.department.new,
+                path: paths.dashboard.branch.new,
                 roles: ['super_admin'],
               },
             ],

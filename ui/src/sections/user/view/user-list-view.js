@@ -268,6 +268,7 @@ export default function UserListView() {
                       tableData.map((row) => row.id)
                     )
                   }
+                  showCheckbox={false}
                 />
 
                 <TableBody>
@@ -353,8 +354,10 @@ function applyFilter({ inputData, comparator, filters }) {
   inputData = stabilizedThis.map((el) => el[0]);
 
   if (name) {
-    inputData = inputData.filter(
-      (user) => user.name.toLowerCase().indexOf(name.toLowerCase()) !== -1
+    inputData = inputData.filter((storageLocation) =>
+      Object.values(storageLocation).some((value) =>
+        String(value).toLowerCase().includes(name.toLowerCase())
+      )
     );
   }
 

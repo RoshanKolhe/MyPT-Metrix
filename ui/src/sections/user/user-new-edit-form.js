@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
@@ -32,10 +32,11 @@ import FormProvider, {
   RHFAutocomplete,
   RHFSelect,
 } from 'src/components/hook-form';
-import { IconButton, InputAdornment, MenuItem } from '@mui/material';
+import { Chip, IconButton, InputAdornment, MenuItem } from '@mui/material';
 import { states } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useBoolean } from 'src/hooks/use-boolean';
+import { useGetBranchs } from 'src/api/branch';
 
 // ----------------------------------------------------------------------
 
@@ -46,34 +47,41 @@ export default function UserNewEditForm({ currentUser }) {
 
   const password = useBoolean();
 
-  const NewUserSchema = Yup.object().shape({
-    firstName: Yup.string().required('First Name is required'),
-    lastName: Yup.string().required('Last Name is required'),
-    email: Yup.string().required('Email is required').email('Email must be a valid email address'),
-    country: Yup.string().required('Country is required'),
-    password: !currentUser
-      ? Yup.string()
-          .min(6, 'Password must be at least 6 characters')
-          .required('Password is required')
-      : Yup.string(),
-    confirmPassword: !currentUser
-      ? Yup.string()
-          .required('Confirm password is required')
-          .oneOf([Yup.ref('password')], 'Passwords must match')
-      : Yup.string(),
-    phoneNumber: Yup.string()
-      .required('Phone number is required')
-      .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
-    dob: Yup.string(),
-    address: Yup.string(),
-    state: Yup.string(),
-    city: Yup.string(),
-    role: Yup.string().required('Role is required'),
-    zipCode: Yup.string(),
-    avatarUrl: Yup.mixed().nullable(),
-    isActive: Yup.boolean(),
-  });
+  const { branches, branchesLoading, branchesEmpty, refreshBranches } = useGetBranchs();
 
+  const [departments, setDepartments] = useState([]);
+
+  const [validationSchema, setValidationSchema] = useState(
+    Yup.object().shape({
+      firstName: Yup.string().required('First Name is required'),
+      lastName: Yup.string().required('Last Name is required'),
+      email: Yup.string()
+        .required('Email is required')
+        .email('Email must be a valid email address'),
+      country: Yup.string().required('Country is required'),
+      password: !currentUser
+        ? Yup.string()
+            .min(6, 'Password must be at least 6 characters')
+            .required('Password is required')
+        : Yup.string(),
+      confirmPassword: !currentUser
+        ? Yup.string()
+            .required('Confirm password is required')
+            .oneOf([Yup.ref('password')], 'Passwords must match')
+        : Yup.string(),
+      phoneNumber: Yup.string()
+        .required('Phone number is required')
+        .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
+      dob: Yup.string(),
+      address: Yup.string(),
+      state: Yup.string(),
+      city: Yup.string(),
+      role: Yup.string().required('Role is required'),
+      zipCode: Yup.string(),
+      avatarUrl: Yup.mixed().nullable(),
+      isActive: Yup.boolean(),
+    })
+  );
   const defaultValues = useMemo(
     () => ({
       firstName: currentUser?.firstName || '',
@@ -95,7 +103,7 @@ export default function UserNewEditForm({ currentUser }) {
   );
 
   const methods = useForm({
-    resolver: yupResolver(NewUserSchema),
+    resolver: yupResolver(validationSchema),
     defaultValues,
   });
 
@@ -104,11 +112,18 @@ export default function UserNewEditForm({ currentUser }) {
     watch,
     control,
     setValue,
+    setError,
+    clearErrors,
     handleSubmit,
     formState: { isSubmitting },
   } = methods;
 
+  const branch = watch('branch');
+  const selectedDepartments = watch('departments');
   const values = watch();
+  const role = watch('role');
+
+  console.log(role);
 
   const onSubmit = handleSubmit(async (formData) => {
     try {
@@ -169,6 +184,44 @@ export default function UserNewEditForm({ currentUser }) {
     },
     [setValue]
   );
+
+  useEffect(() => {
+    if (role && role !== 'admin') {
+      setValidationSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            branch: Yup.object().required('Branch is required').nullable(),
+            departments: Yup.array()
+              .min(1, 'At least one department must be selected')
+              .required('Departments are required'),
+          })
+        )
+      );
+    } else {
+      setValidationSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            branch: Yup.mixed().notRequired(),
+            departments: Yup.array().notRequired(),
+          })
+        )
+      );
+    }
+  }, [role]);
+
+  useEffect(() => {
+    if (branch && branch?.departments) {
+      setValue('departments', []);
+      setDepartments(branch.departments);
+    }
+  }, [branch, setValue]);
+
+  useEffect(() => {
+    if (role === 'admin') {
+      setValue('branch', null);
+      setValue('departments', []);
+    }
+  }, [role, setValue]);
 
   useEffect(() => {
     if (currentUser) {
@@ -332,15 +385,78 @@ export default function UserNewEditForm({ currentUser }) {
               <RHFSelect fullWidth name="role" label="Role">
                 {[
                   { value: 'admin', name: 'Admin' },
-                  { value: 'worker', name: 'Worker' },
-                  { value: 'qc_admin', name: 'Qc Admin' },
-                  { value: 'dispatch', name: 'Dispatch' },
+                  { value: 'hod', name: 'HOD' },
+                  { value: 'salesman', name: 'Salesman' },
                 ].map((option) => (
                   <MenuItem key={option.value} value={option.value}>
                     {option.name}
                   </MenuItem>
                 ))}
               </RHFSelect>
+              {role && role !== 'admin' && (
+                <>
+                  <RHFAutocomplete
+                    name="branch"
+                    label="Branch"
+                    options={branches || []}
+                    getOptionLabel={(option) => `${option?.name}` || ''}
+                    filterOptions={(x) => x}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    renderOption={(props, option) => (
+                      <li {...props}>
+                        <div>
+                          <Typography variant="subtitle2" fontWeight="bold">
+                            {`${option?.name}`}
+                          </Typography>
+                        </div>
+                      </li>
+                    )}
+                    renderTags={(selected, getTagProps) =>
+                      selected.map((option, tagIndex) => (
+                        <Chip
+                          {...getTagProps({ index: tagIndex })}
+                          key={option.id}
+                          label={`${option.name}`}
+                          size="small"
+                          color="info"
+                          variant="soft"
+                        />
+                      ))
+                    }
+                  />
+
+                  <RHFAutocomplete
+                    multiple
+                    name="departments"
+                    label="Departments"
+                    options={departments || []}
+                    getOptionLabel={(option) => `${option?.name}` || ''}
+                    filterOptions={(x) => x}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    renderOption={(props, option) => (
+                      <li {...props}>
+                        <div>
+                          <Typography variant="subtitle2" fontWeight="bold">
+                            {`${option?.name}`}
+                          </Typography>
+                        </div>
+                      </li>
+                    )}
+                    renderTags={(selected, getTagProps) =>
+                      selected.map((option, tagIndex) => (
+                        <Chip
+                          {...getTagProps({ index: tagIndex })}
+                          key={option.id}
+                          label={`${option.name}`}
+                          size="small"
+                          color="info"
+                          variant="soft"
+                        />
+                      ))
+                    }
+                  />
+                </>
+              )}
             </Box>
 
             <Stack alignItems="flex-end" sx={{ mt: 3 }}>
