@@ -20,6 +20,12 @@ const UserCreatePage = lazy(() => import('src/pages/dashboard/user/new'));
 const UserEditPage = lazy(() => import('src/pages/dashboard/user/edit'));
 const UserViewPage = lazy(() => import('src/pages/dashboard/user/view'));
 
+// DEPARTMENT
+const DepartmentListPage = lazy(() => import('src/pages/dashboard/department/list'));
+const DepartmentCreatePage = lazy(() => import('src/pages/dashboard/department/new'));
+const DepartmentEditPage = lazy(() => import('src/pages/dashboard/department/edit'));
+const DepartmentViewPage = lazy(() => import('src/pages/dashboard/department/view'));
+
 // ----------------------------------------------------------------------
 
 export const dashboardRoutes = [
@@ -47,6 +53,17 @@ export const dashboardRoutes = [
           { path: ':id/edit', element: <UserEditPage /> },
           { path: ':id/view', element: <UserViewPage /> },
           { path: 'account', element: <UserAccountPage /> },
+        ],
+      },
+      {
+        path: 'department',
+        element: <RolesAuthRoute roles={['super_admin', 'admin']} />,
+        children: [
+          { element: <DepartmentListPage />, index: true },
+          { path: 'list', element: <DepartmentListPage /> },
+          { path: 'new', element: <DepartmentCreatePage /> },
+          { path: ':id/edit', element: <DepartmentEditPage /> },
+          { path: ':id/view', element: <DepartmentViewPage /> },
         ],
       },
     ],

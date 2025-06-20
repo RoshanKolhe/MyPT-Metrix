@@ -76,6 +76,31 @@ export function useNavData() {
           },
         ],
       },
+      // MASTERS
+      {
+        subheader: t('masters'),
+        items: [
+          // Department
+          {
+            title: t('department'),
+            path: paths.dashboard.department.root,
+            icon: ICONS.label,
+            roles: ['super_admin'],
+            children: [
+              {
+                title: t('list'),
+                path: paths.dashboard.department.list,
+                roles: ['super_admin'],
+              },
+              {
+                title: t('create'),
+                path: paths.dashboard.department.new,
+                roles: ['super_admin'],
+              },
+            ],
+          },
+        ],
+      },
     ],
     [t]
   );

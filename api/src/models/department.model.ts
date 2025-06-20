@@ -20,6 +20,12 @@ export class Department extends Entity {
   })
   description?: string;
 
+ @property({
+    type: 'boolean',
+    required: true,
+  })
+  isActive: boolean;
+
   @property({
     type: 'date',
   })

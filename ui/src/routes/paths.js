@@ -123,6 +123,13 @@ export const paths = {
         edit: `${ROOTS.DASHBOARD}/user/${MOCK_ID}/edit`,
       },
     },
+    department: {
+      root: `${ROOTS.DASHBOARD}/department`,
+      new: `${ROOTS.DASHBOARD}/department/new`,
+      list: `${ROOTS.DASHBOARD}/department/list`,
+      edit: (id) => `${ROOTS.DASHBOARD}/department/${id}/edit`,
+      view: (id) => `${ROOTS.DASHBOARD}/department/${id}/view`,
+    },
     product: {
       root: `${ROOTS.DASHBOARD}/product`,
       new: `${ROOTS.DASHBOARD}/product/new`,
