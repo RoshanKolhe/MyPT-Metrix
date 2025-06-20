@@ -16,7 +16,7 @@ export default function DepartmentCreateView() {
   return (
     <Container maxWidth={settings.themeStretch ? false : 'lg'}>
       <CustomBreadcrumbs
-        heading="Create a new Hsn Master"
+        heading="Create a new Department"
         links={[
           {
             name: 'Dashboard',

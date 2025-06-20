@@ -104,13 +104,15 @@ export default function DepartmentNewEditForm({ currentDepartment }) {
                 sm: 'repeat(2, 1fr)',
               }}
             >
-              <RHFSelect name="isActive" label="Status">
-                {COMMON_STATUS_OPTIONS.map((status) => (
-                  <MenuItem key={status.value} value={status.value}>
-                    {status.label}
-                  </MenuItem>
-                ))}
-              </RHFSelect>
+              {currentDepartment ? (
+                <RHFSelect name="isActive" label="Status">
+                  {COMMON_STATUS_OPTIONS.map((status) => (
+                    <MenuItem key={status.value} value={status.value}>
+                      {status.label}
+                    </MenuItem>
+                  ))}
+                </RHFSelect>
+              ) : null}
               <Box sx={{ display: { xs: 'none', sm: 'block' } }} />
               <RHFTextField name="departmentName" label="Department Name" />
               <RHFTextField name="description" label="Description" />
