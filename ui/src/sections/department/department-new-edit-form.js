@@ -56,8 +56,6 @@ export default function DepartmentNewEditForm({ currentDepartment }) {
     formState: { isSubmitting },
   } = methods;
 
-  const values = watch();
-
   const onSubmit = handleSubmit(async (formData) => {
     try {
       console.info('DATA', formData);
@@ -105,15 +103,18 @@ export default function DepartmentNewEditForm({ currentDepartment }) {
               }}
             >
               {currentDepartment ? (
-                <RHFSelect name="isActive" label="Status">
-                  {COMMON_STATUS_OPTIONS.map((status) => (
-                    <MenuItem key={status.value} value={status.value}>
-                      {status.label}
-                    </MenuItem>
-                  ))}
-                </RHFSelect>
+                <>
+                  <RHFSelect name="isActive" label="Status">
+                    {COMMON_STATUS_OPTIONS.map((status) => (
+                      <MenuItem key={status.value} value={status.value}>
+                        {status.label}
+                      </MenuItem>
+                    ))}
+                  </RHFSelect>
+                  <Box sx={{ display: { xs: 'none', sm: 'block' } }} />
+                </>
               ) : null}
-              <Box sx={{ display: { xs: 'none', sm: 'block' } }} />
+
               <RHFTextField name="departmentName" label="Department Name" />
               <RHFTextField name="description" label="Description" />
             </Box>
