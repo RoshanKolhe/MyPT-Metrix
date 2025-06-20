@@ -43,6 +43,7 @@ const ICONS = {
   ecommerce: icon('ic_ecommerce'),
   analytics: icon('ic_analytics'),
   dashboard: icon('ic_dashboard'),
+  branch: icon('ic_branch'),
 };
 
 // ----------------------------------------------------------------------
@@ -90,6 +91,25 @@ export function useNavData() {
               {
                 title: t('list'),
                 path: paths.dashboard.department.list,
+                roles: ['super_admin'],
+              },
+              {
+                title: t('create'),
+                path: paths.dashboard.department.new,
+                roles: ['super_admin'],
+              },
+            ],
+          },
+          // Branch
+          {
+            title: t('branch'),
+            path: paths.dashboard.branch.root,
+            icon: ICONS.branch,
+            roles: ['super_admin'],
+            children: [
+              {
+                title: t('list'),
+                path: paths.dashboard.branch.list,
                 roles: ['super_admin'],
               },
               {

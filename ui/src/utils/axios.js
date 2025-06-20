@@ -60,4 +60,9 @@ export const endpoints = {
     filterList: (filter) => `/departments?${filter}`,
     details: (id) => `/departments/${id}`,
   },
+  branch: {
+    list: '/branches',
+    filterList: (filter) => `/branches?${filter}`,
+    details: (id) => `/branches/${id}`,
+  },
 };

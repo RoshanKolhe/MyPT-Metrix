@@ -17,7 +17,7 @@ import {
   requestBody,
   response,
 } from '@loopback/rest';
-import {Branch} from '../models';
+import {Branch, Department} from '../models';
 import {BranchRepository} from '../repositories';
 import {authenticate} from '@loopback/authentication';
 import {PermissionKeys} from '../authorization/permission-keys';
@@ -41,16 +41,39 @@ export class BranchController {
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(Branch, {
-            title: 'NewBranch',
-            exclude: ['id'],
-          }),
+          schema: {
+            type: 'object',
+            required: ['name'], // update as per your required fields
+            properties: {
+              ...getModelSchemaRef(Branch, {
+                title: 'NewBranch',
+                exclude: ['id'],
+              }).definitions?.Branch?.properties,
+              departments: {
+                type: 'array',
+                items: {type: 'object'}, // Accepts materials array
+              },
+            },
+          },
         },
       },
     })
-    branch: Omit<Branch, 'id'>,
+    requestData: {
+      name: string;
+      // other branch fields...
+      departments?: any[];
+    },
   ): Promise<Branch> {
-    return this.branchRepository.create(branch);
+    const {departments = [], ...branchData} = requestData;
+
+    // Create the Branch
+    const createdBranch = await this.branchRepository.create(branchData);
+
+    for (const dept of departments) {
+      await this.branchRepository.departments(createdBranch.id).link(dept.id);
+    }
+
+    return createdBranch;
   }
 
   @authenticate({
@@ -70,7 +93,7 @@ export class BranchController {
     },
   })
   async find(@param.filter(Branch) filter?: Filter<Branch>): Promise<Branch[]> {
-    return this.branchRepository.find(filter);
+    return this.branchRepository.find({...filter, include: ['departments']});
   }
 
   @authenticate({
@@ -91,7 +114,10 @@ export class BranchController {
     @param.filter(Branch, {exclude: 'where'})
     filter?: FilterExcludingWhere<Branch>,
   ): Promise<Branch> {
-    return this.branchRepository.findById(id, filter);
+    return this.branchRepository.findById(id, {
+      ...filter,
+      include: ['departments'],
+    });
   }
 
   @authenticate({
@@ -107,13 +133,35 @@ export class BranchController {
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(Branch, {partial: true}),
+          schema: {
+            type: 'object',
+            properties: {
+              ...getModelSchemaRef(Branch, {partial: true}).definitions?.Branch
+                ?.properties,
+              departments: {
+                type: 'array',
+                items: {type: 'object'}, // Accepts materials array
+              },
+            },
+          },
         },
       },
     })
-    branch: Branch,
+    requestData: Partial<Branch> & {departments?: any[]},
   ): Promise<void> {
-    await this.branchRepository.updateById(id, branch);
+    const {departments = [], ...branchData} = requestData;
+
+    // Update branch fields
+    await this.branchRepository.updateById(id, branchData);
+
+    if (departments && departments.length > 0) {
+      // Clear existing department links (junction table)
+      await this.branchRepository.departments(id).unlinkAll();
+      // Add new department links
+      for (const dept of departments) {
+        await this.branchRepository.departments(id).link(dept.id);
+      }
+    }
   }
 
   @authenticate({

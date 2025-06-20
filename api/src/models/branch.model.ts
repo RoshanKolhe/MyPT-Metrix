@@ -1,4 +1,6 @@
-import {Entity, model, property} from '@loopback/repository';
+import {Entity, model, property, hasMany} from '@loopback/repository';
+import {Department} from './department.model';
+import {BranchDepartment} from './branch-department.model';
 
 @model()
 export class Branch extends Entity {
@@ -21,6 +23,12 @@ export class Branch extends Entity {
   description?: string;
 
   @property({
+    type: 'boolean',
+    required: true,
+  })
+  isActive: boolean;
+
+  @property({
     type: 'date',
   })
   createdAt?: Date;
@@ -40,6 +48,9 @@ export class Branch extends Entity {
     default: false,
   })
   isDeleted: boolean;
+
+  @hasMany(() => Department, {through: {model: () => BranchDepartment}})
+  departments: Department[];
 
   constructor(data?: Partial<Branch>) {
     super(data);
