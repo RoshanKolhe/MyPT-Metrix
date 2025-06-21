@@ -363,6 +363,8 @@ export const states = [
 
 export const PERMISSION_KEY = 'permission';
 
+export const _roles = ['Super Admin', 'Admin', 'CGM', 'Hod', 'Sub Hod'];
+
 export const USER_STATUS_OPTIONS = [
   { value: '1', label: 'Active' },
   { value: '0', label: 'In-Active' },
@@ -372,8 +374,6 @@ export const COMMON_STATUS_OPTIONS = [
   { value: '1', label: 'Active' },
   { value: '0', label: 'In-Active' },
 ];
-
-export const _roles = ['Admin', 'Worker', 'Qc Admin', 'Dispatch'];
 
 export const formatRFQId = (rfqId) => `RFQ${rfqId.toString().padStart(4, '0')}`;
 export const formatChallanId = (challanId) => `CHLN${challanId.toString().padStart(4, '0')}`;

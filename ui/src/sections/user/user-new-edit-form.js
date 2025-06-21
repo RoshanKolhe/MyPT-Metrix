@@ -98,6 +98,8 @@ export default function UserNewEditForm({ currentUser }) {
       state: currentUser?.state || '',
       password: '',
       confirmPassword: '',
+      departments: currentUser?.departments || [],
+      branch: currentUser?.branch || null,
     }),
     [currentUser]
   );
@@ -115,8 +117,10 @@ export default function UserNewEditForm({ currentUser }) {
     setError,
     clearErrors,
     handleSubmit,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
   } = methods;
+
+  console.log(errors);
 
   const branch = watch('branch');
   const selectedDepartments = watch('departments');
@@ -150,11 +154,19 @@ export default function UserNewEditForm({ currentUser }) {
       if (formData.password) {
         inputData.password = formData.password;
       }
+      if (formData.branch && formData.branch.id) {
+        inputData.branchId = formData.branch.id;
+      }
+      if (Array.isArray(formData.departments) && formData.departments.length > 0) {
+        inputData.departments = formData.departments.map((dept) => dept.id);
+      }
+
+      console.log(inputData);
       if (!currentUser) {
         await axiosInstance.post('/register', inputData);
       } else {
         console.log('here');
-        await axiosInstance.patch(`/api/users/${currentUser.id}`, inputData);
+        await axiosInstance.patch(`/users/${currentUser.id}`, inputData);
       }
       reset();
       enqueueSnackbar(currentUser ? 'Update success!' : 'Create success!');
@@ -186,11 +198,20 @@ export default function UserNewEditForm({ currentUser }) {
   );
 
   useEffect(() => {
-    if (role && role !== 'admin') {
+    if (role === 'cgm') {
       setValidationSchema((prev) =>
         prev.concat(
           Yup.object().shape({
-            branch: Yup.object().required('Branch is required').nullable(),
+            branch: Yup.object().required('Branch is required'),
+            departments: Yup.array().notRequired(),
+          })
+        )
+      );
+    } else if (role && role !== 'admin' && role !== 'super_admin') {
+      setValidationSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            branch: Yup.object().required('Branch is required'),
             departments: Yup.array()
               .min(1, 'At least one department must be selected')
               .required('Departments are required'),
@@ -210,11 +231,20 @@ export default function UserNewEditForm({ currentUser }) {
   }, [role]);
 
   useEffect(() => {
-    if (branch && branch?.departments) {
+    if (!branch) {
+      setDepartments([]);
       setValue('departments', []);
-      setDepartments(branch.departments);
+      return;
     }
-  }, [branch, setValue]);
+
+    const fetchedDepartments = branch?.departments || [];
+
+    setDepartments(fetchedDepartments);
+
+    if (!currentUser) {
+      setValue('departments', []);
+    }
+  }, [branch, currentUser, setValue]);
 
   useEffect(() => {
     if (role === 'admin') {
@@ -265,14 +295,6 @@ export default function UserNewEditForm({ currentUser }) {
                 }
               />
             </Box>
-
-            {currentUser && (
-              <Stack justifyContent="center" alignItems="center" sx={{ mt: 3 }}>
-                <Button variant="soft" color="error">
-                  Delete User
-                </Button>
-              </Stack>
-            )}
           </Card>
         </Grid>
 
@@ -384,16 +406,18 @@ export default function UserNewEditForm({ currentUser }) {
               <RHFTextField name="address" label="Address" />
               <RHFSelect fullWidth name="role" label="Role">
                 {[
+                  { value: 'super_admin', name: 'Super Admin' },
                   { value: 'admin', name: 'Admin' },
+                  { value: 'cgm', name: 'CGM' },
                   { value: 'hod', name: 'HOD' },
-                  { value: 'salesman', name: 'Salesman' },
+                  { value: 'sub_hod', name: 'SUB HOD' },
                 ].map((option) => (
                   <MenuItem key={option.value} value={option.value}>
                     {option.name}
                   </MenuItem>
                 ))}
               </RHFSelect>
-              {role && role !== 'admin' && (
+              {role && role !== 'admin' && role !== 'super_admin' && (
                 <>
                   <RHFAutocomplete
                     name="branch"
@@ -404,11 +428,9 @@ export default function UserNewEditForm({ currentUser }) {
                     isOptionEqualToValue={(option, value) => option.id === value.id}
                     renderOption={(props, option) => (
                       <li {...props}>
-                        <div>
-                          <Typography variant="subtitle2" fontWeight="bold">
-                            {`${option?.name}`}
-                          </Typography>
-                        </div>
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          {option?.name}
+                        </Typography>
                       </li>
                     )}
                     renderTags={(selected, getTagProps) =>
@@ -416,7 +438,7 @@ export default function UserNewEditForm({ currentUser }) {
                         <Chip
                           {...getTagProps({ index: tagIndex })}
                           key={option.id}
-                          label={`${option.name}`}
+                          label={option.name}
                           size="small"
                           color="info"
                           variant="soft"
@@ -425,36 +447,36 @@ export default function UserNewEditForm({ currentUser }) {
                     }
                   />
 
-                  <RHFAutocomplete
-                    multiple
-                    name="departments"
-                    label="Departments"
-                    options={departments || []}
-                    getOptionLabel={(option) => `${option?.name}` || ''}
-                    filterOptions={(x) => x}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    renderOption={(props, option) => (
-                      <li {...props}>
-                        <div>
+                  {role !== 'cgm' && (
+                    <RHFAutocomplete
+                      multiple
+                      name="departments"
+                      label="Departments"
+                      options={departments || []}
+                      getOptionLabel={(option) => `${option?.name}` || ''}
+                      filterOptions={(x) => x}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      renderOption={(props, option) => (
+                        <li {...props}>
                           <Typography variant="subtitle2" fontWeight="bold">
-                            {`${option?.name}`}
+                            {option?.name}
                           </Typography>
-                        </div>
-                      </li>
-                    )}
-                    renderTags={(selected, getTagProps) =>
-                      selected.map((option, tagIndex) => (
-                        <Chip
-                          {...getTagProps({ index: tagIndex })}
-                          key={option.id}
-                          label={`${option.name}`}
-                          size="small"
-                          color="info"
-                          variant="soft"
-                        />
-                      ))
-                    }
-                  />
+                        </li>
+                      )}
+                      renderTags={(selected, getTagProps) =>
+                        selected.map((option, tagIndex) => (
+                          <Chip
+                            {...getTagProps({ index: tagIndex })}
+                            key={option.id}
+                            label={option.name}
+                            size="small"
+                            color="info"
+                            variant="soft"
+                          />
+                        ))
+                      }
+                    />
+                  )}
                 </>
               )}
             </Box>

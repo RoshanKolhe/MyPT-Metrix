@@ -236,34 +236,6 @@ export const _phoneNumbers = [
   '606-285-8928',
 ];
 
-// ----------------------------------------------------------------------
-
-export const _roles = [
-  'HR Manager',
-  'Data Analyst',
-  'Legal Counsel',
-  'UX/UI Designer',
-  'Project Manager',
-  'Account Manager',
-  'Registered Nurse',
-  'Business Analyst',
-  'Creative Director',
-  'Financial Planner',
-  'Event Coordinator',
-  'Marketing Director',
-  'Software Developer',
-  'Research Scientist',
-  'Content Strategist',
-  'Operations Manager',
-  'Sales Representative',
-  'Supply Chain Analyst',
-  'Operations Coordinator',
-  'Customer Service Associate',
-  'Quality Assurance Specialist',
-  'CEO',
-  'CFO',
-  'CTO',
-];
 
 // ----------------------------------------------------------------------
 

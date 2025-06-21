@@ -53,7 +53,7 @@ export default function UserQuickEditForm({ currentUser, open, onClose, refreshU
       dob: currentUser?.dob || '',
       email: currentUser?.email || '',
       isActive: currentUser?.isActive ? '1' : '0' || '',
-
+      country: currentUser?.country || '',
       phoneNumber: currentUser?.phoneNumber || '',
       address: currentUser?.fullAddress || '',
       city: currentUser?.city || '',
@@ -90,7 +90,7 @@ export default function UserQuickEditForm({ currentUser, open, onClose, refreshU
         city: formData.city,
         state: formData.state,
       };
-      await axiosInstance.patch(`/api/users/${currentUser.id}`, inputData);
+      await axiosInstance.patch(`/users/${currentUser.id}`, inputData);
       refreshUsers();
       reset();
       onClose();
@@ -194,21 +194,16 @@ export default function UserQuickEditForm({ currentUser, open, onClose, refreshU
               }}
             />
 
-            <RHFSelect fullWidth name="state" label="State">
-              {states.map((option) => (
-                <MenuItem key={option.id} value={option.id}>
-                  {option.name}
-                </MenuItem>
-              ))}
-            </RHFSelect>
+            <RHFTextField name="state" label="State/Region" />
             <RHFTextField name="city" label="City" />
             <RHFTextField name="address" label="Address" />
             <RHFSelect fullWidth name="role" label="Role">
               {[
+                { value: 'super_admin', name: 'Super Admin' },
                 { value: 'admin', name: 'Admin' },
-                { value: 'worker', name: 'Worker' },
-                { value: 'qc_admin', name: 'Qc Admin' },
-                { value: 'dispatch', name: 'Dispatch' },
+                { value: 'cgm', name: 'CGM' },
+                { value: 'hod', name: 'HOD' },
+                { value: 'sub_hod', name: 'SUB HOD' },
               ].map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.name}

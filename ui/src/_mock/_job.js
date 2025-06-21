@@ -82,7 +82,6 @@ export const JOB_SORT_OPTIONS = [
 
 const CANDIDATES = [...Array(12)].map((_, index) => ({
   id: _mock.id(index),
-  role: _mock.role(index),
   name: _mock.fullName(index),
   avatarUrl: _mock.image.avatar(index),
 }));
@@ -162,7 +161,6 @@ export const _jobs = [...Array(12)].map((_, index) => {
     employmentTypes,
     content: CONTENT,
     candidates: CANDIDATES,
-    role: _mock.role(index),
     title: _mock.jobTitle(index),
     createdAt: _mock.time(index),
     expiredDate: _mock.time(index),

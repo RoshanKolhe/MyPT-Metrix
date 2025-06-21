@@ -25,7 +25,11 @@ import * as _ from 'lodash';
 import {PermissionKeys} from '../authorization/permission-keys';
 import {EmailManagerBindings} from '../keys';
 import {User} from '../models';
-import {Credentials, UserRepository} from '../repositories';
+import {
+  Credentials,
+  UserDepartmentRepository,
+  UserRepository,
+} from '../repositories';
 import {EmailManager, EmailService} from '../services/email.service';
 import {BcryptHasher} from '../services/hash.password.bcrypt';
 import {JWTService} from '../services/jwt-service';
@@ -46,6 +50,8 @@ export class UserController {
     public emailManager: EmailManager,
     @repository(UserRepository)
     public userRepository: UserRepository,
+    @repository(UserDepartmentRepository)
+    public userDepartmentRepository: UserDepartmentRepository,
     @inject('service.hasher')
     public hasher: BcryptHasher,
     @inject('service.user.service')
@@ -70,42 +76,79 @@ export class UserController {
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(User, {
-            exclude: ['id'],
-          }),
+          schema: {
+            type: 'object',
+            properties: {
+              ...getModelSchemaRef(User, {
+                exclude: ['id'],
+              }).definitions?.User?.properties,
+              departments: {
+                type: 'array',
+                items: {type: 'number'},
+              },
+            },
+            required: ['email', 'password', 'permissions'], // no branchId here
+          },
         },
       },
     })
-    userData: Omit<User, 'id'>,
-  ) {
+    userData: Omit<User, 'id'> & {departments?: number[]},
+  ): Promise<any> {
     const repo = new DefaultTransactionalRepository(User, this.dataSource);
     const tx = await repo.beginTransaction(IsolationLevel.READ_COMMITTED);
+
     try {
+      const rolesRequiringBranch = ['admin', 'hod', 'sub_hod'];
+
+      const role = userData.permissions?.[0]; // assuming single-role system
+
+      if (rolesRequiringBranch.includes(role) && !userData.branchId) {
+        throw new HttpErrors.BadRequest(
+          'branchId is required for role: ' + role,
+        );
+      }
+
       validateCredentials(userData);
-      const user = await this.userRepository.findOne({
-        where: {
-          email: userData.email,
-        },
+
+      const existing = await this.userRepository.findOne({
+        where: {email: userData.email},
       });
-      console.log(user);
-      if (user) {
+
+      if (existing) {
         throw new HttpErrors.BadRequest('User Already Exists');
       }
 
-      // userData.permissions = [PermissionKeys.ADMIN];
+      const departments = userData.departments ?? [];
+
+      delete (userData as any).departments;
+      // 🔐 Hash password
       userData.password = await this.hasher.hashPassword(userData.password);
+
+      // 🧑 Create user
       const savedUser = await this.userRepository.create(userData, {
         transaction: tx,
       });
-      const savedUserData = _.omit(savedUser, 'password');
-      tx.commit();
-      return Promise.resolve({
+
+      // 🔗 Link to departments (if any)
+      for (const deptId of departments) {
+        await this.userDepartmentRepository.create(
+          {
+            userId: savedUser.id,
+            departmentId: deptId,
+          },
+          {transaction: tx},
+        );
+      }
+
+      await tx.commit();
+
+      return {
         success: true,
-        userData: savedUserData,
-        message: `User registered successfully`,
-      });
+        userData: _.omit(savedUser, 'password'),
+        message: 'User registered successfully',
+      };
     } catch (err) {
-      tx.rollback();
+      await tx.rollback();
       throw err;
     }
   }
@@ -224,6 +267,15 @@ export class UserController {
         otp: false,
         otpExpireAt: false,
       },
+      include: [
+        {relation: 'departments'},
+        {
+          relation: 'branch',
+          scope: {
+            include: ['departments'],
+          },
+        },
+      ],
     });
     return Promise.resolve({
       ...user,
@@ -242,40 +294,81 @@ export class UserController {
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(User, {partial: true}),
+          schema: {
+            type: 'object',
+            properties: {
+              ...getModelSchemaRef(User, {partial: true}).definitions?.User
+                ?.properties,
+              departments: {
+                type: 'array',
+                items: {type: 'number'},
+              },
+            },
+          },
         },
       },
     })
-    user: User,
+    user: Partial<User> & {departments?: number[]},
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
   ): Promise<any> {
-    // Fetch the user information before updating
-    const existingUser = await this.userRepository.findById(id);
-    if (!existingUser) {
-      throw new HttpErrors.NotFound('User not found');
-    }
+    // Begin transaction
+    const repo = new DefaultTransactionalRepository(User, this.dataSource);
+    const tx = await repo.beginTransaction(IsolationLevel.READ_COMMITTED);
 
-    // Hash password if it's being updated
-    if (user.password) {
-      user.password = await this.hasher.hashPassword(user.password);
-    }
-
-    // Validate email uniqueness only if email is being updated
-    if (user.email && user.email !== existingUser.email) {
-      const emailExists = await this.userRepository.findOne({
-        where: {email: user.email, id: {neq: id}}, // Exclude the current user
-      });
-
-      if (emailExists) {
-        throw new HttpErrors.BadRequest('Email already exists');
+    try {
+      const existingUser = await this.userRepository.findById(id);
+      if (!existingUser) {
+        throw new HttpErrors.NotFound('User not found');
       }
-    }
-    await this.userRepository.updateById(id, user);
 
-    return {
-      success: true,
-      message: `User profile updated successfully`,
-    };
+      // Hash password if it's being updated
+      if (user.password) {
+        user.password = await this.hasher.hashPassword(user.password);
+      }
+
+      // Validate email uniqueness only if changed
+      if (user.email && user.email !== existingUser.email) {
+        const emailExists = await this.userRepository.findOne({
+          where: {email: user.email, id: {neq: id}},
+        });
+        if (emailExists) {
+          throw new HttpErrors.BadRequest('Email already exists');
+        }
+      }
+
+      const departments = user.departments ?? [];
+      if ('departments' in user) {
+        delete (user as any).departments;
+      }
+      console.log('departments', departments);
+      await this.userRepository.updateById(id, user, {transaction: tx});
+      if (departments && departments.length) {
+        await this.userDepartmentRepository.deleteAll(
+          {userId: id},
+          {transaction: tx},
+        );
+
+        for (const deptId of departments) {
+          await this.userDepartmentRepository.create(
+            {
+              userId: id,
+              departmentId: deptId,
+            },
+            {transaction: tx},
+          );
+        }
+      }
+
+      await tx.commit();
+
+      return {
+        success: true,
+        message: `User profile updated successfully`,
+      };
+    } catch (error) {
+      await tx.rollback();
+      throw error;
+    }
   }
 
   @post('/sendResetPasswordLink')

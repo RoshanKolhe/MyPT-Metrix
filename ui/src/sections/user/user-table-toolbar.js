@@ -117,15 +117,6 @@ export default function UserTableToolbar({
             popover.onClose();
           }}
         >
-          <Iconify icon="solar:printer-minimalistic-bold" />
-          Print
-        </MenuItem>
-
-        <MenuItem
-          onClick={() => {
-            popover.onClose();
-          }}
-        >
           <Iconify icon="solar:import-bold" />
           Import
         </MenuItem>

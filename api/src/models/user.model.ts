@@ -77,7 +77,7 @@ export class User extends Entity {
   @property.array(String, {
     name: 'permissions',
   })
-  permissions: String[];
+  permissions: string[];
 
   @property({
     type: 'boolean',

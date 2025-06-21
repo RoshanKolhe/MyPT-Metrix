@@ -16,8 +16,6 @@ import TableContainer from '@mui/material/TableContainer';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hook';
 import { RouterLink } from 'src/routes/components';
-// _mock
-import { _userList, _roles } from 'src/_mock';
 // hooks
 import { useBoolean } from 'src/hooks/use-boolean';
 // components
@@ -39,10 +37,11 @@ import {
 } from 'src/components/table';
 //
 import { useGetUsers } from 'src/api/user';
-import { USER_STATUS_OPTIONS } from 'src/utils/constants';
+import { _roles, USER_STATUS_OPTIONS } from 'src/utils/constants';
 import UserTableRow from '../user-table-row';
 import UserTableToolbar from '../user-table-toolbar';
 import UserTableFiltersResult from '../user-table-filters-result';
+import UserQuickEditForm from '../user-quick-edit-form';
 
 // ----------------------------------------------------------------------
 
@@ -72,6 +71,10 @@ export default function UserListView() {
   const router = useRouter();
 
   const confirm = useBoolean();
+
+  const [quickEditRow, setQuickEditRow] = useState();
+
+  const quickEdit = useBoolean();
 
   const [tableData, setTableData] = useState([]);
 
@@ -133,6 +136,21 @@ export default function UserListView() {
       router.push(paths.dashboard.user.edit(id));
     },
     [router]
+  );
+
+  const handleViewRow = useCallback(
+    (id) => {
+      router.push(paths.dashboard.user.view(id));
+    },
+    [router]
+  );
+
+  const handleQuickEditRow = useCallback(
+    (row) => {
+      setQuickEditRow(row);
+      quickEdit.onTrue();
+    },
+    [quickEdit]
   );
 
   const handleFilterStatus = useCallback(
@@ -285,6 +303,11 @@ export default function UserListView() {
                         onSelectRow={() => table.onSelectRow(row.id)}
                         onDeleteRow={() => handleDeleteRow(row.id)}
                         onEditRow={() => handleEditRow(row.id)}
+                        onViewRow={() => handleViewRow(row.id)}
+                        handleQuickEditRow={(user) => {
+                          handleQuickEditRow(user);
+                        }}
+                        quickEdit={quickEdit}
                       />
                     ))}
 
@@ -334,6 +357,18 @@ export default function UserListView() {
           </Button>
         }
       />
+
+      {quickEdit.value && quickEditRow && (
+        <UserQuickEditForm
+          currentUser={quickEditRow}
+          open={quickEdit.value}
+          onClose={() => {
+            setQuickEditRow(null);
+            quickEdit.onFalse();
+          }}
+          refreshUsers={refreshUsers}
+        />
+      )}
     </>
   );
 }
@@ -342,9 +377,14 @@ export default function UserListView() {
 
 function applyFilter({ inputData, comparator, filters }) {
   const { name, status, role } = filters;
-
   const stabilizedThis = inputData.map((el, index) => [el, index]);
-
+  const roleMapping = {
+    super_admin: 'Super Admin',
+    admin: 'Admin',
+    cgm: 'CGM',
+    hod: 'Hod',
+    sub_hod: 'Sub Hod',
+  };
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
@@ -354,19 +394,26 @@ function applyFilter({ inputData, comparator, filters }) {
   inputData = stabilizedThis.map((el) => el[0]);
 
   if (name) {
-    inputData = inputData.filter((storageLocation) =>
-      Object.values(storageLocation).some((value) =>
-        String(value).toLowerCase().includes(name.toLowerCase())
-      )
+    inputData = inputData.filter((user) =>
+      Object.values(user).some((value) => String(value).toLowerCase().includes(name.toLowerCase()))
     );
   }
 
   if (status !== 'all') {
-    inputData = inputData.filter((user) => user.status === status);
+    inputData = inputData.filter((user) => (status === '1' ? user.isActive : !user.isActive));
   }
 
   if (role.length) {
-    inputData = inputData.filter((user) => role.includes(user.role));
+    inputData = inputData.filter(
+      (user) =>
+        user.permissions &&
+        user.permissions.some((userRole) => {
+          console.log(userRole);
+          const mappedRole = roleMapping[userRole];
+          console.log('Mapped Role:', mappedRole); // Check the mapped role
+          return mappedRole && role.includes(mappedRole);
+        })
+    );
   }
 
   return inputData;
