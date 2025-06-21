@@ -20,6 +20,12 @@ const UserCreatePage = lazy(() => import('src/pages/dashboard/user/new'));
 const UserEditPage = lazy(() => import('src/pages/dashboard/user/edit'));
 const UserViewPage = lazy(() => import('src/pages/dashboard/user/view'));
 
+// TRAINER
+const TrainerListPage = lazy(() => import('src/pages/dashboard/trainer/list'));
+const TrainerCreatePage = lazy(() => import('src/pages/dashboard/trainer/new'));
+const TrainerEditPage = lazy(() => import('src/pages/dashboard/trainer/edit'));
+const TrainerViewPage = lazy(() => import('src/pages/dashboard/trainer/view'));
+
 // DEPARTMENT
 const DepartmentListPage = lazy(() => import('src/pages/dashboard/department/list'));
 const DepartmentCreatePage = lazy(() => import('src/pages/dashboard/department/new'));
@@ -59,6 +65,17 @@ export const dashboardRoutes = [
           { path: ':id/edit', element: <UserEditPage /> },
           { path: ':id/view', element: <UserViewPage /> },
           { path: 'account', element: <UserAccountPage /> },
+        ],
+      },
+      {
+        path: 'trainer',
+        element: <RolesAuthRoute roles={['super_admin', 'admin']} />,
+        children: [
+          { element: <TrainerListPage />, index: true },
+          { path: 'list', element: <TrainerListPage /> },
+          { path: 'new', element: <TrainerCreatePage /> },
+          { path: ':id/edit', element: <TrainerEditPage /> },
+          { path: ':id/view', element: <TrainerViewPage /> },
         ],
       },
       {

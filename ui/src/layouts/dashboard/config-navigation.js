@@ -24,6 +24,7 @@ const ICONS = {
   chat: icon('ic_chat'),
   mail: icon('ic_mail'),
   user: icon('ic_user'),
+  trainer: icon('ic_trainer'),
   file: icon('ic_file'),
   lock: icon('ic_lock'),
   tour: icon('ic_tour'),
@@ -73,6 +74,16 @@ export function useNavData() {
             children: [
               { title: t('list'), path: paths.dashboard.user.list },
               { title: t('create'), path: paths.dashboard.user.new },
+            ],
+          },
+          // TRAINER
+          {
+            title: t('trainer'),
+            path: paths.dashboard.trainer.root,
+            icon: ICONS.trainer,
+            children: [
+              { title: t('list'), path: paths.dashboard.trainer.list },
+              { title: t('create'), path: paths.dashboard.trainer.new },
             ],
           },
         ],

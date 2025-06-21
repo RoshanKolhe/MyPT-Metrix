@@ -30,26 +30,6 @@ export class Trainer extends Entity {
   @property({
     type: 'string',
   })
-  country: string;
-
-  @property({
-    type: 'string',
-  })
-  fullAddress: string;
-
-  @property({
-    type: 'string',
-  })
-  city: string;
-
-  @property({
-    type: 'string',
-  })
-  state: string;
-
-  @property({
-    type: 'string',
-  })
   email: string;
 
   @property({
