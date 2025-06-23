@@ -78,7 +78,14 @@ export class BranchController {
 
   @authenticate({
     strategy: 'jwt',
-    options: {required: [PermissionKeys.SUPER_ADMIN]},
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+        PermissionKeys.HOD,
+      ],
+    },
   })
   @get('/branches')
   @response(200, {
@@ -98,7 +105,15 @@ export class BranchController {
 
   @authenticate({
     strategy: 'jwt',
-    options: {required: [PermissionKeys.SUPER_ADMIN]},
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+        PermissionKeys.HOD,
+
+      ],
+    },
   })
   @get('/branches/{id}')
   @response(200, {

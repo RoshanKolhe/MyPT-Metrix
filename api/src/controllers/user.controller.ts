@@ -5,6 +5,7 @@ import {
   DefaultTransactionalRepository,
   Filter,
   IsolationLevel,
+  Where,
   WhereBuilder,
   repository,
 } from '@loopback/repository';
@@ -196,7 +197,7 @@ export class UserController {
       where: {
         id: currnetUser.id,
       },
-      include: ['branch'],
+      include: ['branch', 'departments'],
     });
     const userData = _.omit(user, 'password');
     return Promise.resolve({
@@ -208,7 +209,12 @@ export class UserController {
   @authenticate({
     strategy: 'jwt',
     options: {
-      required: [PermissionKeys.SUPER_ADMIN],
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+        PermissionKeys.HOD,
+      ],
     },
   })
   @get('/users/list')
@@ -229,21 +235,95 @@ export class UserController {
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
     @param.filter(User) filter?: Filter<User>,
   ): Promise<User[]> {
-    filter = {
-      ...filter,
-      where: {
-        ...filter?.where,
-        id: {neq: currentUser.id},
-        isDeleted: false,
-      },
-      fields: {password: false, otp: false, otpExpireAt: false},
+    const loggedInUser = await this.userRepository.findById(currentUser.id, {
+      include: ['departments'],
+    });
+
+    const permissions = currentUser.permissions || [];
+
+    // Base filter to exclude self and soft-deleted users
+    const baseWhere: Where<User> = {
+      id: {neq: currentUser.id},
+      isDeleted: false,
     };
-    return this.userRepository.find(filter);
+
+    const baseFields = {
+      password: false,
+      otp: false,
+      otpExpireAt: false,
+    };
+
+    // ✅ SUPER_ADMIN or ADMIN: return all users except self
+    if (
+      permissions.includes(PermissionKeys.SUPER_ADMIN) ||
+      permissions.includes(PermissionKeys.ADMIN)
+    ) {
+      return this.userRepository.find({
+        ...filter,
+        where: {
+          ...filter?.where,
+          ...baseWhere,
+        },
+        fields: baseFields,
+      });
+    }
+
+    // ✅ CGM: return users from same branch
+    if (permissions.includes(PermissionKeys.CGM)) {
+      return this.userRepository.find({
+        ...filter,
+        where: {
+          ...filter?.where,
+          ...baseWhere,
+          branchId: loggedInUser.branchId,
+        },
+        fields: baseFields,
+      });
+    }
+
+    // ✅ HOD: return sub_hod users in same branch AND matching departments
+    if (permissions.includes(PermissionKeys.HOD)) {
+      const departmentIds = loggedInUser.departments?.map(d => d.id) ?? [];
+
+      if (departmentIds.length === 0) {
+        return []; // No departments assigned → return nothing
+      }
+
+      // Fetch all users in same branch
+      const allUsersInBranch = await this.userRepository.find({
+        where: {
+          id: {neq: currentUser.id},
+          isDeleted: false,
+          branchId: loggedInUser.branchId,
+        },
+        fields: baseFields,
+        include: ['departments'],
+      });
+
+      // Filter: permissions must include 'sub_hod' AND share at least one department
+      const finalUsers = allUsersInBranch.filter(
+        user =>
+          user.permissions?.includes('sub_hod') &&
+          user.departments?.some(dep => departmentIds.includes(dep.id)),
+      );
+
+      return finalUsers;
+    }
+
+    // Default fallback: deny access
+    return [];
   }
 
   @authenticate({
     strategy: 'jwt',
-    options: {required: [PermissionKeys.SUPER_ADMIN]},
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+        PermissionKeys.HOD,
+      ],
+    },
   })
   @get('/users/{id}', {
     responses: {
@@ -608,7 +688,7 @@ export class UserController {
     const filtered = users.filter(
       user =>
         (user.permissions || []).includes('hod') ||
-        (user.permissions || []).includes('subhod'),
+        (user.permissions || []).includes('sub_hod'),
     );
 
     // Ensure they are actually linked to the given department

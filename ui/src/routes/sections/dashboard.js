@@ -57,7 +57,7 @@ export const dashboardRoutes = [
       { path: 'profile', element: <UserAccountPage /> },
       {
         path: 'user',
-        element: <RolesAuthRoute roles={['super_admin', 'admin']} />,
+        element: <RolesAuthRoute roles={['super_admin', 'admin', 'cgm', 'hod']} />,
         children: [
           { element: <UserListPage />, index: true },
           { path: 'list', element: <UserListPage /> },
@@ -69,7 +69,7 @@ export const dashboardRoutes = [
       },
       {
         path: 'trainer',
-        element: <RolesAuthRoute roles={['super_admin', 'admin']} />,
+        element: <RolesAuthRoute roles={['super_admin', 'admin', 'cgm', 'hod']} />,
         children: [
           { element: <TrainerListPage />, index: true },
           { path: 'list', element: <TrainerListPage /> },

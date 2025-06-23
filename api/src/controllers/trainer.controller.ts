@@ -64,8 +64,9 @@ export class TrainerController {
     options: {
       required: [
         PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
         PermissionKeys.HOD,
-        PermissionKeys.SUB_HOD,
       ],
     },
   })
@@ -107,8 +108,9 @@ export class TrainerController {
     options: {
       required: [
         PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
         PermissionKeys.HOD,
-        PermissionKeys.SUB_HOD,
       ],
     },
   })
@@ -149,6 +151,7 @@ export class TrainerController {
     options: {
       required: [
         PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.CGM,
         PermissionKeys.HOD,
         PermissionKeys.SUB_HOD,
       ],
@@ -179,6 +182,7 @@ export class TrainerController {
         PermissionKeys.SUPER_ADMIN,
         PermissionKeys.HOD,
         PermissionKeys.SUB_HOD,
+        PermissionKeys.CGM,
       ],
     },
   })

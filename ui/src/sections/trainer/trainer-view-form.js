@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -9,47 +10,39 @@ import Box from '@mui/material/Box';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import Switch from '@mui/material/Switch';
 import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
-import FormControlLabel from '@mui/material/FormControlLabel';
 // utils
 import { fData } from 'src/utils/format-number';
 // routes
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hook';
-// assets
-import { countries } from 'src/assets/data';
 // components
 import Label from 'src/components/label';
-import Iconify from 'src/components/iconify';
 import { useSnackbar } from 'src/components/snackbar';
 import FormProvider, {
-  RHFSwitch,
   RHFTextField,
   RHFUploadAvatar,
   RHFAutocomplete,
-  RHFSelect,
 } from 'src/components/hook-form';
-import { Chip, IconButton, InputAdornment, MenuItem } from '@mui/material';
-import { states } from 'src/utils/constants';
+import { Chip } from '@mui/material';
 import axiosInstance from 'src/utils/axios';
-import { useBoolean } from 'src/hooks/use-boolean';
 import { useGetBranchs } from 'src/api/branch';
+import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
-export default function TrainerViewForm({ currentTrainer }) {
+export default function TrainerNewEditForm({ currentTrainer }) {
+  const { user } = useAuthContext();
   const router = useRouter();
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const password = useBoolean();
-
-  const { branches, branchesLoading, branchesEmpty, refreshBranches } = useGetBranchs();
+  const { branches } = useGetBranchs();
 
   const [departments, setDepartments] = useState([]);
+
+  const [reportingUserOptions, setReportingUserOptions] = useState([]);
 
   const [validationSchema, setValidationSchema] = useState(
     Yup.object().shape({
@@ -58,26 +51,10 @@ export default function TrainerViewForm({ currentTrainer }) {
       email: Yup.string()
         .required('Email is required')
         .email('Email must be a valid email address'),
-      country: Yup.string().required('Country is required'),
-      password: !currentTrainer
-        ? Yup.string()
-            .min(6, 'Password must be at least 6 characters')
-            .required('Password is required')
-        : Yup.string(),
-      confirmPassword: !currentTrainer
-        ? Yup.string()
-            .required('Confirm password is required')
-            .oneOf([Yup.ref('password')], 'Passwords must match')
-        : Yup.string(),
       phoneNumber: Yup.string()
         .required('Phone number is required')
         .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
       dob: Yup.string(),
-      address: Yup.string(),
-      state: Yup.string(),
-      city: Yup.string(),
-      role: Yup.string().required('Role is required'),
-      zipCode: Yup.string(),
       avatarUrl: Yup.mixed().nullable(),
       isActive: Yup.boolean(),
     })
@@ -86,20 +63,14 @@ export default function TrainerViewForm({ currentTrainer }) {
     () => ({
       firstName: currentTrainer?.firstName || '',
       lastName: currentTrainer?.lastName || '',
-      role: currentTrainer?.permissions[0] || '',
       dob: currentTrainer?.dob || '',
-      country: currentTrainer?.country || '',
       email: currentTrainer?.email || '',
       isActive: currentTrainer?.isActive ?? 1,
       avatarUrl: currentTrainer?.avatar?.fileUrl || null,
       phoneNumber: currentTrainer?.phoneNumber || '',
-      address: currentTrainer?.fullAddress || '',
-      city: currentTrainer?.city || '',
-      state: currentTrainer?.state || '',
-      password: '',
-      confirmPassword: '',
-      departments: currentTrainer?.departments || [],
+      department: currentTrainer?.department || null,
       branch: currentTrainer?.branch || null,
+      reportingUser: currentTrainer?.supervisor || null,
     }),
     [currentTrainer]
   );
@@ -114,61 +85,53 @@ export default function TrainerViewForm({ currentTrainer }) {
     watch,
     control,
     setValue,
-    setError,
-    clearErrors,
     handleSubmit,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
   } = methods;
 
-  const branch = watch('branch');
-  const selectedDepartments = watch('departments');
-  const values = watch();
-  const role = watch('role');
+  console.log(errors);
 
-  console.log(role);
+  const branch = watch('branch');
+  const department = watch('department');
+  const values = watch();
 
   const onSubmit = handleSubmit(async (formData) => {
     try {
       console.info('DATA', formData);
-
       const inputData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        permissions: [formData.role],
         email: formData.email,
         phoneNumber: formData.phoneNumber,
         isActive: formData.isActive,
         dob: formData.dob,
-        fullAddress: formData.address,
-        city: formData.city,
-        state: formData.state,
-        country: formData.country,
       };
       if (formData.avatarUrl) {
         inputData.avatar = {
           fileUrl: formData.avatarUrl,
         };
       }
-      if (formData.password) {
-        inputData.password = formData.password;
-      }
       if (formData.branch && formData.branch.id) {
         inputData.branchId = formData.branch.id;
       }
-      if (Array.isArray(formData.departments) && formData.departments.length > 0) {
-        inputData.departments = formData.departments.map((dept) => dept.id);
+      if (formData.department?.id) {
+        inputData.departmentId = formData.department.id;
+      }
+      if (formData.reportingUser?.id) {
+        inputData.supervisorId = formData.reportingUser.id;
       }
 
       console.log(inputData);
+
       if (!currentTrainer) {
-        await axiosInstance.post('/register', inputData);
+        await axiosInstance.post('/trainers', inputData);
       } else {
         console.log('here');
-        await axiosInstance.patch(`/users/${currentTrainer.id}`, inputData);
+        await axiosInstance.patch(`/trainers/${currentTrainer.id}`, inputData);
       }
       reset();
       enqueueSnackbar(currentTrainer ? 'Update success!' : 'Create success!');
-      router.push(paths.dashboard.user.list);
+      router.push(paths.dashboard.trainer.list);
     } catch (error) {
       console.error(error);
       enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
@@ -195,15 +158,58 @@ export default function TrainerViewForm({ currentTrainer }) {
     [setValue]
   );
 
+  const fetchReportingUsers = async (branchId, departmentId) => {
+    try {
+      const response = await axiosInstance.post('/users/by-branch-department', {
+        branchId,
+        departmentId,
+      });
+      setReportingUserOptions(response.data);
+    } catch (error) {
+      console.error('Failed to fetch reporting users:', error);
+      setReportingUserOptions([]);
+    }
+  };
   useEffect(() => {
-    if (role && role !== 'admin' && role !== 'super_admin') {
+    const branchId = branch?.id;
+    const departmentId = department?.id;
+
+    const isEditing = !!currentTrainer?.id;
+
+    if (branchId && departmentId) {
+      fetchReportingUsers(branchId, departmentId).then(() => {
+        if (isEditing && currentTrainer?.supervisor) {
+          setValue('reportingUser', currentTrainer.supervisor);
+        }
+      });
+    } else {
+      setReportingUserOptions([]);
+      setValue('reportingUser', null);
+    }
+  }, [branch, department, setValue, currentTrainer]);
+
+  useEffect(() => {
+    const isSuperOrAdmin =
+      user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
+    const isCGM = user?.permissions?.includes('cgm');
+
+    if (isSuperOrAdmin) {
       setValidationSchema((prev) =>
         prev.concat(
           Yup.object().shape({
             branch: Yup.object().required('Branch is required'),
-            departments: Yup.array()
-              .min(1, 'At least one department must be selected')
-              .required('Departments are required'),
+            department: Yup.object().required('Department is required'),
+            reportingUser: Yup.object().required('Reporting User is required'),
+          })
+        )
+      );
+    } else if (isCGM) {
+      setValidationSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            branch: Yup.mixed().notRequired(),
+            department: Yup.object().required('Department is required'),
+            reportingUser: Yup.object().required('Reporting User is required'),
           })
         )
       );
@@ -212,12 +218,13 @@ export default function TrainerViewForm({ currentTrainer }) {
         prev.concat(
           Yup.object().shape({
             branch: Yup.mixed().notRequired(),
-            departments: Yup.array().notRequired(),
+            department: Yup.mixed().notRequired(),
+            reportingUser: Yup.object().notRequired(),
           })
         )
       );
     }
-  }, [role]);
+  }, [user?.permissions]);
 
   useEffect(() => {
     if (!branch) {
@@ -236,17 +243,19 @@ export default function TrainerViewForm({ currentTrainer }) {
   }, [branch, currentTrainer, setValue]);
 
   useEffect(() => {
-    if (role === 'admin') {
-      setValue('branch', null);
-      setValue('departments', []);
-    }
-  }, [role, setValue]);
-
-  useEffect(() => {
     if (currentTrainer) {
       reset(defaultValues);
     }
   }, [currentTrainer, defaultValues, reset]);
+
+  useEffect(() => {
+    if (
+      (user?.permissions?.includes('hod') || user?.permissions?.includes('subhod')) &&
+      user?.branch
+    ) {
+      setValue('branch', user.branch);
+    }
+  }, [setValue, user]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -282,7 +291,6 @@ export default function TrainerViewForm({ currentTrainer }) {
                     <br /> max size of {fData(3145728)}
                   </Typography>
                 }
-                disabled
               />
             </Box>
           </Card>
@@ -299,10 +307,11 @@ export default function TrainerViewForm({ currentTrainer }) {
                 sm: 'repeat(2, 1fr)',
               }}
             >
-              <RHFTextField name="firstName" label="First Name" disabled />
-              <RHFTextField name="lastName" label="Last Name" disabled />
-              <RHFTextField name="email" label="Email Address" disabled />
-              <RHFTextField type="number" name="phoneNumber" label="Phone Number" disabled />
+              <RHFTextField name="firstName" label="First Name" />
+              <RHFTextField name="lastName" label="Last Name" />
+              <RHFTextField name="email" label="Email Address" />
+              <RHFTextField type="number" name="phoneNumber" label="Phone Number" />
+
               <Controller
                 name="dob"
                 control={control}
@@ -320,122 +329,156 @@ export default function TrainerViewForm({ currentTrainer }) {
                         helperText: error?.message,
                       },
                     }}
-                    disabled
                   />
                 )}
               />
+              <>
+                {user?.permissions?.includes('admin') ||
+                user?.permissions?.includes('super_admin') ||
+                user?.permissions?.includes('cgm') ? (
+                  <>
+                    {/* Branch Select */}
+                    <RHFAutocomplete
+                      name="branch"
+                      label="Branch"
+                      options={branches || []}
+                      getOptionLabel={(option) => `${option?.name}` || ''}
+                      filterOptions={(x) => x}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      renderOption={(props, option) => (
+                        <li {...props}>
+                          <Typography variant="subtitle2">{option?.name}</Typography>
+                        </li>
+                      )}
+                      renderTags={(selected, getTagProps) =>
+                        selected.map((option, tagIndex) => (
+                          <Chip
+                            {...getTagProps({ index: tagIndex })}
+                            key={option.id}
+                            label={option.name}
+                            size="small"
+                            color="info"
+                            variant="soft"
+                          />
+                        ))
+                      }
+                    />
 
-              <RHFAutocomplete
-                name="country"
-                label="Country"
-                options={countries.map((country) => country.label)}
-                getOptionLabel={(option) => option}
-                renderOption={(props, option) => {
-                  const { code, label, phone } = countries.filter(
-                    (country) => country.label === option
-                  )[0];
+                    {/* Department Select */}
+                    <RHFAutocomplete
+                      name="department"
+                      label="Department"
+                      options={departments || []}
+                      getOptionLabel={(option) => `${option?.name}` || ''}
+                      filterOptions={(x) => x}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      renderOption={(props, option) => (
+                        <li {...props}>
+                          <Typography variant="subtitle2">{option?.name}</Typography>
+                        </li>
+                      )}
+                    />
 
-                  if (!label) {
-                    return null;
-                  }
-
-                  return (
-                    <li {...props} key={label}>
-                      <Iconify
-                        key={label}
-                        icon={`circle-flags:${code.toLowerCase()}`}
-                        width={28}
-                        sx={{ mr: 1 }}
+                    {/* Reporting User Select */}
+                    {branch?.id && department?.id && (
+                      <RHFAutocomplete
+                        name="reportingUser"
+                        label="Reporting User"
+                        options={reportingUserOptions}
+                        getOptionLabel={(option) =>
+                          `${option?.firstName} ${option?.lastName}` || ''
+                        }
+                        filterOptions={(x) => x}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        renderOption={(props, option) => (
+                          <li {...props}>
+                            <div>
+                              <Typography variant="subtitle2" fontWeight="bold">
+                                {`${option?.firstName} ${option?.lastName}`}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {option.email}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {option.phoneNumber}
+                              </Typography>
+                            </div>
+                          </li>
+                        )}
                       />
-                      {label} ({code}) +{phone}
-                    </li>
-                  );
-                }}
-                disabled
-              />
-
-              <RHFTextField name="state" label="State/Region" disabled />
-              <RHFTextField name="city" label="City" disabled />
-              <RHFTextField name="address" label="Address" disabled />
-              <RHFSelect fullWidth name="role" label="Role" disabled>
-                {[
-                  { value: 'super_admin', name: 'Super Admin' },
-                  { value: 'admin', name: 'Admin' },
-                  { value: 'hod', name: 'HOD' },
-                  { value: 'sub_hod', name: 'SUB HOD' },
-                ].map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.name}
-                  </MenuItem>
-                ))}
-              </RHFSelect>
-              {role && role !== 'admin' && role !== 'super_admin' && (
-                <>
-                  <RHFAutocomplete
-                    name="branch"
-                    label="Branch"
-                    options={branches || []}
-                    getOptionLabel={(option) => `${option?.name}` || ''}
-                    filterOptions={(x) => x}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    renderOption={(props, option) => (
-                      <li {...props}>
-                        <div>
-                          <Typography variant="subtitle2" fontWeight="bold">
-                            {`${option?.name}`}
-                          </Typography>
-                        </div>
-                      </li>
                     )}
-                    renderTags={(selected, getTagProps) =>
-                      selected.map((option, tagIndex) => (
-                        <Chip
-                          {...getTagProps({ index: tagIndex })}
-                          key={option.id}
-                          label={`${option.name}`}
-                          size="small"
-                          color="info"
-                          variant="soft"
-                        />
-                      ))
-                    }
-                    disabled
-                  />
+                  </>
+                ) : user?.permissions?.includes('hod') || user?.permissions?.includes('subhod') ? (
+                  <>
+                    {/* Branch Disabled & Pre-selected */}
+                    <RHFAutocomplete
+                      name="branch"
+                      label="Branch"
+                      options={branches || []}
+                      getOptionLabel={(option) => `${option?.name}` || ''}
+                      filterOptions={(x) => x}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      renderOption={(props, option) => (
+                        <li {...props}>
+                          <Typography variant="subtitle2">{option?.name}</Typography>
+                        </li>
+                      )}
+                      disabled
+                    />
 
-                  <RHFAutocomplete
-                    multiple
-                    name="departments"
-                    label="Departments"
-                    options={departments || []}
-                    getOptionLabel={(option) => `${option?.name}` || ''}
-                    filterOptions={(x) => x}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    renderOption={(props, option) => (
-                      <li {...props}>
-                        <div>
-                          <Typography variant="subtitle2" fontWeight="bold">
-                            {`${option?.name}`}
-                          </Typography>
-                        </div>
-                      </li>
+                    {/* Department Fixed to User's Department */}
+                    <RHFAutocomplete
+                      name="department"
+                      label="Department"
+                      options={user?.departments ? user.departments : []}
+                      getOptionLabel={(option) => `${option?.name}` || ''}
+                      filterOptions={(x) => x}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      renderOption={(props, option) => (
+                        <li {...props}>
+                          <Typography variant="subtitle2">{option?.name}</Typography>
+                        </li>
+                      )}
+                    />
+
+                    {/* Reporting User Select */}
+                    {branch?.id && department?.id && (
+                      <RHFAutocomplete
+                        name="reportingUser"
+                        label="Reporting User"
+                        options={reportingUserOptions}
+                        getOptionLabel={(option) =>
+                          `${option?.firstName} ${option?.lastName}` || ''
+                        }
+                        filterOptions={(x) => x}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        renderOption={(props, option) => (
+                          <li {...props}>
+                            <div>
+                              <Typography variant="subtitle2" fontWeight="bold">
+                                {`${option?.firstName} ${option?.lastName}`}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {option.email}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {option.phoneNumber}
+                              </Typography>
+                            </div>
+                          </li>
+                        )}
+                      />
                     )}
-                    renderTags={(selected, getTagProps) =>
-                      selected.map((option, tagIndex) => (
-                        <Chip
-                          {...getTagProps({ index: tagIndex })}
-                          key={option.id}
-                          label={`${option.name}`}
-                          size="small"
-                          color="info"
-                          variant="soft"
-                        />
-                      ))
-                    }
-                    disabled
-                  />
-                </>
-              )}
+                  </>
+                ) : null}
+              </>
             </Box>
+
+            <Stack alignItems="flex-end" sx={{ mt: 3 }}>
+              <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
+                {!currentTrainer ? 'Create Trainer' : 'Save Changes'}
+              </LoadingButton>
+            </Stack>
           </Card>
         </Grid>
       </Grid>
@@ -443,6 +486,6 @@ export default function TrainerViewForm({ currentTrainer }) {
   );
 }
 
-TrainerViewForm.propTypes = {
+TrainerNewEditForm.propTypes = {
   currentTrainer: PropTypes.object,
 };

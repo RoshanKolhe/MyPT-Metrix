@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -184,14 +185,20 @@ export default function TrainerNewEditForm({ currentTrainer }) {
   useEffect(() => {
     const branchId = branch?.id;
     const departmentId = department?.id;
+
+    const isEditing = !!currentTrainer?.id;
+
     if (branchId && departmentId) {
-      setValue('reportingUser', null);
-      fetchReportingUsers(branchId, departmentId);
+      fetchReportingUsers(branchId, departmentId).then(() => {
+        if (isEditing && currentTrainer?.supervisor) {
+          setValue('reportingUser', currentTrainer.supervisor);
+        }
+      });
     } else {
       setReportingUserOptions([]);
       setValue('reportingUser', null);
     }
-  }, [branch, department, setValue]);
+  }, [branch, department, setValue, currentTrainer]);
 
   useEffect(() => {
     const isSuperOrAdmin =
@@ -252,6 +259,15 @@ export default function TrainerNewEditForm({ currentTrainer }) {
       reset(defaultValues);
     }
   }, [currentTrainer, defaultValues, reset]);
+
+  useEffect(() => {
+    if (
+      (user?.permissions?.includes('hod') || user?.permissions?.includes('subhod')) &&
+      user?.branch
+    ) {
+      setValue('branch', user.branch);
+    }
+  }, [setValue, user]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -328,75 +344,146 @@ export default function TrainerNewEditForm({ currentTrainer }) {
                   />
                 )}
               />
-              {user?.permissions?.includes('admin') ||
-              user?.permissions?.includes('super_admin') ? (
-                <>
-                  <RHFAutocomplete
-                    name="branch"
-                    label="Branch"
-                    options={branches || []}
-                    getOptionLabel={(option) => `${option?.name}` || ''}
-                    filterOptions={(x) => x}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    renderOption={(props, option) => (
-                      <li {...props}>
-                        <Typography variant="subtitle2">{option?.name}</Typography>
-                      </li>
-                    )}
-                    renderTags={(selected, getTagProps) =>
-                      selected.map((option, tagIndex) => (
-                        <Chip
-                          {...getTagProps({ index: tagIndex })}
-                          key={option.id}
-                          label={option.name}
-                          size="small"
-                          color="info"
-                          variant="soft"
-                        />
-                      ))
-                    }
-                  />
-
-                  <RHFAutocomplete
-                    name="department"
-                    label="Department"
-                    options={departments || []}
-                    getOptionLabel={(option) => `${option?.name}` || ''}
-                    filterOptions={(x) => x}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    renderOption={(props, option) => (
-                      <li {...props}>
-                        <Typography variant="subtitle2">{option?.name}</Typography>
-                      </li>
-                    )}
-                  />
-                  {branch?.id && department?.id && (
+              <>
+                {user?.permissions?.includes('admin') ||
+                user?.permissions?.includes('super_admin') ||
+                user?.permissions?.includes('cgm') ? (
+                  <>
+                    {/* Branch Select */}
                     <RHFAutocomplete
-                      name="reportingUser"
-                      label="Reporting User"
-                      options={reportingUserOptions}
-                      getOptionLabel={(option) => `${option?.firstName} ${option?.lastName}` || ''}
+                      name="branch"
+                      label="Branch"
+                      options={branches || []}
+                      getOptionLabel={(option) => `${option?.name}` || ''}
                       filterOptions={(x) => x}
                       isOptionEqualToValue={(option, value) => option.id === value.id}
                       renderOption={(props, option) => (
                         <li {...props}>
-                          <div>
-                            <Typography variant="subtitle2" fontWeight="bold">
-                              {`${option?.firstName} ${option?.lastName}`}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              {option.email}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              {option.phoneNumber}
-                            </Typography>
-                          </div>
+                          <Typography variant="subtitle2">{option?.name}</Typography>
+                        </li>
+                      )}
+                      renderTags={(selected, getTagProps) =>
+                        selected.map((option, tagIndex) => (
+                          <Chip
+                            {...getTagProps({ index: tagIndex })}
+                            key={option.id}
+                            label={option.name}
+                            size="small"
+                            color="info"
+                            variant="soft"
+                          />
+                        ))
+                      }
+                    />
+
+                    {/* Department Select */}
+                    <RHFAutocomplete
+                      name="department"
+                      label="Department"
+                      options={departments || []}
+                      getOptionLabel={(option) => `${option?.name}` || ''}
+                      filterOptions={(x) => x}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      renderOption={(props, option) => (
+                        <li {...props}>
+                          <Typography variant="subtitle2">{option?.name}</Typography>
                         </li>
                       )}
                     />
-                  )}
-                </>
-              ) : null}
+
+                    {/* Reporting User Select */}
+                    {branch?.id && department?.id && (
+                      <RHFAutocomplete
+                        name="reportingUser"
+                        label="Reporting User"
+                        options={reportingUserOptions}
+                        getOptionLabel={(option) =>
+                          `${option?.firstName} ${option?.lastName}` || ''
+                        }
+                        filterOptions={(x) => x}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        renderOption={(props, option) => (
+                          <li {...props}>
+                            <div>
+                              <Typography variant="subtitle2" fontWeight="bold">
+                                {`${option?.firstName} ${option?.lastName}`}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {option.email}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {option.phoneNumber}
+                              </Typography>
+                            </div>
+                          </li>
+                        )}
+                      />
+                    )}
+                  </>
+                ) : user?.permissions?.includes('hod') || user?.permissions?.includes('subhod') ? (
+                  <>
+                    {/* Branch Disabled & Pre-selected */}
+                    <RHFAutocomplete
+                      name="branch"
+                      label="Branch"
+                      options={branches || []}
+                      getOptionLabel={(option) => `${option?.name}` || ''}
+                      filterOptions={(x) => x}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      renderOption={(props, option) => (
+                        <li {...props}>
+                          <Typography variant="subtitle2">{option?.name}</Typography>
+                        </li>
+                      )}
+                      disabled
+                    />
+
+                    {/* Department Fixed to User's Department */}
+                    <RHFAutocomplete
+                      name="department"
+                      label="Department"
+                      options={user?.departments ? user.departments : []}
+                      getOptionLabel={(option) => `${option?.name}` || ''}
+                      filterOptions={(x) => x}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      renderOption={(props, option) => (
+                        <li {...props}>
+                          <Typography variant="subtitle2">{option?.name}</Typography>
+                        </li>
+                      )}
+                    />
+
+                    {/* Reporting User Select */}
+                    {branch?.id && department?.id && (
+                      <RHFAutocomplete
+                        name="reportingUser"
+                        label="Reporting User"
+                        options={reportingUserOptions}
+                        getOptionLabel={(option) =>
+                          `${option?.firstName} ${option?.lastName}` || ''
+                        }
+                        filterOptions={(x) => x}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        renderOption={(props, option) => (
+                          <li {...props}>
+                            <div>
+                              <Typography variant="subtitle2" fontWeight="bold">
+                                {`${option?.firstName} ${option?.lastName}`}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {option.email}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {option.phoneNumber}
+                              </Typography>
+                            </div>
+                          </li>
+                        )}
+                      />
+                    )}
+                  </>
+                ) : null}
+              </>
             </Box>
 
             <Stack alignItems="flex-end" sx={{ mt: 3 }}>

@@ -7,6 +7,7 @@ import { useLocales } from 'src/locales';
 import Label from 'src/components/label';
 import Iconify from 'src/components/iconify';
 import SvgColor from 'src/components/svg-color';
+import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
@@ -51,9 +52,11 @@ const ICONS = {
 
 export function useNavData() {
   const { t } = useLocales();
+  const { user } = useAuthContext();
 
-  const data = useMemo(
-    () => [
+  let data = [];
+  if (user && (user.permissions.includes('super_admin') || user.permissions.includes('admin'))) {
+    data = [
       // OVERVIEW
       // ----------------------------------------------------------------------
       {
@@ -132,9 +135,84 @@ export function useNavData() {
           },
         ],
       },
-    ],
-    [t]
-  );
+    ];
+  }
+  if (user && user.permissions.includes('cgm')) {
+    data = [
+      // OVERVIEW
+      // ----------------------------------------------------------------------
+      {
+        subheader: t('overview'),
+        items: [{ title: t('dashboard'), path: paths.dashboard.root, icon: ICONS.dashboard }],
+      },
 
+      // MANAGEMENT
+      // ----------------------------------------------------------------------
+      {
+        subheader: t('management'),
+        items: [
+          // USER
+          {
+            title: t('user'),
+            path: paths.dashboard.user.root,
+            icon: ICONS.user,
+            children: [
+              { title: t('list'), path: paths.dashboard.user.list },
+              { title: t('create'), path: paths.dashboard.user.new },
+            ],
+          },
+          // TRAINER
+          {
+            title: t('trainer'),
+            path: paths.dashboard.trainer.root,
+            icon: ICONS.trainer,
+            children: [
+              { title: t('list'), path: paths.dashboard.trainer.list },
+              { title: t('create'), path: paths.dashboard.trainer.new },
+            ],
+          },
+        ],
+      },
+    ];
+  }
+
+  if (user && user.permissions.includes('hod')) {
+    data = [
+      // OVERVIEW
+      // ----------------------------------------------------------------------
+      {
+        subheader: t('overview'),
+        items: [{ title: t('dashboard'), path: paths.dashboard.root, icon: ICONS.dashboard }],
+      },
+
+      // MANAGEMENT
+      // ----------------------------------------------------------------------
+      {
+        subheader: t('management'),
+        items: [
+          // USER
+          {
+            title: t('user'),
+            path: paths.dashboard.user.root,
+            icon: ICONS.user,
+            children: [
+              { title: t('list'), path: paths.dashboard.user.list },
+              { title: t('create'), path: paths.dashboard.user.new },
+            ],
+          },
+          // TRAINER
+          {
+            title: t('trainer'),
+            path: paths.dashboard.trainer.root,
+            icon: ICONS.trainer,
+            children: [
+              { title: t('list'), path: paths.dashboard.trainer.list },
+              { title: t('create'), path: paths.dashboard.trainer.new },
+            ],
+          },
+        ],
+      },
+    ];
+  }
   return data;
 }

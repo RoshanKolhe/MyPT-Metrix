@@ -30,7 +30,9 @@ export class DepartmentController {
 
   @authenticate({
     strategy: 'jwt',
-    options: {required: [PermissionKeys.SUPER_ADMIN]},
+    options: {
+      required: [PermissionKeys.SUPER_ADMIN, PermissionKeys.ADMIN],
+    },
   })
   @post('/departments')
   @response(200, {
@@ -55,7 +57,13 @@ export class DepartmentController {
 
   @authenticate({
     strategy: 'jwt',
-    options: {required: [PermissionKeys.SUPER_ADMIN]},
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+      ],
+    },
   })
   @get('/departments')
   @response(200, {
@@ -77,7 +85,13 @@ export class DepartmentController {
 
   @authenticate({
     strategy: 'jwt',
-    options: {required: [PermissionKeys.SUPER_ADMIN]},
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+      ],
+    },
   })
   @get('/departments/{id}')
   @response(200, {

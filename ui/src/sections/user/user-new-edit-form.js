@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -37,10 +38,31 @@ import { states } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useBoolean } from 'src/hooks/use-boolean';
 import { useGetBranchs } from 'src/api/branch';
+import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
+const allRoles = [
+  { value: 'super_admin', name: 'Super Admin' },
+  { value: 'admin', name: 'Admin' },
+  { value: 'cgm', name: 'CGM' },
+  { value: 'hod', name: 'HOD' },
+  { value: 'sub_hod', name: 'SUB HOD' },
+];
+
 export default function UserNewEditForm({ currentUser }) {
+  const { user } = useAuthContext();
+  console.log(user);
+  const userRole = user?.permissions?.[0];
+  const roleOptions =
+    userRole === 'hod'
+      ? allRoles.filter((r) => r.value === 'sub_hod')
+      : userRole === 'cgm'
+      ? allRoles.filter((r) => r.value === 'hod' || r.value === 'sub_hod')
+      : allRoles;
+
+  console.log(roleOptions);
+
   const router = useRouter();
 
   const { enqueueSnackbar } = useSnackbar();
@@ -49,7 +71,7 @@ export default function UserNewEditForm({ currentUser }) {
 
   const { branches, branchesLoading, branchesEmpty, refreshBranches } = useGetBranchs();
 
-  const [departments, setDepartments] = useState([]);
+  const [departmentOptions, setDepartmentOptions] = useState([]);
 
   const [validationSchema, setValidationSchema] = useState(
     Yup.object().shape({
@@ -232,19 +254,25 @@ export default function UserNewEditForm({ currentUser }) {
 
   useEffect(() => {
     if (!branch) {
-      setDepartments([]);
+      setDepartmentOptions([]);
       setValue('departments', []);
       return;
     }
 
     const fetchedDepartments = branch?.departments || [];
 
-    setDepartments(fetchedDepartments);
+    // Prevent overriding for HOD
+    if (userRole === 'hod') {
+      return;
+    }
 
+    setDepartmentOptions(fetchedDepartments);
+
+    // Only clear departments for new user if not HOD
     if (!currentUser) {
       setValue('departments', []);
     }
-  }, [branch, currentUser, setValue]);
+  }, [branch, currentUser, setValue, userRole]);
 
   useEffect(() => {
     if (role === 'admin') {
@@ -258,6 +286,41 @@ export default function UserNewEditForm({ currentUser }) {
       reset(defaultValues);
     }
   }, [currentUser, defaultValues, reset]);
+
+  useEffect(() => {
+    if (!currentUser && (userRole === 'cgm' || userRole === 'hod') && user) {
+      const selectedBranch = user.branch || null;
+      const selectedUserDepartments = user.departments || [];
+
+      reset((prev) => ({
+        ...prev,
+        branch: selectedBranch,
+        departments: userRole === 'hod' ? selectedUserDepartments : [],
+      }));
+
+      const options =
+        userRole === 'hod' ? selectedUserDepartments : selectedBranch?.departments || [];
+
+      console.log('Setting departmentOptions:', options);
+      setDepartmentOptions(options);
+    }
+  }, [user, userRole, currentUser, reset]);
+
+  useEffect(() => {
+    if (!currentUser && (userRole === 'cgm' || userRole === 'hod') && user) {
+      const selectedBranch = user.branch || null;
+      const selectedUserDepartments = user.departments || [];
+
+      if (userRole === 'hod') {
+        setDepartmentOptions(selectedUserDepartments);
+      } else {
+        setDepartmentOptions(selectedBranch?.departments || []);
+      }
+    }
+  }, [user, userRole, currentUser]);
+
+  console.log('Available department options:', departmentOptions);
+  console.log('Selected departments from form:', watch('departments'));
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -405,13 +468,7 @@ export default function UserNewEditForm({ currentUser }) {
               <RHFTextField name="city" label="City" />
               <RHFTextField name="address" label="Address" />
               <RHFSelect fullWidth name="role" label="Role">
-                {[
-                  { value: 'super_admin', name: 'Super Admin' },
-                  { value: 'admin', name: 'Admin' },
-                  { value: 'cgm', name: 'CGM' },
-                  { value: 'hod', name: 'HOD' },
-                  { value: 'sub_hod', name: 'SUB HOD' },
-                ].map((option) => (
+                {roleOptions.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
                     {option.name}
                   </MenuItem>
@@ -445,6 +502,7 @@ export default function UserNewEditForm({ currentUser }) {
                         />
                       ))
                     }
+                    disabled={userRole === 'hod' || userRole === 'cgm'}
                   />
 
                   {role !== 'cgm' && (
@@ -452,10 +510,10 @@ export default function UserNewEditForm({ currentUser }) {
                       multiple
                       name="departments"
                       label="Departments"
-                      options={departments || []}
+                      options={departmentOptions || []}
                       getOptionLabel={(option) => `${option?.name}` || ''}
                       filterOptions={(x) => x}
-                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      isOptionEqualToValue={(option, value) => option?.id === value?.id}
                       renderOption={(props, option) => (
                         <li {...props}>
                           <Typography variant="subtitle2" fontWeight="bold">
