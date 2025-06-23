@@ -564,4 +564,56 @@ export class UserController {
       deletedAt: new Date(),
     });
   }
+
+  @authenticate('jwt')
+  @post('/users/by-branch-department')
+  async getUsersByBranchAndDepartment(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['branchId', 'departmentId'],
+            properties: {
+              branchId: {type: 'number'},
+              departmentId: {type: 'number'},
+            },
+          },
+        },
+      },
+    })
+    body: {
+      branchId: number;
+      departmentId: number;
+    },
+  ): Promise<User[]> {
+    const {branchId, departmentId} = body;
+
+    // Fetch all users with the given branch
+    const users = await this.userRepository.find({
+      where: {
+        branchId,
+      },
+      include: [
+        {
+          relation: 'departments',
+          scope: {
+            where: {id: departmentId},
+          },
+        },
+      ],
+    });
+
+    // Now filter users whose permissions include 'hod' or 'subhod'
+    const filtered = users.filter(
+      user =>
+        (user.permissions || []).includes('hod') ||
+        (user.permissions || []).includes('subhod'),
+    );
+
+    // Ensure they are actually linked to the given department
+    return filtered.filter(
+      user => user.departments && user.departments.length > 0,
+    );
+  }
 }

@@ -36,11 +36,6 @@ export default function TrainerQuickEditForm({ currentTrainer, open, onClose, re
       .required('Phone number is required')
       .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
     dob: Yup.string(),
-    address: Yup.string(),
-    state: Yup.string(),
-    city: Yup.string(),
-    role: Yup.string().required('Role is required'),
-    zipCode: Yup.string(),
     avatarUrl: Yup.mixed().nullable(),
     isActive: Yup.boolean(),
   });
@@ -49,17 +44,13 @@ export default function TrainerQuickEditForm({ currentTrainer, open, onClose, re
     () => ({
       firstName: currentTrainer?.firstName || '',
       lastName: currentTrainer?.lastName || '',
-      role: currentTrainer?.permissions[0] || '',
       dob: currentTrainer?.dob || '',
       email: currentTrainer?.email || '',
-      isActive: currentTrainer?.isActive ? '1' : '0' || '',
-      country: currentTrainer?.country || '',
+      isActive: currentTrainer?.isActive ?? 1,
+      avatarUrl: currentTrainer?.avatar?.fileUrl || null,
       phoneNumber: currentTrainer?.phoneNumber || '',
-      address: currentTrainer?.fullAddress || '',
-      city: currentTrainer?.city || '',
-      state: currentTrainer?.state || '',
-      password: '',
-      confirmPassword: '',
+      department: currentTrainer?.department || null,
+      branch: currentTrainer?.branch || null,
     }),
     [currentTrainer]
   );
@@ -82,13 +73,9 @@ export default function TrainerQuickEditForm({ currentTrainer, open, onClose, re
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        permissions: [formData.role],
         phoneNumber: formData.phoneNumber,
         isActive: formData.isActive,
         dob: formData.dob,
-        fullAddress: formData.address,
-        city: formData.city,
-        state: formData.state,
       };
       await axiosInstance.patch(`/trainers/${currentTrainer.id}`, inputData);
       refreshTrainers();
@@ -165,51 +152,6 @@ export default function TrainerQuickEditForm({ currentTrainer, open, onClose, re
                 />
               )}
             />
-
-            <RHFAutocomplete
-              name="country"
-              label="Country"
-              options={countries.map((country) => country.label)}
-              getOptionLabel={(option) => option}
-              renderOption={(props, option) => {
-                const { code, label, phone } = countries.filter(
-                  (country) => country.label === option
-                )[0];
-
-                if (!label) {
-                  return null;
-                }
-
-                return (
-                  <li {...props} key={label}>
-                    <Iconify
-                      key={label}
-                      icon={`circle-flags:${code.toLowerCase()}`}
-                      width={28}
-                      sx={{ mr: 1 }}
-                    />
-                    {label} ({code}) +{phone}
-                  </li>
-                );
-              }}
-            />
-
-            <RHFTextField name="state" label="State/Region" />
-            <RHFTextField name="city" label="City" />
-            <RHFTextField name="address" label="Address" />
-            <RHFSelect fullWidth name="role" label="Role">
-              {[
-                { value: 'super_admin', name: 'Super Admin' },
-                { value: 'admin', name: 'Admin' },
-                { value: 'cgm', name: 'CGM' },
-                { value: 'hod', name: 'HOD' },
-                { value: 'sub_hod', name: 'SUB HOD' },
-              ].map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.name}
-                </MenuItem>
-              ))}
-            </RHFSelect>
           </Box>
         </DialogContent>
 

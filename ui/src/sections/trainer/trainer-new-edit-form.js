@@ -37,10 +37,12 @@ import { states } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useBoolean } from 'src/hooks/use-boolean';
 import { useGetBranchs } from 'src/api/branch';
+import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
 export default function TrainerNewEditForm({ currentTrainer }) {
+  const { user } = useAuthContext();
   const router = useRouter();
 
   const { enqueueSnackbar } = useSnackbar();
@@ -48,6 +50,8 @@ export default function TrainerNewEditForm({ currentTrainer }) {
   const { branches, branchesLoading, branchesEmpty, refreshBranches } = useGetBranchs();
 
   const [departments, setDepartments] = useState([]);
+
+  const [reportingUserOptions, setReportingUserOptions] = useState([]);
 
   const [validationSchema, setValidationSchema] = useState(
     Yup.object().shape({
@@ -73,8 +77,9 @@ export default function TrainerNewEditForm({ currentTrainer }) {
       isActive: currentTrainer?.isActive ?? 1,
       avatarUrl: currentTrainer?.avatar?.fileUrl || null,
       phoneNumber: currentTrainer?.phoneNumber || '',
-      departments: currentTrainer?.departments || [],
+      department: currentTrainer?.department || null,
       branch: currentTrainer?.branch || null,
+      reportingUser: currentTrainer?.supervisor || null,
     }),
     [currentTrainer]
   );
@@ -98,20 +103,15 @@ export default function TrainerNewEditForm({ currentTrainer }) {
   console.log(errors);
 
   const branch = watch('branch');
-  const selectedDepartments = watch('departments');
+  const department = watch('department');
   const values = watch();
-  const role = watch('role');
-
-  console.log(role);
 
   const onSubmit = handleSubmit(async (formData) => {
     try {
       console.info('DATA', formData);
-
       const inputData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        permissions: [formData.role],
         email: formData.email,
         phoneNumber: formData.phoneNumber,
         isActive: formData.isActive,
@@ -125,11 +125,15 @@ export default function TrainerNewEditForm({ currentTrainer }) {
       if (formData.branch && formData.branch.id) {
         inputData.branchId = formData.branch.id;
       }
-      if (Array.isArray(formData.departments) && formData.departments.length > 0) {
-        inputData.departments = formData.departments.map((dept) => dept.id);
+      if (formData.department?.id) {
+        inputData.departmentId = formData.department.id;
+      }
+      if (formData.reportingUser?.id) {
+        inputData.supervisorId = formData.reportingUser.id;
       }
 
       console.log(inputData);
+
       if (!currentTrainer) {
         await axiosInstance.post('/trainers', inputData);
       } else {
@@ -165,24 +169,52 @@ export default function TrainerNewEditForm({ currentTrainer }) {
     [setValue]
   );
 
+  const fetchReportingUsers = async (branchId, departmentId) => {
+    try {
+      const response = await axiosInstance.post('/users/by-branch-department', {
+        branchId,
+        departmentId,
+      });
+      setReportingUserOptions(response.data);
+    } catch (error) {
+      console.error('Failed to fetch reporting users:', error);
+      setReportingUserOptions([]);
+    }
+  };
   useEffect(() => {
-    if (role === 'cgm') {
+    const branchId = branch?.id;
+    const departmentId = department?.id;
+    if (branchId && departmentId) {
+      setValue('reportingUser', null);
+      fetchReportingUsers(branchId, departmentId);
+    } else {
+      setReportingUserOptions([]);
+      setValue('reportingUser', null);
+    }
+  }, [branch, department, setValue]);
+
+  useEffect(() => {
+    const isSuperOrAdmin =
+      user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
+    const isCGM = user?.permissions?.includes('cgm');
+
+    if (isSuperOrAdmin) {
       setValidationSchema((prev) =>
         prev.concat(
           Yup.object().shape({
             branch: Yup.object().required('Branch is required'),
-            departments: Yup.array().notRequired(),
+            department: Yup.object().required('Department is required'),
+            reportingUser: Yup.object().required('Reporting User is required'),
           })
         )
       );
-    } else if (role && role !== 'admin' && role !== 'super_admin') {
+    } else if (isCGM) {
       setValidationSchema((prev) =>
         prev.concat(
           Yup.object().shape({
-            branch: Yup.object().required('Branch is required'),
-            departments: Yup.array()
-              .min(1, 'At least one department must be selected')
-              .required('Departments are required'),
+            branch: Yup.mixed().notRequired(),
+            department: Yup.object().required('Department is required'),
+            reportingUser: Yup.object().required('Reporting User is required'),
           })
         )
       );
@@ -191,12 +223,13 @@ export default function TrainerNewEditForm({ currentTrainer }) {
         prev.concat(
           Yup.object().shape({
             branch: Yup.mixed().notRequired(),
-            departments: Yup.array().notRequired(),
+            department: Yup.mixed().notRequired(),
+            reportingUser: Yup.object().notRequired(),
           })
         )
       );
     }
-  }, [role]);
+  }, [user?.permissions]);
 
   useEffect(() => {
     if (!branch) {
@@ -213,13 +246,6 @@ export default function TrainerNewEditForm({ currentTrainer }) {
       setValue('departments', []);
     }
   }, [branch, currentTrainer, setValue]);
-
-  useEffect(() => {
-    if (role === 'admin') {
-      setValue('branch', null);
-      setValue('departments', []);
-    }
-  }, [role, setValue]);
 
   useEffect(() => {
     if (currentTrainer) {
@@ -302,7 +328,8 @@ export default function TrainerNewEditForm({ currentTrainer }) {
                   />
                 )}
               />
-              {role && role !== 'admin' && role !== 'super_admin' && (
+              {user?.permissions?.includes('admin') ||
+              user?.permissions?.includes('super_admin') ? (
                 <>
                   <RHFAutocomplete
                     name="branch"
@@ -313,9 +340,7 @@ export default function TrainerNewEditForm({ currentTrainer }) {
                     isOptionEqualToValue={(option, value) => option.id === value.id}
                     renderOption={(props, option) => (
                       <li {...props}>
-                        <Typography variant="subtitle2" fontWeight="bold">
-                          {option?.name}
-                        </Typography>
+                        <Typography variant="subtitle2">{option?.name}</Typography>
                       </li>
                     )}
                     renderTags={(selected, getTagProps) =>
@@ -332,38 +357,46 @@ export default function TrainerNewEditForm({ currentTrainer }) {
                     }
                   />
 
-                  {role !== 'cgm' && (
+                  <RHFAutocomplete
+                    name="department"
+                    label="Department"
+                    options={departments || []}
+                    getOptionLabel={(option) => `${option?.name}` || ''}
+                    filterOptions={(x) => x}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    renderOption={(props, option) => (
+                      <li {...props}>
+                        <Typography variant="subtitle2">{option?.name}</Typography>
+                      </li>
+                    )}
+                  />
+                  {branch?.id && department?.id && (
                     <RHFAutocomplete
-                      multiple
-                      name="departments"
-                      label="Departments"
-                      options={departments || []}
-                      getOptionLabel={(option) => `${option?.name}` || ''}
+                      name="reportingUser"
+                      label="Reporting User"
+                      options={reportingUserOptions}
+                      getOptionLabel={(option) => `${option?.firstName} ${option?.lastName}` || ''}
                       filterOptions={(x) => x}
                       isOptionEqualToValue={(option, value) => option.id === value.id}
                       renderOption={(props, option) => (
                         <li {...props}>
-                          <Typography variant="subtitle2" fontWeight="bold">
-                            {option?.name}
-                          </Typography>
+                          <div>
+                            <Typography variant="subtitle2" fontWeight="bold">
+                              {`${option?.firstName} ${option?.lastName}`}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {option.email}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {option.phoneNumber}
+                            </Typography>
+                          </div>
                         </li>
                       )}
-                      renderTags={(selected, getTagProps) =>
-                        selected.map((option, tagIndex) => (
-                          <Chip
-                            {...getTagProps({ index: tagIndex })}
-                            key={option.id}
-                            label={option.name}
-                            size="small"
-                            color="info"
-                            variant="soft"
-                          />
-                        ))
-                      }
                     />
                   )}
                 </>
-              )}
+              ) : null}
             </Box>
 
             <Stack alignItems="flex-end" sx={{ mt: 3 }}>

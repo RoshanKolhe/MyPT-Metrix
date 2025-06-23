@@ -30,7 +30,7 @@ export default function TrainerTableRow({
   quickEdit,
   handleQuickEditRow,
 }) {
-  const { firstName, lastName, avatar, permissions, isActive, email, phoneNumber } = row;
+  const { firstName, lastName, avatar, isActive, email, phoneNumber } = row;
 
   const confirm = useBoolean();
 
@@ -55,8 +55,6 @@ export default function TrainerTableRow({
         </TableCell>
 
         <TableCell sx={{ whiteSpace: 'nowrap' }}>{phoneNumber}</TableCell>
-
-        <TableCell sx={{ whiteSpace: 'nowrap' }}>{permissions.toString()}</TableCell>
 
         <TableCell>
           <Label

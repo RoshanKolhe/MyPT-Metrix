@@ -16,7 +16,7 @@ export default function TrainerCreateView() {
   return (
     <Container maxWidth={settings.themeStretch ? false : 'lg'}>
       <CustomBreadcrumbs
-        heading="Create a new trainer"
+        heading="Create a new Trainer"
         links={[
           {
             name: 'Dashboard',

@@ -50,7 +50,6 @@ const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...USER_STATUS_OPTIONS];
 const TABLE_HEAD = [
   { id: 'name', label: 'Name' },
   { id: 'phoneNumber', label: 'Phone Number', width: 180 },
-  { id: 'role', label: 'Role', width: 180 },
   { id: 'status', label: 'Status', width: 100 },
   { id: '', width: 88 },
 ];
@@ -166,8 +165,7 @@ export default function TrainerListView() {
 
   useEffect(() => {
     if (trainers) {
-      const updatedTrainers = trainers.filter((obj) => !obj.permissions.includes('super_admin'));
-      setTableData(updatedTrainers);
+      setTableData(trainers);
     }
   }, [trainers]);
 
@@ -395,12 +393,16 @@ function applyFilter({ inputData, comparator, filters }) {
 
   if (name) {
     inputData = inputData.filter((trainer) =>
-      Object.values(trainer).some((value) => String(value).toLowerCase().includes(name.toLowerCase()))
+      Object.values(trainer).some((value) =>
+        String(value).toLowerCase().includes(name.toLowerCase())
+      )
     );
   }
 
   if (status !== 'all') {
-    inputData = inputData.filter((trainer) => (status === '1' ? trainer.isActive : !trainer.isActive));
+    inputData = inputData.filter((trainer) =>
+      status === '1' ? trainer.isActive : !trainer.isActive
+    );
   }
 
   if (role.length) {

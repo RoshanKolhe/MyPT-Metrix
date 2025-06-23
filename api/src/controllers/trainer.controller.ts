@@ -84,7 +84,22 @@ export class TrainerController {
   async find(
     @param.filter(Trainer) filter?: Filter<Trainer>,
   ): Promise<Trainer[]> {
-    return this.trainerRepository.find(filter);
+    return this.trainerRepository.find({
+      ...filter,
+      include: [
+        {relation: 'department'},
+        {relation: 'branch'},
+        {
+          relation: 'supervisor',
+          scope: {
+            fields: {
+              password: false,
+              permissions: false,
+            },
+          },
+        },
+      ],
+    });
   }
 
   @authenticate({
@@ -111,7 +126,22 @@ export class TrainerController {
     @param.filter(Trainer, {exclude: 'where'})
     filter?: FilterExcludingWhere<Trainer>,
   ): Promise<Trainer> {
-    return this.trainerRepository.findById(id, filter);
+    return this.trainerRepository.findById(id, {
+      ...filter,
+      include: [
+        {relation: 'department'},
+        {relation: 'branch'},
+        {
+          relation: 'supervisor',
+          scope: {
+            fields: {
+              password: false,
+              permissions: false,
+            },
+          },
+        },
+      ],
+    });
   }
 
   @authenticate({
