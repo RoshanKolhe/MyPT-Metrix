@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary */
 import isEqual from 'lodash/isEqual';
 import { useState, useCallback, useEffect } from 'react';
 // @mui
@@ -38,6 +39,7 @@ import {
 //
 import { useGetUsers } from 'src/api/user';
 import { _roles, USER_STATUS_OPTIONS } from 'src/utils/constants';
+import { useAuthContext } from 'src/auth/hooks';
 import UserTableRow from '../user-table-row';
 import UserTableToolbar from '../user-table-toolbar';
 import UserTableFiltersResult from '../user-table-filters-result';
@@ -61,9 +63,26 @@ const defaultFilters = {
   status: 'all',
 };
 
+const roleLabels = {
+  super_admin: 'Super Admin',
+  admin: 'Admin',
+  cgm: 'CGM',
+  hod: 'Hod',
+  sub_hod: 'Sub Hod',
+};
 // ----------------------------------------------------------------------
 
 export default function UserListView() {
+  const { user: currentUser } = useAuthContext();
+  const userRole = currentUser?.permissions?.[0];
+  const roleOptions =
+    userRole === 'hod'
+      ? _roles.filter((r) => r === roleLabels.sub_hod)
+      : userRole === 'cgm'
+      ? _roles.filter((r) => r === roleLabels.hod || r === roleLabels.sub_hod)
+      : _roles;
+
+  console.log(roleOptions);
   const table = useTable();
 
   const settings = useSettingsContext();
@@ -236,7 +255,7 @@ export default function UserListView() {
             filters={filters}
             onFilters={handleFilters}
             //
-            roleOptions={_roles}
+            roleOptions={roleOptions}
           />
 
           {canReset && (

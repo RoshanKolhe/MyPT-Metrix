@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
 import { useMemo } from 'react';
@@ -21,11 +22,31 @@ import { states, USER_STATUS_OPTIONS } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import Iconify from 'src/components/iconify';
 import { countries } from 'src/assets/data';
+import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
+const allRoles = [
+  { value: 'super_admin', name: 'Super Admin' },
+  { value: 'admin', name: 'Admin' },
+  { value: 'cgm', name: 'CGM' },
+  { value: 'hod', name: 'HOD' },
+  { value: 'sub_hod', name: 'SUB HOD' },
+];
 export default function UserQuickEditForm({ currentUser, open, onClose, refreshUsers }) {
   console.log(currentUser);
+
+  const { user } = useAuthContext();
+  console.log(user);
+  const userRole = user?.permissions?.[0];
+
+  const roleOptions =
+    userRole === 'hod'
+      ? allRoles.filter((r) => r.value === 'sub_hod')
+      : userRole === 'cgm'
+      ? allRoles.filter((r) => r.value === 'hod' || r.value === 'sub_hod')
+      : allRoles;
+
   const { enqueueSnackbar } = useSnackbar();
 
   const NewUserSchema = Yup.object().shape({
@@ -198,13 +219,7 @@ export default function UserQuickEditForm({ currentUser, open, onClose, refreshU
             <RHFTextField name="city" label="City" />
             <RHFTextField name="address" label="Address" />
             <RHFSelect fullWidth name="role" label="Role">
-              {[
-                { value: 'super_admin', name: 'Super Admin' },
-                { value: 'admin', name: 'Admin' },
-                { value: 'cgm', name: 'CGM' },
-                { value: 'hod', name: 'HOD' },
-                { value: 'sub_hod', name: 'SUB HOD' },
-              ].map((option) => (
+              {roleOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.name}
                 </MenuItem>
