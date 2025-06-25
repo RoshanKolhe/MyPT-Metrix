@@ -10,45 +10,35 @@ import Box from '@mui/material/Box';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import Switch from '@mui/material/Switch';
 import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
-import FormControlLabel from '@mui/material/FormControlLabel';
 // utils
 import { fData } from 'src/utils/format-number';
 // routes
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hook';
-// assets
-import { countries } from 'src/assets/data';
 // components
 import Label from 'src/components/label';
-import Iconify from 'src/components/iconify';
 import { useSnackbar } from 'src/components/snackbar';
 import FormProvider, {
-  RHFSwitch,
   RHFTextField,
   RHFUploadAvatar,
   RHFAutocomplete,
-  RHFSelect,
 } from 'src/components/hook-form';
-import { Chip, IconButton, InputAdornment, MenuItem } from '@mui/material';
-import { states } from 'src/utils/constants';
+import { Chip } from '@mui/material';
 import axiosInstance from 'src/utils/axios';
-import { useBoolean } from 'src/hooks/use-boolean';
 import { useGetBranchs } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
-export default function TrainerNewEditForm({ currentTrainer }) {
+export default function StaffNewEditForm({ currentStaff }) {
   const { user } = useAuthContext();
   const router = useRouter();
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const { branches, branchesLoading, branchesEmpty, refreshBranches } = useGetBranchs();
+  const { branches } = useGetBranchs();
 
   const [departments, setDepartments] = useState([]);
 
@@ -71,18 +61,18 @@ export default function TrainerNewEditForm({ currentTrainer }) {
   );
   const defaultValues = useMemo(
     () => ({
-      firstName: currentTrainer?.firstName || '',
-      lastName: currentTrainer?.lastName || '',
-      dob: currentTrainer?.dob || '',
-      email: currentTrainer?.email || '',
-      isActive: currentTrainer?.isActive ?? 1,
-      avatarUrl: currentTrainer?.avatar?.fileUrl || null,
-      phoneNumber: currentTrainer?.phoneNumber || '',
-      department: currentTrainer?.department || null,
-      branch: currentTrainer?.branch || null,
-      reportingUser: currentTrainer?.supervisor || null,
+      firstName: currentStaff?.firstName || '',
+      lastName: currentStaff?.lastName || '',
+      dob: currentStaff?.dob || '',
+      email: currentStaff?.email || '',
+      isActive: currentStaff?.isActive ?? 1,
+      avatarUrl: currentStaff?.avatar?.fileUrl || null,
+      phoneNumber: currentStaff?.phoneNumber || '',
+      department: currentStaff?.department || null,
+      branch: currentStaff?.branch || null,
+      reportingUser: currentStaff?.supervisor || null,
     }),
-    [currentTrainer]
+    [currentStaff]
   );
 
   const methods = useForm({
@@ -95,8 +85,6 @@ export default function TrainerNewEditForm({ currentTrainer }) {
     watch,
     control,
     setValue,
-    setError,
-    clearErrors,
     handleSubmit,
     formState: { isSubmitting, errors },
   } = methods;
@@ -135,15 +123,15 @@ export default function TrainerNewEditForm({ currentTrainer }) {
 
       console.log(inputData);
 
-      if (!currentTrainer) {
-        await axiosInstance.post('/trainers', inputData);
+      if (!currentStaff) {
+        await axiosInstance.post('/staffs', inputData);
       } else {
         console.log('here');
-        await axiosInstance.patch(`/trainers/${currentTrainer.id}`, inputData);
+        await axiosInstance.patch(`/staffs/${currentStaff.id}`, inputData);
       }
       reset();
-      enqueueSnackbar(currentTrainer ? 'Update success!' : 'Create success!');
-      router.push(paths.dashboard.trainer.list);
+      enqueueSnackbar(currentStaff ? 'Update success!' : 'Create success!');
+      router.push(paths.dashboard.staff.list);
     } catch (error) {
       console.error(error);
       enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
@@ -186,19 +174,19 @@ export default function TrainerNewEditForm({ currentTrainer }) {
     const branchId = branch?.id;
     const departmentId = department?.id;
 
-    const isEditing = !!currentTrainer?.id;
+    const isEditing = !!currentStaff?.id;
 
     if (branchId && departmentId) {
       fetchReportingUsers(branchId, departmentId).then(() => {
-        if (isEditing && currentTrainer?.supervisor) {
-          setValue('reportingUser', currentTrainer.supervisor);
+        if (isEditing && currentStaff?.supervisor) {
+          setValue('reportingUser', currentStaff.supervisor);
         }
       });
     } else {
       setReportingUserOptions([]);
       setValue('reportingUser', null);
     }
-  }, [branch, department, setValue, currentTrainer]);
+  }, [branch, department, setValue, currentStaff]);
 
   useEffect(() => {
     const isSuperOrAdmin =
@@ -249,16 +237,16 @@ export default function TrainerNewEditForm({ currentTrainer }) {
 
     setDepartments(fetchedDepartments);
 
-    if (!currentTrainer) {
+    if (!currentStaff) {
       setValue('departments', []);
     }
-  }, [branch, currentTrainer, setValue]);
+  }, [branch, currentStaff, setValue]);
 
   useEffect(() => {
-    if (currentTrainer) {
+    if (currentStaff) {
       reset(defaultValues);
     }
-  }, [currentTrainer, defaultValues, reset]);
+  }, [currentStaff, defaultValues, reset]);
 
   useEffect(() => {
     if (
@@ -274,7 +262,7 @@ export default function TrainerNewEditForm({ currentTrainer }) {
       <Grid container spacing={3}>
         <Grid xs={12} md={4}>
           <Card sx={{ pt: 10, pb: 5, px: 3 }}>
-            {currentTrainer && (
+            {currentStaff && (
               <Label
                 color={(values.isActive && 'success') || (!values.isActive && 'error') || 'warning'}
                 sx={{ position: 'absolute', top: 24, right: 24 }}
@@ -488,7 +476,7 @@ export default function TrainerNewEditForm({ currentTrainer }) {
 
             <Stack alignItems="flex-end" sx={{ mt: 3 }}>
               <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
-                {!currentTrainer ? 'Create Trainer' : 'Save Changes'}
+                {!currentStaff ? 'Create Staff' : 'Save Changes'}
               </LoadingButton>
             </Stack>
           </Card>
@@ -498,6 +486,6 @@ export default function TrainerNewEditForm({ currentTrainer }) {
   );
 }
 
-TrainerNewEditForm.propTypes = {
-  currentTrainer: PropTypes.object,
+StaffNewEditForm.propTypes = {
+  currentStaff: PropTypes.object,
 };

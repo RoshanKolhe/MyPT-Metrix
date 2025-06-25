@@ -53,7 +53,7 @@ export default function DepartmentTableRow({
         </TableCell>
 
         <TableCell align="right" sx={{ px: 1, whiteSpace: 'nowrap' }}>
-          <Tooltip title="Quick Edit" placement="top" arrow>
+          {/* <Tooltip title="Quick Edit" placement="top" arrow>
             <IconButton
               color={quickEdit.value ? 'inherit' : 'default'}
               onClick={() => {
@@ -62,7 +62,7 @@ export default function DepartmentTableRow({
             >
               <Iconify icon="solar:pen-bold" />
             </IconButton>
-          </Tooltip>
+          </Tooltip> */}
 
           <Tooltip title="View" placement="top" arrow>
             <IconButton

@@ -20,11 +20,11 @@ const UserCreatePage = lazy(() => import('src/pages/dashboard/user/new'));
 const UserEditPage = lazy(() => import('src/pages/dashboard/user/edit'));
 const UserViewPage = lazy(() => import('src/pages/dashboard/user/view'));
 
-// TRAINER
-const TrainerListPage = lazy(() => import('src/pages/dashboard/trainer/list'));
-const TrainerCreatePage = lazy(() => import('src/pages/dashboard/trainer/new'));
-const TrainerEditPage = lazy(() => import('src/pages/dashboard/trainer/edit'));
-const TrainerViewPage = lazy(() => import('src/pages/dashboard/trainer/view'));
+// STAFF
+const StaffListPage = lazy(() => import('src/pages/dashboard/staff/list'));
+const StaffCreatePage = lazy(() => import('src/pages/dashboard/staff/new'));
+const StaffEditPage = lazy(() => import('src/pages/dashboard/staff/edit'));
+const StaffViewPage = lazy(() => import('src/pages/dashboard/staff/view'));
 
 // DEPARTMENT
 const DepartmentListPage = lazy(() => import('src/pages/dashboard/department/list'));
@@ -68,14 +68,14 @@ export const dashboardRoutes = [
         ],
       },
       {
-        path: 'trainer',
+        path: 'staff',
         element: <RolesAuthRoute roles={['super_admin', 'admin', 'cgm', 'hod']} />,
         children: [
-          { element: <TrainerListPage />, index: true },
-          { path: 'list', element: <TrainerListPage /> },
-          { path: 'new', element: <TrainerCreatePage /> },
-          { path: ':id/edit', element: <TrainerEditPage /> },
-          { path: ':id/view', element: <TrainerViewPage /> },
+          { element: <StaffListPage />, index: true },
+          { path: 'list', element: <StaffListPage /> },
+          { path: 'new', element: <StaffCreatePage /> },
+          { path: ':id/edit', element: <StaffEditPage /> },
+          { path: ':id/view', element: <StaffViewPage /> },
         ],
       },
       {
@@ -84,8 +84,6 @@ export const dashboardRoutes = [
         children: [
           { element: <DepartmentListPage />, index: true },
           { path: 'list', element: <DepartmentListPage /> },
-          { path: 'new', element: <DepartmentCreatePage /> },
-          { path: ':id/edit', element: <DepartmentEditPage /> },
           { path: ':id/view', element: <DepartmentViewPage /> },
         ],
       },

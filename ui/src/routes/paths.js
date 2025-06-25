@@ -119,18 +119,16 @@ export const paths = {
       edit: (id) => `${ROOTS.DASHBOARD}/user/${id}/edit`,
       view: (id) => `${ROOTS.DASHBOARD}/user/${id}/view`,
     },
-    trainer: {
-      root: `${ROOTS.DASHBOARD}/trainer`,
-      new: `${ROOTS.DASHBOARD}/trainer/new`,
-      list: `${ROOTS.DASHBOARD}/trainer/list`,
-      edit: (id) => `${ROOTS.DASHBOARD}/trainer/${id}/edit`,
-      view: (id) => `${ROOTS.DASHBOARD}/trainer/${id}/view`,
+    staff: {
+      root: `${ROOTS.DASHBOARD}/staff`,
+      new: `${ROOTS.DASHBOARD}/staff/new`,
+      list: `${ROOTS.DASHBOARD}/staff/list`,
+      edit: (id) => `${ROOTS.DASHBOARD}/staff/${id}/edit`,
+      view: (id) => `${ROOTS.DASHBOARD}/staff/${id}/view`,
     },
     department: {
       root: `${ROOTS.DASHBOARD}/department`,
-      new: `${ROOTS.DASHBOARD}/department/new`,
       list: `${ROOTS.DASHBOARD}/department/list`,
-      edit: (id) => `${ROOTS.DASHBOARD}/department/${id}/edit`,
       view: (id) => `${ROOTS.DASHBOARD}/department/${id}/view`,
     },
     branch: {

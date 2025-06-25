@@ -11,7 +11,7 @@ import Iconify from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
 
-export default function TrainerTableFiltersResult({
+export default function StaffTableFiltersResult({
   filters,
   onFilters,
   //
@@ -69,7 +69,7 @@ export default function TrainerTableFiltersResult({
   );
 }
 
-TrainerTableFiltersResult.propTypes = {
+StaffTableFiltersResult.propTypes = {
   filters: PropTypes.object,
   onFilters: PropTypes.func,
   onResetFilters: PropTypes.func,

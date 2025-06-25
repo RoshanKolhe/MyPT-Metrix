@@ -17,7 +17,7 @@ import CustomPopover, { usePopover } from 'src/components/custom-popover';
 
 // ----------------------------------------------------------------------
 
-export default function TrainerTableToolbar({
+export default function StaffTableToolbar({
   filters,
   onFilters,
   //
@@ -105,7 +105,7 @@ export default function TrainerTableToolbar({
   );
 }
 
-TrainerTableToolbar.propTypes = {
+StaffTableToolbar.propTypes = {
   filters: PropTypes.object,
   onFilters: PropTypes.func,
   roleOptions: PropTypes.array,

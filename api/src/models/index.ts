@@ -4,3 +4,4 @@ export * from './department.model';
 export * from './branch-department.model';
 export * from './user-department.model';
 export * from './trainer.model';
+export * from './target.model';

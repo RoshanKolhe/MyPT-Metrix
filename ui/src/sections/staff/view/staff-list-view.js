@@ -36,12 +36,12 @@ import {
   TablePaginationCustom,
 } from 'src/components/table';
 //
-import { useGetTrainers } from 'src/api/trainer';
+import { useGetStaffs } from 'src/api/staff';
 import { _roles, USER_STATUS_OPTIONS } from 'src/utils/constants';
-import TrainerTableRow from '../trainer-table-row';
-import TrainerTableToolbar from '../trainer-table-toolbar';
-import TrainerTableFiltersResult from '../trainer-table-filters-result';
-import TrainerQuickEditForm from '../trainer-quick-edit-form';
+import StaffTableRow from '../staff-table-row';
+import StaffTableToolbar from '../staff-table-toolbar';
+import StaffTableFiltersResult from '../staff-table-filters-result';
+import StaffQuickEditForm from '../staff-quick-edit-form';
 
 // ----------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ const defaultFilters = {
 
 // ----------------------------------------------------------------------
 
-export default function TrainerListView() {
+export default function StaffListView() {
   const table = useTable();
 
   const settings = useSettingsContext();
@@ -79,7 +79,7 @@ export default function TrainerListView() {
 
   const [filters, setFilters] = useState(defaultFilters);
 
-  const { trainers, trainersLoading, trainersEmpty, refreshTrainers } = useGetTrainers();
+  const { staffs, staffsLoading, staffsEmpty, refreshStaffs } = useGetStaffs();
 
   const dataFiltered = applyFilter({
     inputData: tableData,
@@ -132,14 +132,14 @@ export default function TrainerListView() {
 
   const handleEditRow = useCallback(
     (id) => {
-      router.push(paths.dashboard.trainer.edit(id));
+      router.push(paths.dashboard.staff.edit(id));
     },
     [router]
   );
 
   const handleViewRow = useCallback(
     (id) => {
-      router.push(paths.dashboard.trainer.view(id));
+      router.push(paths.dashboard.staff.view(id));
     },
     [router]
   );
@@ -164,10 +164,10 @@ export default function TrainerListView() {
   }, []);
 
   useEffect(() => {
-    if (trainers) {
-      setTableData(trainers);
+    if (staffs) {
+      setTableData(staffs);
     }
-  }, [trainers]);
+  }, [staffs]);
 
   return (
     <>
@@ -176,17 +176,17 @@ export default function TrainerListView() {
           heading="List"
           links={[
             { name: 'Dashboard', href: paths.dashboard.root },
-            { name: 'Trainer', href: paths.dashboard.trainer.root },
+            { name: 'Staff', href: paths.dashboard.staff.root },
             { name: 'List' },
           ]}
           action={
             <Button
               component={RouterLink}
-              href={paths.dashboard.trainer.new}
+              href={paths.dashboard.staff.new}
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
             >
-              New Trainer
+              New Staff
             </Button>
           }
           sx={{
@@ -221,16 +221,16 @@ export default function TrainerListView() {
                     }
                   >
                     {tab.value === 'all' && tableData.length}
-                    {tab.value === '1' && tableData.filter((trainer) => trainer.isActive).length}
+                    {tab.value === '1' && tableData.filter((staff) => staff.isActive).length}
 
-                    {tab.value === '0' && tableData.filter((trainer) => !trainer.isActive).length}
+                    {tab.value === '0' && tableData.filter((staff) => !staff.isActive).length}
                   </Label>
                 }
               />
             ))}
           </Tabs>
 
-          <TrainerTableToolbar
+          <StaffTableToolbar
             filters={filters}
             onFilters={handleFilters}
             //
@@ -238,7 +238,7 @@ export default function TrainerListView() {
           />
 
           {canReset && (
-            <TrainerTableFiltersResult
+            <StaffTableFiltersResult
               filters={filters}
               onFilters={handleFilters}
               //
@@ -294,7 +294,7 @@ export default function TrainerListView() {
                       table.page * table.rowsPerPage + table.rowsPerPage
                     )
                     .map((row) => (
-                      <TrainerTableRow
+                      <StaffTableRow
                         key={row.id}
                         row={row}
                         selected={table.selected.includes(row.id)}
@@ -302,8 +302,8 @@ export default function TrainerListView() {
                         onDeleteRow={() => handleDeleteRow(row.id)}
                         onEditRow={() => handleEditRow(row.id)}
                         onViewRow={() => handleViewRow(row.id)}
-                        handleQuickEditRow={(trainer) => {
-                          handleQuickEditRow(trainer);
+                        handleQuickEditRow={(staff) => {
+                          handleQuickEditRow(staff);
                         }}
                         quickEdit={quickEdit}
                       />
@@ -357,14 +357,14 @@ export default function TrainerListView() {
       />
 
       {quickEdit.value && quickEditRow && (
-        <TrainerQuickEditForm
-          currentTrainer={quickEditRow}
+        <StaffQuickEditForm
+          currentStaff={quickEditRow}
           open={quickEdit.value}
           onClose={() => {
             setQuickEditRow(null);
             quickEdit.onFalse();
           }}
-          refreshTrainers={refreshTrainers}
+          refreshStaffs={refreshStaffs}
         />
       )}
     </>
@@ -392,26 +392,26 @@ function applyFilter({ inputData, comparator, filters }) {
   inputData = stabilizedThis.map((el) => el[0]);
 
   if (name) {
-    inputData = inputData.filter((trainer) =>
-      Object.values(trainer).some((value) =>
+    inputData = inputData.filter((staff) =>
+      Object.values(staff).some((value) =>
         String(value).toLowerCase().includes(name.toLowerCase())
       )
     );
   }
 
   if (status !== 'all') {
-    inputData = inputData.filter((trainer) =>
-      status === '1' ? trainer.isActive : !trainer.isActive
+    inputData = inputData.filter((staff) =>
+      status === '1' ? staff.isActive : !staff.isActive
     );
   }
 
   if (role.length) {
     inputData = inputData.filter(
-      (trainer) =>
-        trainer.permissions &&
-        trainer.permissions.some((trainerRole) => {
-          console.log(trainerRole);
-          const mappedRole = roleMapping[trainerRole];
+      (staff) =>
+        staff.permissions &&
+        staff.permissions.some((staffRole) => {
+          console.log(staffRole);
+          const mappedRole = roleMapping[staffRole];
           console.log('Mapped Role:', mappedRole); // Check the mapped role
           return mappedRole && role.includes(mappedRole);
         })

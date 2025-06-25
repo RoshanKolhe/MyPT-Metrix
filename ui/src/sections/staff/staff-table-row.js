@@ -20,7 +20,7 @@ import { ConfirmDialog } from 'src/components/custom-dialog';
 
 // ----------------------------------------------------------------------
 
-export default function TrainerTableRow({
+export default function StaffTableRow({
   row,
   selected,
   onEditRow,
@@ -77,7 +77,7 @@ export default function TrainerTableRow({
                 <Iconify icon="solar:pen-bold" />
               </IconButton>
             </Tooltip>
-            <Tooltip title="View Trainer" placement="top" arrow>
+            <Tooltip title="View Staff" placement="top" arrow>
               <IconButton
                 onClick={() => {
                   onViewRow();
@@ -137,7 +137,7 @@ export default function TrainerTableRow({
   );
 }
 
-TrainerTableRow.propTypes = {
+StaffTableRow.propTypes = {
   onDeleteRow: PropTypes.func,
   onEditRow: PropTypes.func,
   onViewRow: PropTypes.func,

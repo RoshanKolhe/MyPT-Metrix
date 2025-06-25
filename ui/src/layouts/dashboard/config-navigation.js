@@ -25,7 +25,7 @@ const ICONS = {
   chat: icon('ic_chat'),
   mail: icon('ic_mail'),
   user: icon('ic_user'),
-  trainer: icon('ic_trainer'),
+  staff: icon('ic_staff'),
   file: icon('ic_file'),
   lock: icon('ic_lock'),
   tour: icon('ic_tour'),
@@ -79,14 +79,14 @@ export function useNavData() {
               { title: t('create'), path: paths.dashboard.user.new },
             ],
           },
-          // TRAINER
+          // STAFF
           {
-            title: t('trainer'),
-            path: paths.dashboard.trainer.root,
-            icon: ICONS.trainer,
+            title: t('staff'),
+            path: paths.dashboard.staff.root,
+            icon: ICONS.staff,
             children: [
-              { title: t('list'), path: paths.dashboard.trainer.list },
-              { title: t('create'), path: paths.dashboard.trainer.new },
+              { title: t('list'), path: paths.dashboard.staff.list },
+              { title: t('create'), path: paths.dashboard.staff.new },
             ],
           },
         ],
@@ -105,11 +105,6 @@ export function useNavData() {
               {
                 title: t('list'),
                 path: paths.dashboard.department.list,
-                roles: ['super_admin'],
-              },
-              {
-                title: t('create'),
-                path: paths.dashboard.department.new,
                 roles: ['super_admin'],
               },
             ],
@@ -161,14 +156,14 @@ export function useNavData() {
               { title: t('create'), path: paths.dashboard.user.new },
             ],
           },
-          // TRAINER
+          // STAFF
           {
-            title: t('trainer'),
-            path: paths.dashboard.trainer.root,
-            icon: ICONS.trainer,
+            title: t('staff'),
+            path: paths.dashboard.staff.root,
+            icon: ICONS.staff,
             children: [
-              { title: t('list'), path: paths.dashboard.trainer.list },
-              { title: t('create'), path: paths.dashboard.trainer.new },
+              { title: t('list'), path: paths.dashboard.staff.list },
+              { title: t('create'), path: paths.dashboard.staff.new },
             ],
           },
         ],
@@ -200,14 +195,14 @@ export function useNavData() {
               { title: t('create'), path: paths.dashboard.user.new },
             ],
           },
-          // TRAINER
+          // STAFF
           {
-            title: t('trainer'),
-            path: paths.dashboard.trainer.root,
-            icon: ICONS.trainer,
+            title: t('staff'),
+            path: paths.dashboard.staff.root,
+            icon: ICONS.staff,
             children: [
-              { title: t('list'), path: paths.dashboard.trainer.list },
-              { title: t('create'), path: paths.dashboard.trainer.new },
+              { title: t('list'), path: paths.dashboard.staff.list },
+              { title: t('create'), path: paths.dashboard.staff.new },
             ],
           },
         ],

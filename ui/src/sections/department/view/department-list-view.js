@@ -198,16 +198,6 @@ export default function DepartmentListView() {
             { name: 'Department Management', href: paths.dashboard.department.list },
             { name: 'List' },
           ]}
-          action={
-            <Button
-              component={RouterLink}
-              href={paths.dashboard.department.new}
-              variant="contained"
-              startIcon={<Iconify icon="mingcute:add-line" />}
-            >
-              New Department
-            </Button>
-          }
           sx={{
             mb: { xs: 3, md: 5 },
           }}

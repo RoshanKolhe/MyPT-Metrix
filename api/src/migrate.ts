@@ -1,4 +1,4 @@
-import {MyPtMetrixApplication} from './application';
+import { MyPtMetrixApplication } from './application';
 
 export async function migrate(args: string[]) {
   const existingSchema = args.includes('--rebuild') ? 'drop' : 'alter';
@@ -15,6 +15,7 @@ export async function migrate(args: string[]) {
       'BranchDepartment',
       'UserDepartment',
       'Trainer',
+      'Target',
     ],
   });
 

@@ -1,17 +1,17 @@
 import { Helmet } from 'react-helmet-async';
 // sections
-import { TrainerListView } from 'src/sections/trainer/view';
+import { StaffCreateView } from 'src/sections/staff/view';
 
 // ----------------------------------------------------------------------
 
-export default function TrainerListPage() {
+export default function StaffCreatePage() {
   return (
     <>
       <Helmet>
-        <title> Dashboard: Trainer List</title>
+        <title> Dashboard: Create a new staff</title>
       </Helmet>
 
-      <TrainerListView />
+      <StaffCreateView />
     </>
   );
 }

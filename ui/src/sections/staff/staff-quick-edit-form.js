@@ -24,11 +24,11 @@ import { countries } from 'src/assets/data';
 
 // ----------------------------------------------------------------------
 
-export default function TrainerQuickEditForm({ currentTrainer, open, onClose, refreshTrainers }) {
-  console.log(currentTrainer);
+export default function StaffQuickEditForm({ currentStaff, open, onClose, refreshStaffs }) {
+  console.log(currentStaff);
   const { enqueueSnackbar } = useSnackbar();
 
-  const NewTrainerSchema = Yup.object().shape({
+  const NewStaffSchema = Yup.object().shape({
     firstName: Yup.string().required('First Name is required'),
     lastName: Yup.string().required('Last Name is required'),
     email: Yup.string().required('Email is required').email('Email must be a valid email address'),
@@ -42,21 +42,21 @@ export default function TrainerQuickEditForm({ currentTrainer, open, onClose, re
 
   const defaultValues = useMemo(
     () => ({
-      firstName: currentTrainer?.firstName || '',
-      lastName: currentTrainer?.lastName || '',
-      dob: currentTrainer?.dob || '',
-      email: currentTrainer?.email || '',
-      isActive: currentTrainer?.isActive ?? 1,
-      avatarUrl: currentTrainer?.avatar?.fileUrl || null,
-      phoneNumber: currentTrainer?.phoneNumber || '',
-      department: currentTrainer?.department || null,
-      branch: currentTrainer?.branch || null,
+      firstName: currentStaff?.firstName || '',
+      lastName: currentStaff?.lastName || '',
+      dob: currentStaff?.dob || '',
+      email: currentStaff?.email || '',
+      isActive: currentStaff?.isActive ?? 1,
+      avatarUrl: currentStaff?.avatar?.fileUrl || null,
+      phoneNumber: currentStaff?.phoneNumber || '',
+      department: currentStaff?.department || null,
+      branch: currentStaff?.branch || null,
     }),
-    [currentTrainer]
+    [currentStaff]
   );
 
   const methods = useForm({
-    resolver: yupResolver(NewTrainerSchema),
+    resolver: yupResolver(NewStaffSchema),
     defaultValues,
   });
 
@@ -77,8 +77,8 @@ export default function TrainerQuickEditForm({ currentTrainer, open, onClose, re
         isActive: formData.isActive,
         dob: formData.dob,
       };
-      await axiosInstance.patch(`/trainers/${currentTrainer.id}`, inputData);
-      refreshTrainers();
+      await axiosInstance.patch(`/staffs/${currentStaff.id}`, inputData);
+      refreshStaffs();
       reset();
       onClose();
       enqueueSnackbar('Update success!');
@@ -102,7 +102,7 @@ export default function TrainerQuickEditForm({ currentTrainer, open, onClose, re
         <DialogTitle>Quick Update</DialogTitle>
 
         <DialogContent>
-          {!currentTrainer?.isActive && (
+          {!currentStaff?.isActive && (
             <Alert variant="outlined" severity="error" sx={{ mb: 3 }}>
               Account is In-Active
             </Alert>
@@ -169,9 +169,9 @@ export default function TrainerQuickEditForm({ currentTrainer, open, onClose, re
   );
 }
 
-TrainerQuickEditForm.propTypes = {
-  currentTrainer: PropTypes.object,
+StaffQuickEditForm.propTypes = {
+  currentStaff: PropTypes.object,
   onClose: PropTypes.func,
   open: PropTypes.bool,
-  refreshTrainers: PropTypes.func,
+  refreshStaffs: PropTypes.func,
 };

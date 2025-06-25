@@ -55,7 +55,7 @@ export const endpoints = {
     filterList: (filter) => `/users/list?${filter}`,
     details: (id) => `/users/${id}`,
   },
-  trainer: {
+  staff: {
     list: '/trainers',
     filterList: (filter) => `/trainers?${filter}`,
     details: (id) => `/trainers/${id}`,

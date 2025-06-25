@@ -8,14 +8,14 @@ import { useSettingsContext } from 'src/components/settings';
 import CustomBreadcrumbs from 'src/components/custom-breadcrumbs';
 //
 import { Tab, Tabs } from '@mui/material';
-import { useGetTrainer } from 'src/api/trainer';
+import { useGetStaff } from 'src/api/staff';
 import Iconify from 'src/components/iconify';
 import { useCallback, useState } from 'react';
-import TrainerNewEditForm from '../trainer-new-edit-form';
+import StaffNewEditForm from '../staff-new-edit-form';
 
 // ----------------------------------------------------------------------
 
-export default function TrainerEditView() {
+export default function StaffEditView() {
   const settings = useSettingsContext();
 
   const [currentTab, setCurrentTab] = useState('general');
@@ -28,7 +28,7 @@ export default function TrainerEditView() {
 
   const { id } = params;
 
-  const { trainer: currentTrainer } = useGetTrainer(id);
+  const { staff: currentStaff } = useGetStaff(id);
 
   return (
     <Container maxWidth={settings.themeStretch ? false : 'lg'}>
@@ -40,11 +40,11 @@ export default function TrainerEditView() {
             href: paths.dashboard.root,
           },
           {
-            name: 'Trainer',
-            href: paths.dashboard.trainer.root,
+            name: 'Staff',
+            href: paths.dashboard.staff.root,
           },
           {
-            name: `${currentTrainer?.firstName} ${currentTrainer?.lastName ? currentTrainer?.lastName : ''}`,
+            name: `${currentStaff?.firstName} ${currentStaff?.lastName ? currentStaff?.lastName : ''}`,
           },
         ]}
         sx={{
@@ -52,7 +52,7 @@ export default function TrainerEditView() {
         }}
       />
 
-      <TrainerNewEditForm currentTrainer={currentTrainer} />
+      <StaffNewEditForm currentStaff={currentStaff} />
     </Container>
   );
 }
