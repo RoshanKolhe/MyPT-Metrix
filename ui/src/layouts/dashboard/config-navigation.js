@@ -216,6 +216,16 @@ export function useNavData() {
               { title: t('create'), path: paths.dashboard.user.new },
             ],
           },
+          // TARGET
+          {
+            title: t('target'),
+            path: paths.dashboard.target.root,
+            icon: ICONS.target,
+            children: [
+              { title: t('list'), path: paths.dashboard.target.list },
+              { title: t('create'), path: paths.dashboard.target.new },
+            ],
+          },
           // STAFF
           {
             title: t('staff'),

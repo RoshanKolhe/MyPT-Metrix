@@ -30,7 +30,7 @@ export default function TargetTableRow({
   onViewRow,
   onSelectRow,
   onDeleteRow,
-  quickEdit,
+  onAssignTrainerTarget,
 }) {
   const { user } = useAuthContext();
   const isSuperOrAdmin =
@@ -93,7 +93,6 @@ export default function TargetTableRow({
           {isSuperOrAdmin ? (
             <Tooltip title="Edit" placement="top" arrow>
               <IconButton
-                color={quickEdit.value ? 'inherit' : 'default'}
                 onClick={() => {
                   onEditRow();
                 }}
@@ -143,6 +142,9 @@ export default function TargetTableRow({
               <Grid item xs={3}>
                 Target
               </Grid>
+              <Grid item xs={3}>
+                Action
+              </Grid>
             </Grid>
 
             {/* Table Rows */}
@@ -160,6 +162,19 @@ export default function TargetTableRow({
                 </Grid>
                 <Grid item xs={3}>
                   {item?.targetValue}
+                </Grid>
+                <Grid item xs={3}>
+                  {status === 1 ? (
+                    <Tooltip title="Assign Target">
+                      <IconButton
+                        color="primary"
+                        size="small"
+                        onClick={() => onAssignTrainerTarget(item)}
+                      >
+                        <Iconify icon="ic:baseline-assignment" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
                 </Grid>
               </Grid>
             ))}
@@ -197,5 +212,5 @@ TargetTableRow.propTypes = {
   onSelectRow: PropTypes.func,
   row: PropTypes.object,
   selected: PropTypes.bool,
-  quickEdit: PropTypes.any,
+  onAssignTrainerTarget: PropTypes.func,
 };

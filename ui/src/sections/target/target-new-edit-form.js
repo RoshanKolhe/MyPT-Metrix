@@ -187,7 +187,7 @@ export default function TargetNewEditForm({ currentTarget }) {
   }, [currentTarget, setValue]);
 
   useEffect(() => {
-    if (isSuperAdmin && branch?.departments) {
+    if (branch?.departments) {
       setDepartments(branch.departments);
 
       // Initialize validation schema for each department
@@ -221,19 +221,12 @@ export default function TargetNewEditForm({ currentTarget }) {
     }
   }, [branch, isSuperAdmin]);
 
-  useEffect(() => {
-    if (isHOD && user?.branch) {
-      setValue('branch', user.branch);
-      setDepartments(user?.departments ?? []);
-
-      axiosInstance
-        .post('/trainers/by-department', {
-          departmentIds: user.departments?.map((d) => d.id),
-        })
-        .then((res) => setTrainers(res.data))
-        .catch(() => setTrainers([]));
-    }
-  }, [isHOD, user, setValue]);
+  // useEffect(() => {
+  //   if (user?.branch) {
+  //     setValue('branch', user.branch);
+  //     setDepartments(user?.departments ?? []);
+  //   }
+  // }, [user, setValue]);
 
   useEffect(() => {
     if (branchTarget) {
@@ -306,6 +299,7 @@ export default function TargetNewEditForm({ currentTarget }) {
                         onChange={(newValue) => {
                           field.onChange(newValue);
                         }}
+                        minDate={new Date()}
                         slotProps={{
                           textField: {
                             fullWidth: true,
@@ -329,6 +323,7 @@ export default function TargetNewEditForm({ currentTarget }) {
                         onChange={(newValue) => {
                           field.onChange(newValue);
                         }}
+                        minDate={new Date()}
                         slotProps={{
                           textField: {
                             fullWidth: true,
@@ -380,29 +375,6 @@ export default function TargetNewEditForm({ currentTarget }) {
                 </Grid>
               )}
 
-              {isHOD && trainers.length > 0 && (
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Assign Targets to Trainers</Typography>
-                  <Grid container spacing={2} sx={{ mt: 1 }}>
-                    {trainers.map((trainer) => (
-                      <Grid item xs={12} sm={6} key={trainer.id}>
-                        <TextField
-                          fullWidth
-                          label={`${trainer.firstName} ${trainer.lastName}`}
-                          type="number"
-                          onChange={(e) =>
-                            setTrainerTargets((prev) => ({
-                              ...prev,
-                              [trainer.id]: e.target.value,
-                            }))
-                          }
-                        />
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Grid>
-              )}
-
               {currentTarget?.requestChangeReason ? (
                 <Grid item xs={12}>
                   <RHFTextField
@@ -415,9 +387,13 @@ export default function TargetNewEditForm({ currentTarget }) {
               ) : null}
 
               <Grid item xs={12} container justifyContent="flex-start" sx={{ mt: 2 }}>
-                <Button type="submit" variant="contained" size="small">
-                  {currentTarget ? 'Update Target' : 'Send for approval'}
-                </Button>
+                {(!currentTarget || currentTarget?.status !== 1) && (
+                  <Grid item xs={12} container justifyContent="flex-start" sx={{ mt: 2 }}>
+                    <Button type="submit" variant="contained" size="small">
+                      {currentTarget ? 'Update Target' : 'Send for approval'}
+                    </Button>
+                  </Grid>
+                )}
               </Grid>
             </Grid>
           </Card>

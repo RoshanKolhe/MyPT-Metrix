@@ -3,7 +3,7 @@ import * as Yup from 'yup';
 import { useEffect, useState, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { Card, Stack, Grid, Typography,  TextField, Button } from '@mui/material';
+import { Card, Stack, Grid, Typography, TextField, Button } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'src/components/snackbar';
@@ -270,19 +270,19 @@ export default function TargetViewForm({ currentTarget }) {
     }
   }, [branch, isSuperAdmin]);
 
-  useEffect(() => {
-    if (isHOD && user?.branch) {
-      setValue('branch', user.branch);
-      setDepartments(user?.departments ?? []);
+  // useEffect(() => {
+  //   if (isHOD && user?.branch) {
+  //     setValue('branch', user.branch);
+  //     setDepartments(user?.departments ?? []);
 
-      axiosInstance
-        .post('/trainers/by-department', {
-          departmentIds: user.departments?.map((d) => d.id),
-        })
-        .then((res) => setTrainers(res.data))
-        .catch(() => setTrainers([]));
-    }
-  }, [isHOD, user, setValue]);
+  //     axiosInstance
+  //       .post('/trainers/by-department', {
+  //         departmentIds: user.departments?.map((d) => d.id),
+  //       })
+  //       .then((res) => setTrainers(res.data))
+  //       .catch(() => setTrainers([]));
+  //   }
+  // }, [isHOD, user, setValue]);
 
   useEffect(() => {
     if (branchTarget) {
@@ -456,16 +456,14 @@ export default function TargetViewForm({ currentTarget }) {
                 </Grid>
               )}
 
-              {currentTarget?.requestChangeReason ? (
-                <Grid item xs={12}>
-                  <RHFTextField
-                    label="Change Request Reason"
-                    name="requestChangeReason"
-                    multiline
-                    rows={3}
-                  />
-                </Grid>
-              ) : null}
+              {/* <Grid item xs={12}>
+                <RHFTextField
+                  label="Change Request Reason"
+                  name="requestChangeReason"
+                  multiline
+                  rows={3}
+                />
+              </Grid> */}
 
               <Grid item xs={12} container spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
                 {!isSuperAdmin && currentTarget && currentTarget?.status !== 1 && (
@@ -479,16 +477,17 @@ export default function TargetViewForm({ currentTarget }) {
                         handleApproveTarget();
                       }}
                     >
-                      Approve Quote
+                      Approve Target
                     </LoadingButton>
                   </Grid>
                 )}
 
                 {!isSuperAdmin && currentTarget && currentTarget?.status !== 1 && (
                   <Grid item>
-                    <Button
+                    <LoadingButton
                       color="error"
                       variant="contained"
+                      loading={loading}
                       onClick={() => {
                         console.log('reject');
                         confirm.onTrue();
@@ -496,7 +495,7 @@ export default function TargetViewForm({ currentTarget }) {
                       disabled={currentTarget?.status !== 0}
                     >
                       Request Change
-                    </Button>
+                    </LoadingButton>
                   </Grid>
                 )}
               </Grid>

@@ -149,13 +149,9 @@ export default function TargetListView() {
     [router]
   );
 
-  const handleQuickEditRow = useCallback(
-    (row) => {
-      setQuickEditRow(row);
-      quickEdit.onTrue();
-    },
-    [quickEdit]
-  );
+  const handleAssignTrainerTarget = useCallback((row) => {
+    console.log(row);
+  }, []);
 
   const handleFilterStatus = useCallback(
     (event, newValue) => {
@@ -313,7 +309,7 @@ export default function TargetListView() {
                         onDeleteRow={() => handleDeleteRow(row.id)}
                         onEditRow={() => handleEditRow(row.id)}
                         onViewRow={() => handleViewRow(row.id)}
-                        quickEdit={quickEdit}
+                        onAssignTrainerTarget={() => handleAssignTrainerTarget(row.id)}
                       />
                     ))}
 
