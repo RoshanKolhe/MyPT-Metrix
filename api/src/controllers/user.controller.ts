@@ -698,4 +698,48 @@ export class UserController {
       user => user.departments && user.departments.length > 0,
     );
   }
+
+  @authenticate('jwt')
+  @post('/cgms/by-branch', {
+    responses: {
+      '200': {
+        description: 'CGM users by branch',
+        content: {
+          'application/json': {
+            schema: {type: 'array', items: {type: 'object'}},
+          },
+        },
+      },
+    },
+  })
+  async getCgmsByBranch(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['branchId'],
+            properties: {
+              branchId: {type: 'number'},
+            },
+          },
+        },
+      },
+    })
+    body: {
+      branchId: number;
+    },
+  ): Promise<object[]> {
+    const {branchId} = body;
+
+    const users = await this.userRepository.find({
+      where: {branchId},
+    });
+
+    // Manually filter for users who have 'cgm' in permissions array
+    return users.filter(
+      user =>
+        Array.isArray(user.permissions) && user.permissions.includes('cgm'),
+    );
+  }
 }

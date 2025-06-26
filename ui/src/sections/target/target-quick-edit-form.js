@@ -22,11 +22,11 @@ import axiosInstance from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
 
-export default function StaffQuickEditForm({ currentStaff, open, onClose, refreshStaffs }) {
-  console.log(currentStaff);
+export default function TargetQuickEditForm({ currentTarget, open, onClose, refreshTargets }) {
+  console.log(currentTarget);
   const { enqueueSnackbar } = useSnackbar();
 
-  const NewStaffSchema = Yup.object().shape({
+  const NewTargetSchema = Yup.object().shape({
     firstName: Yup.string().required('First Name is required'),
     lastName: Yup.string().required('Last Name is required'),
     email: Yup.string().required('Email is required').email('Email must be a valid email address'),
@@ -40,21 +40,21 @@ export default function StaffQuickEditForm({ currentStaff, open, onClose, refres
 
   const defaultValues = useMemo(
     () => ({
-      firstName: currentStaff?.firstName || '',
-      lastName: currentStaff?.lastName || '',
-      dob: currentStaff?.dob || '',
-      email: currentStaff?.email || '',
-      isActive: currentStaff?.isActive ? '1' : '0' || '',
-      avatarUrl: currentStaff?.avatar?.fileUrl || null,
-      phoneNumber: currentStaff?.phoneNumber || '',
-      department: currentStaff?.department || null,
-      branch: currentStaff?.branch || null,
+      firstName: currentTarget?.firstName || '',
+      lastName: currentTarget?.lastName || '',
+      dob: currentTarget?.dob || '',
+      email: currentTarget?.email || '',
+      isActive: currentTarget?.isActive ? '1' : '0' || '',
+      avatarUrl: currentTarget?.avatar?.fileUrl || null,
+      phoneNumber: currentTarget?.phoneNumber || '',
+      department: currentTarget?.department || null,
+      branch: currentTarget?.branch || null,
     }),
-    [currentStaff]
+    [currentTarget]
   );
 
   const methods = useForm({
-    resolver: yupResolver(NewStaffSchema),
+    resolver: yupResolver(NewTargetSchema),
     defaultValues,
   });
 
@@ -75,8 +75,8 @@ export default function StaffQuickEditForm({ currentStaff, open, onClose, refres
         isActive: formData.isActive,
         dob: formData.dob,
       };
-      await axiosInstance.patch(`/staffs/${currentStaff.id}`, inputData);
-      refreshStaffs();
+      await axiosInstance.patch(`/targets/${currentTarget.id}`, inputData);
+      refreshTargets();
       reset();
       onClose();
       enqueueSnackbar('Update success!');
@@ -100,7 +100,7 @@ export default function StaffQuickEditForm({ currentStaff, open, onClose, refres
         <DialogTitle>Quick Update</DialogTitle>
 
         <DialogContent>
-          {!currentStaff?.isActive && (
+          {!currentTarget?.isActive && (
             <Alert variant="outlined" severity="error" sx={{ mb: 3 }}>
               Account is In-Active
             </Alert>
@@ -167,9 +167,9 @@ export default function StaffQuickEditForm({ currentStaff, open, onClose, refres
   );
 }
 
-StaffQuickEditForm.propTypes = {
-  currentStaff: PropTypes.object,
+TargetQuickEditForm.propTypes = {
+  currentTarget: PropTypes.object,
   onClose: PropTypes.func,
   open: PropTypes.bool,
-  refreshStaffs: PropTypes.func,
+  refreshTargets: PropTypes.func,
 };

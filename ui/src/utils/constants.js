@@ -370,6 +370,12 @@ export const USER_STATUS_OPTIONS = [
   { value: '0', label: 'In-Active' },
 ];
 
+export const TARGET_STATUS_OPTIONS = [
+  { value: '0', label: 'Pending' },
+  { value: '1', label: 'Approved' },
+  { value: '2', label: 'Change Request' },
+];
+
 export const COMMON_STATUS_OPTIONS = [
   { value: '1', label: 'Active' },
   { value: '0', label: 'In-Active' },

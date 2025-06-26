@@ -20,12 +20,12 @@ import {
   response,
   HttpErrors,
 } from '@loopback/rest';
-import { Target } from '../models';
-import { TargetRepository } from '../repositories';
-import { authenticate, AuthenticationBindings } from '@loopback/authentication';
-import { inject } from '@loopback/core';
-import { UserProfile } from '@loopback/security';
-import { MyptMetrixDataSource } from '../datasources';
+import {Target} from '../models';
+import {DepartmentTargetRepository, TargetRepository} from '../repositories';
+import {authenticate, AuthenticationBindings} from '@loopback/authentication';
+import {inject} from '@loopback/core';
+import {UserProfile} from '@loopback/security';
+import {MyptMetrixDataSource} from '../datasources';
 
 export class TargetController {
   constructor(
@@ -33,13 +33,26 @@ export class TargetController {
     public dataSource: MyptMetrixDataSource,
     @repository(TargetRepository)
     public targetRepository: TargetRepository,
-  ) { }
+    @repository(DepartmentTargetRepository)
+    public departmentTargetRepository: DepartmentTargetRepository,
+  ) {}
 
   @authenticate('jwt')
   @post('/targets')
   @response(200, {
     description: 'Target assignment response',
-    content: { 'application/json': { schema: { type: 'object' } } },
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            message: {type: 'string'},
+            branchTarget: {type: 'object'},
+            departmentsAssigned: {type: 'number'},
+          },
+        },
+      },
+    },
   })
   async assignBranchAndDepartmentTargets(
     @requestBody({
@@ -47,20 +60,27 @@ export class TargetController {
         'application/json': {
           schema: {
             type: 'object',
-            required: ['branchId', 'targetValue', 'startDate', 'endDate', 'departmentTargets'],
+            required: [
+              'branchId',
+              'targetValue',
+              'startDate',
+              'endDate',
+              'departmentTargets',
+            ],
             properties: {
-              branchId: { type: 'number' },
-              targetValue: { type: 'number' },
-              startDate: { type: 'string', format: 'date' },
-              endDate: { type: 'string', format: 'date' },
+              branchId: {type: 'number'},
+              cgmApproverUserId: {type: 'number'},
+              targetValue: {type: 'number'},
+              startDate: {type: 'string'},
+              endDate: {type: 'string'},
               departmentTargets: {
                 type: 'array',
                 items: {
                   type: 'object',
                   required: ['departmentId', 'targetValue'],
                   properties: {
-                    departmentId: { type: 'number' },
-                    targetValue: { type: 'number' },
+                    departmentId: {type: 'number'},
+                    targetValue: {type: 'number'},
                   },
                 },
               },
@@ -71,49 +91,68 @@ export class TargetController {
     })
     input: {
       branchId: number;
+      cgmApproverUserId: number;
       targetValue: number;
       startDate: string;
       endDate: string;
-      departmentTargets: { departmentId: number; targetValue: number }[];
+      departmentTargets: {departmentId: number; targetValue: number}[];
     },
 
-    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @inject(AuthenticationBindings.CURRENT_USER)
+    currentUser: UserProfile,
   ): Promise<object> {
     const repo = new DefaultTransactionalRepository(Target, this.dataSource);
     const tx = await repo.beginTransaction(IsolationLevel.READ_COMMITTED);
-    try {
-      const { branchId, targetValue, startDate, endDate, departmentTargets } = input;
 
-      if (!currentUser.role.includes('super_admin') || !currentUser.role.includes('admin')) {
-        throw new HttpErrors.Forbidden('Only CEO can assign branch targets');
-      }
-      // 1. Create branch-level target
-      await this.targetRepository.create({
+    try {
+      const {
         branchId,
+        cgmApproverUserId,
         targetValue,
         startDate,
         endDate,
-        targetLevel: 'branch',
-        assignedByUserId: currentUser.id,
-      }, { transaction: tx },);
+        departmentTargets,
+      } = input;
 
-      // 2. Create department-level targets
+      if (
+        !currentUser.permissions.includes('super_admin') &&
+        !currentUser.permissions.includes('admin')
+      ) {
+        throw new HttpErrors.Forbidden('Only CEO can assign branch targets');
+      }
+
+      // 1. Create the branch-level target
+      const branchTarget = await this.targetRepository.create(
+        {
+          branchId,
+          targetValue,
+          startDate: startDate,
+          endDate: endDate,
+          assignedByUserId: currentUser.id,
+          cgmApproverUserId,
+        },
+        {transaction: tx},
+      );
+
+      // 2. Create related department-level targets
       const departmentTargetEntities = departmentTargets.map(dt => ({
-        branchId,
+        targetId: branchTarget.id,
         departmentId: dt.departmentId,
         targetValue: dt.targetValue,
-        startDate,
-        endDate,
-        targetLevel: 'department',
-        assignedByUserId: currentUser.id,
       }));
 
-      await this.targetRepository.createAll(departmentTargetEntities, { transaction: tx },);
+      await this.departmentTargetRepository.createAll(
+        departmentTargetEntities,
+        {
+          transaction: tx,
+        },
+      );
 
       await tx.commit();
+
       return {
         message: 'Branch and department targets assigned successfully',
-        branchTarget: { branchId, targetValue },
+        branchTarget,
         departmentsAssigned: departmentTargets.length,
       };
     } catch (err) {
@@ -122,7 +161,7 @@ export class TargetController {
     }
   }
 
-
+  @authenticate('jwt')
   @get('/targets')
   @response(200, {
     description: 'Array of Target model instances',
@@ -130,15 +169,39 @@ export class TargetController {
       'application/json': {
         schema: {
           type: 'array',
-          items: getModelSchemaRef(Target, { includeRelations: true }),
+          items: getModelSchemaRef(Target, {includeRelations: true}),
         },
       },
     },
   })
   async find(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
     @param.filter(Target) filter?: Filter<Target>,
   ): Promise<Target[]> {
-    return this.targetRepository.find(filter);
+    const isCGM = currentUser.permissions?.includes('cgm');
+    const whereFilter = isCGM ? {cgmApproverUserId: currentUser.id} : {};
+    return this.targetRepository.find({
+      ...filter,
+      where: {
+        ...whereFilter,
+        ...(filter?.where ?? {}),
+      },
+      include: [
+        {
+          relation: 'departmentTargets',
+          scope: {
+            include: [{relation: 'department'}],
+          },
+        },
+        {relation: 'cgmApproverUser'},
+        {
+          relation: 'branch',
+          scope: {
+            include: [{relation: 'departments'}],
+          },
+        },
+      ],
+    });
   }
 
   @get('/targets/{id}')
@@ -146,33 +209,222 @@ export class TargetController {
     description: 'Target model instance',
     content: {
       'application/json': {
-        schema: getModelSchemaRef(Target, { includeRelations: true }),
+        schema: getModelSchemaRef(Target, {includeRelations: true}),
       },
     },
   })
   async findById(
     @param.path.number('id') id: number,
-    @param.filter(Target, { exclude: 'where' }) filter?: FilterExcludingWhere<Target>
+    @param.filter(Target, {exclude: 'where'})
+    filter?: FilterExcludingWhere<Target>,
   ): Promise<Target> {
-    return this.targetRepository.findById(id, filter);
+    return this.targetRepository.findById(id, {
+      ...filter,
+      include: [
+        {
+          relation: 'departmentTargets',
+          scope: {
+            include: [{relation: 'department'}],
+          },
+        },
+        {relation: 'cgmApproverUser'},
+        {
+          relation: 'branch',
+          scope: {
+            include: [{relation: 'departments'}],
+          },
+        },
+      ],
+    });
   }
 
+  @authenticate('jwt')
   @patch('/targets/{id}')
-  @response(204, {
-    description: 'Target PATCH success',
+  @response(200, {
+    description: 'Target update response',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            message: {type: 'string'},
+            updatedTarget: {type: 'object'},
+          },
+        },
+      },
+    },
   })
   async updateById(
     @param.path.number('id') id: number,
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(Target, { partial: true }),
+          schema: {
+            type: 'object',
+            properties: {
+              targetValue: {type: 'number'},
+              startDate: {type: 'string', format: 'date-time'},
+              endDate: {type: 'string', format: 'date-time'},
+              status: {type: 'number'},
+              cgmApproverUserId: {type: 'number'},
+              rejectedReason: {type: 'string'},
+              departmentTargets: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['departmentId', 'targetValue'],
+                  properties: {
+                    departmentId: {type: 'number'},
+                    targetValue: {type: 'number'},
+                  },
+                },
+              },
+            },
+          },
         },
       },
     })
-    target: Target,
-  ): Promise<void> {
-    await this.targetRepository.updateById(id, target);
+    input: {
+      targetValue?: number;
+      startDate?: string;
+      endDate?: string;
+      status?: number;
+      cgmApproverUserId?: number;
+      rejectedReason?: string;
+      departmentTargets?: {departmentId: number; targetValue: number}[];
+    },
+    @inject(AuthenticationBindings.CURRENT_USER)
+    currentUser: UserProfile,
+  ): Promise<object> {
+    const repo = new DefaultTransactionalRepository(Target, this.dataSource);
+    const tx = await repo.beginTransaction(IsolationLevel.READ_COMMITTED);
+
+    try {
+      if (
+        !currentUser.permissions.includes('super_admin') &&
+        !currentUser.permissions.includes('admin')
+      ) {
+        throw new HttpErrors.Forbidden('Only CEO can update targets');
+      }
+
+      // ✅ Clean input before updating the model
+      const {departmentTargets, ...safeTargetData} = input;
+
+      await this.targetRepository.updateById(
+        id,
+        {
+          ...safeTargetData,
+          updatedAt: new Date(),
+        },
+        {transaction: tx},
+      );
+
+      // ✅ Handle departmentTargets separately if provided
+      if (departmentTargets) {
+        await this.departmentTargetRepository.deleteAll(
+          {targetId: id},
+          {transaction: tx},
+        );
+
+        const newDeptTargets = departmentTargets.map(dt => ({
+          targetId: id,
+          departmentId: dt.departmentId,
+          targetValue: dt.targetValue,
+        }));
+
+        await this.departmentTargetRepository.createAll(newDeptTargets, {
+          transaction: tx,
+        });
+      }
+
+      await tx.commit();
+
+      const updatedTarget = await this.targetRepository.findById(id, {
+        include: [
+          {relation: 'departmentTargets'},
+          {relation: 'cgmApproverUser'},
+        ],
+      });
+
+      return {
+        message: 'Target updated successfully',
+        updatedTarget,
+      };
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
+  }
+
+  @authenticate('jwt')
+  @patch('/targets/{id}/status')
+  @response(200, {
+    description: 'Target status update response',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            message: {type: 'string'},
+            updatedStatus: {type: 'number'},
+          },
+        },
+      },
+    },
+  })
+  async updateTargetStatus(
+    @param.path.number('id') targetId: number,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['status'],
+            properties: {
+              status: {type: 'number', enum: [1, 2]}, // 1 = approved, 2 = request change
+              changeRequestReason: {type: 'string'},
+            },
+          },
+        },
+      },
+    })
+    input: {
+      status: 1 | 2;
+      changeRequestReason?: string;
+    },
+
+    @inject(AuthenticationBindings.CURRENT_USER)
+    currentUser: UserProfile,
+  ): Promise<object> {
+    if (
+      !['cgm', 'admin', 'super_admin'].some(role =>
+        currentUser.permissions.includes(role),
+      )
+    ) {
+      throw new HttpErrors.Forbidden(
+        'You are not allowed to update target status.',
+      );
+    }
+
+    const updatePayload: Partial<Target> = {
+      status: input.status,
+      updatedAt: new Date(),
+    };
+
+    // Only set rejectedReason if status is 2
+    if (input.status === 2 && input.changeRequestReason) {
+      updatePayload['requestChangeReason'] = input.changeRequestReason;
+    }
+
+    await this.targetRepository.updateById(targetId, updatePayload);
+
+    return {
+      message:
+        input.status === 1
+          ? 'Target approved successfully'
+          : 'Target sent for changes',
+      updatedStatus: input.status,
+    };
   }
 
   @del('/targets/{id}')

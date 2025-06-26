@@ -60,6 +60,11 @@ export const endpoints = {
     filterList: (filter) => `/trainers?${filter}`,
     details: (id) => `/trainers/${id}`,
   },
+  target: {
+    list: '/targets',
+    filterList: (filter) => `/targets?${filter}`,
+    details: (id) => `/targets/${id}`,
+  },
   department: {
     list: '/departments',
     filterList: (filter) => `/departments?${filter}`,

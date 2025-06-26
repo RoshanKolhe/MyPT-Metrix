@@ -26,6 +26,7 @@ const ICONS = {
   mail: icon('ic_mail'),
   user: icon('ic_user'),
   staff: icon('ic_staff'),
+  target: icon('ic_target'),
   file: icon('ic_file'),
   lock: icon('ic_lock'),
   tour: icon('ic_tour'),
@@ -77,6 +78,16 @@ export function useNavData() {
             children: [
               { title: t('list'), path: paths.dashboard.user.list },
               { title: t('create'), path: paths.dashboard.user.new },
+            ],
+          },
+          // TARGET
+          {
+            title: t('target'),
+            path: paths.dashboard.target.root,
+            icon: ICONS.target,
+            children: [
+              { title: t('list'), path: paths.dashboard.target.list },
+              { title: t('create'), path: paths.dashboard.target.new },
             ],
           },
           // STAFF
@@ -154,6 +165,16 @@ export function useNavData() {
             children: [
               { title: t('list'), path: paths.dashboard.user.list },
               { title: t('create'), path: paths.dashboard.user.new },
+            ],
+          },
+          // TARGET
+          {
+            title: t('target'),
+            path: paths.dashboard.target.root,
+            icon: ICONS.target,
+            children: [
+              { title: t('list'), path: paths.dashboard.target.list },
+              { title: t('create'), path: paths.dashboard.target.new },
             ],
           },
           // STAFF
