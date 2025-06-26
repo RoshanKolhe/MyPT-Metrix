@@ -1,5 +1,7 @@
-import {Entity, model, property, belongsTo} from '@loopback/repository';
+import {Entity, model, property, belongsTo, hasMany} from '@loopback/repository';
 import {Department} from './department.model';
+import {Target} from './target.model';
+import {TrainerTarget} from './trainer-target.model';
 
 @model()
 export class DepartmentTarget extends Entity {
@@ -40,10 +42,11 @@ export class DepartmentTarget extends Entity {
   @belongsTo(() => Department)
   departmentId: number;
 
-  @property({
-    type: 'number',
-  })
-  targetId?: number;
+  @belongsTo(() => Target)
+  targetId: number;
+
+  @hasMany(() => TrainerTarget)
+  trainerTargets: TrainerTarget[];
 
   constructor(data?: Partial<DepartmentTarget>) {
     super(data);

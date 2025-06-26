@@ -73,12 +73,6 @@ export class Target extends Entity {
   @belongsTo(() => Branch)
   branchId: number;
 
-  @belongsTo(() => Department)
-  departmentId: number;
-
-  @belongsTo(() => Trainer)
-  trainerId: number;
-
   @belongsTo(() => User)
   assignedByUserId: number;
 

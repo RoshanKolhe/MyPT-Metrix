@@ -75,7 +75,7 @@ export default function StaffQuickEditForm({ currentStaff, open, onClose, refres
         isActive: formData.isActive,
         dob: formData.dob,
       };
-      await axiosInstance.patch(`/staffs/${currentStaff.id}`, inputData);
+      await axiosInstance.patch(`/trainers/${currentStaff.id}`, inputData);
       refreshStaffs();
       reset();
       onClose();
@@ -102,7 +102,7 @@ export default function StaffQuickEditForm({ currentStaff, open, onClose, refres
         <DialogContent>
           {!currentStaff?.isActive && (
             <Alert variant="outlined" severity="error" sx={{ mb: 3 }}>
-              Account is In-Active
+              Trainer is In-Active
             </Alert>
           )}
 

@@ -23,10 +23,6 @@ export class TargetRepository extends TimeStampRepositoryMixin<
 
   public readonly branch: BelongsToAccessor<Branch, typeof Target.prototype.id>;
 
-  public readonly department: BelongsToAccessor<Department, typeof Target.prototype.id>;
-
-  public readonly trainer: BelongsToAccessor<Trainer, typeof Target.prototype.id>;
-
   public readonly assignedByUser: BelongsToAccessor<User, typeof Target.prototype.id>;
 
   public readonly cgmApproverUser: BelongsToAccessor<User, typeof Target.prototype.id>;
@@ -44,10 +40,6 @@ export class TargetRepository extends TimeStampRepositoryMixin<
     this.assignedByUser = this.createBelongsToAccessorFor('assignedByUser', userRepositoryGetter,);
     this.registerInclusionResolver('assignedByUser', this.assignedByUser.inclusionResolver);
 
-    this.trainer = this.createBelongsToAccessorFor('trainer', trainerRepositoryGetter,);
-    this.registerInclusionResolver('trainer', this.trainer.inclusionResolver);
-    this.department = this.createBelongsToAccessorFor('department', departmentRepositoryGetter,);
-    this.registerInclusionResolver('department', this.department.inclusionResolver);
     this.branch = this.createBelongsToAccessorFor('branch', branchRepositoryGetter,);
     this.registerInclusionResolver('branch', this.branch.inclusionResolver);
   }

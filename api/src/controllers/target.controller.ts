@@ -20,8 +20,12 @@ import {
   response,
   HttpErrors,
 } from '@loopback/rest';
-import {Target} from '../models';
-import {DepartmentTargetRepository, TargetRepository} from '../repositories';
+import {DepartmentTarget, Target} from '../models';
+import {
+  DepartmentTargetRepository,
+  TargetRepository,
+  TrainerTargetRepository,
+} from '../repositories';
 import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {UserProfile} from '@loopback/security';
@@ -35,6 +39,8 @@ export class TargetController {
     public targetRepository: TargetRepository,
     @repository(DepartmentTargetRepository)
     public departmentTargetRepository: DepartmentTargetRepository,
+    @repository(TrainerTargetRepository)
+    public trainerTargetRepository: TrainerTargetRepository,
   ) {}
 
   @authenticate('jwt')
@@ -433,5 +439,112 @@ export class TargetController {
   })
   async deleteById(@param.path.number('id') id: number): Promise<void> {
     await this.targetRepository.deleteById(id);
+  }
+
+  @authenticate('jwt')
+  @get('/department-target/{id}')
+  @response(200, {
+    description: 'Target model instance',
+    content: {
+      'application/json': {
+        schema: getModelSchemaRef(Target, {includeRelations: true}),
+      },
+    },
+  })
+  async findByIdDepartmentTarget(
+    @param.path.number('id') id: number,
+    @param.filter(DepartmentTarget, {exclude: 'where'})
+    filter?: FilterExcludingWhere<DepartmentTarget>,
+  ): Promise<DepartmentTarget> {
+    return this.departmentTargetRepository.findById(id, {
+      ...filter,
+      include: [
+        {
+          relation: 'department',
+        },
+        {
+          relation: 'target',
+          scope: {
+            include: ['branch'],
+          },
+        },
+        {
+          relation: 'trainerTargets',
+          scope: {
+            include: ['trainer'],
+          },
+        },
+      ],
+    });
+  }
+
+  @authenticate('jwt')
+  @post('/trainer-targets/assign')
+  async assignTrainerTargets(
+    @requestBody({
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['departmentTargetId', 'trainerTargets'],
+            properties: {
+              departmentTargetId: {type: 'number'},
+              trainerTargets: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  required: ['trainerId', 'targetValue'],
+                  properties: {
+                    trainerId: {type: 'number'},
+                    targetValue: {type: 'number'},
+                    trainerTargetId: {type: 'number'}, // optional for update
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+    body: {
+      departmentTargetId: number;
+      trainerTargets: {
+        trainerId: number;
+        targetValue: number;
+        trainerTargetId?: number;
+      }[];
+    },
+  ) {
+    const {departmentTargetId, trainerTargets} = body;
+    const result = [];
+
+    for (const {trainerId, targetValue, trainerTargetId} of trainerTargets) {
+      if (trainerTargetId) {
+        // Update existing
+        await this.trainerTargetRepository.updateById(trainerTargetId, {
+          targetValue,
+          updatedAt: new Date(),
+        });
+        result.push({trainerId, trainerTargetId, updated: true});
+      } else {
+        // Create new
+        const created = await this.trainerTargetRepository.create({
+          departmentTargetId,
+          trainerId,
+          targetValue,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isDeleted: false,
+        });
+        result.push({trainerId, trainerTargetId: created.id, created: true});
+      }
+    }
+
+    return {
+      message: 'Trainer targets processed successfully',
+      count: result.length,
+      data: result,
+    };
   }
 }

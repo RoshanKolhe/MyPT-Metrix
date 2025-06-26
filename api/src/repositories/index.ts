@@ -6,3 +6,4 @@ export * from './user-department.repository';
 export * from './trainer.repository';
 export * from './target.repository';
 export * from './department-target.repository';
+export * from './trainer-target.repository';

@@ -169,7 +169,7 @@ export default function TargetTableRow({
                       <IconButton
                         color="primary"
                         size="small"
-                        onClick={() => onAssignTrainerTarget(item)}
+                        onClick={() => onAssignTrainerTarget(item.id)}
                       >
                         <Iconify icon="ic:baseline-assignment" />
                       </IconButton>

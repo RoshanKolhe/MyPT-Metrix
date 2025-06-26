@@ -47,6 +47,25 @@ export function useGetTarget(targetId) {
 
 // ----------------------------------------------------------------------
 
+export function useGetDepartmentTarget(depTargetId) {
+  const URL = depTargetId ? [endpoints.target.depTarget(depTargetId)] : null;
+  const { data, isLoading, error, isValidating } = useSWR(URL, fetcher);
+
+  const memoizedValue = useMemo(
+    () => ({
+      depTarget: data,
+      depTargetLoading: isLoading,
+      depTargetError: error,
+      depTargetValidating: isValidating,
+    }),
+    [data, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+
+// ----------------------------------------------------------------------
+
 export function useGetTargetsWithFilter(filter) {
   let URL;
   if (filter) {

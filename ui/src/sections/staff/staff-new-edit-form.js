@@ -136,10 +136,10 @@ export default function StaffNewEditForm({ currentStaff }) {
       console.log(inputData);
 
       if (!currentStaff) {
-        await axiosInstance.post('/staffs', inputData);
+        await axiosInstance.post('/trainers', inputData);
       } else {
         console.log('here');
-        await axiosInstance.patch(`/staffs/${currentStaff.id}`, inputData);
+        await axiosInstance.patch(`/trainers/${currentStaff.id}`, inputData);
       }
       reset();
       enqueueSnackbar(currentStaff ? 'Update success!' : 'Create success!');

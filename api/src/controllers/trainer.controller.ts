@@ -16,6 +16,7 @@ import {
   del,
   requestBody,
   response,
+  HttpErrors,
 } from '@loopback/rest';
 import {Trainer} from '../models';
 import {TrainerRepository} from '../repositories';
@@ -192,5 +193,56 @@ export class TrainerController {
   })
   async deleteById(@param.path.number('id') id: number): Promise<void> {
     await this.trainerRepository.deleteById(id);
+  }
+
+  @authenticate('jwt')
+  @post('/trainers/by-branch-department')
+  @response(200, {
+    description: 'Trainers filtered by branch and department',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'array',
+          items: {
+            'x-ts-type': Trainer,
+          },
+        },
+      },
+    },
+  })
+  async getTrainersByBranchAndDepartment(
+    @requestBody({
+      description: 'Branch and department filter',
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            required: ['branchId', 'departmentId'],
+            properties: {
+              branchId: {type: 'number'},
+              departmentId: {type: 'number'},
+            },
+          },
+        },
+      },
+    })
+    body: {
+      branchId: number;
+      departmentId: number;
+    },
+  ): Promise<Trainer[]> {
+    const {branchId, departmentId} = body;
+
+    const trainers = await this.trainerRepository.find({
+      where: {
+        branchId,
+        departmentId,
+        isDeleted: false,
+        isActive: true,
+      },
+    });
+
+    return trainers;
   }
 }

@@ -31,6 +31,7 @@ const TargetListPage = lazy(() => import('src/pages/dashboard/target/list'));
 const TargetCreatePage = lazy(() => import('src/pages/dashboard/target/new'));
 const TargetEditPage = lazy(() => import('src/pages/dashboard/target/edit'));
 const TargetViewPage = lazy(() => import('src/pages/dashboard/target/view'));
+const TargetAssignTargetPage = lazy(() => import('src/pages/dashboard/target/assignTarget'));
 
 // DEPARTMENT
 const DepartmentListPage = lazy(() => import('src/pages/dashboard/department/list'));
@@ -82,6 +83,7 @@ export const dashboardRoutes = [
           { path: 'new', element: <TargetCreatePage /> },
           { path: ':id/edit', element: <TargetEditPage /> },
           { path: ':id/view', element: <TargetViewPage /> },
+          { path: ':id/assign-trainer-target', element: <TargetAssignTargetPage /> },
         ],
       },
       {

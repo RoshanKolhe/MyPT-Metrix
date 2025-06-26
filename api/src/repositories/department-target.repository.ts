@@ -1,12 +1,14 @@
 import {Constructor, inject, Getter} from '@loopback/core';
-import {DefaultCrudRepository, repository, BelongsToAccessor} from '@loopback/repository';
+import {DefaultCrudRepository, repository, BelongsToAccessor, HasManyRepositoryFactory} from '@loopback/repository';
 import {MyptMetrixDataSource} from '../datasources';
 import {
   BranchRelations,
   DepartmentTarget,
-  DepartmentTargetRelations, Department} from '../models';
+  DepartmentTargetRelations, Department, Target, TrainerTarget} from '../models';
 import {TimeStampRepositoryMixin} from '../mixins/timestamp-repository-mixin';
 import {DepartmentRepository} from './department.repository';
+import {TargetRepository} from './target.repository';
+import {TrainerTargetRepository} from './trainer-target.repository';
 
 export class DepartmentTargetRepository extends TimeStampRepositoryMixin<
   DepartmentTarget,
@@ -22,10 +24,18 @@ export class DepartmentTargetRepository extends TimeStampRepositoryMixin<
 
   public readonly department: BelongsToAccessor<Department, typeof DepartmentTarget.prototype.id>;
 
+  public readonly target: BelongsToAccessor<Target, typeof DepartmentTarget.prototype.id>;
+
+  public readonly trainerTargets: HasManyRepositoryFactory<TrainerTarget, typeof DepartmentTarget.prototype.id>;
+
   constructor(
-    @inject('datasources.myptMetrix') dataSource: MyptMetrixDataSource, @repository.getter('DepartmentRepository') protected departmentRepositoryGetter: Getter<DepartmentRepository>,
+    @inject('datasources.myptMetrix') dataSource: MyptMetrixDataSource, @repository.getter('DepartmentRepository') protected departmentRepositoryGetter: Getter<DepartmentRepository>, @repository.getter('TargetRepository') protected targetRepositoryGetter: Getter<TargetRepository>, @repository.getter('TrainerTargetRepository') protected trainerTargetRepositoryGetter: Getter<TrainerTargetRepository>,
   ) {
     super(DepartmentTarget, dataSource);
+    this.trainerTargets = this.createHasManyRepositoryFactoryFor('trainerTargets', trainerTargetRepositoryGetter,);
+    this.registerInclusionResolver('trainerTargets', this.trainerTargets.inclusionResolver);
+    this.target = this.createBelongsToAccessorFor('target', targetRepositoryGetter,);
+    this.registerInclusionResolver('target', this.target.inclusionResolver);
     this.department = this.createBelongsToAccessorFor('department', departmentRepositoryGetter,);
     this.registerInclusionResolver('department', this.department.inclusionResolver);
   }

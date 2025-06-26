@@ -149,9 +149,13 @@ export default function TargetListView() {
     [router]
   );
 
-  const handleAssignTrainerTarget = useCallback((row) => {
-    console.log(row);
-  }, []);
+  const handleAssignTrainerTarget = useCallback(
+    (id) => {
+      console.log(id);
+      router.push(paths.dashboard.target.assignTrainerTarget(id));
+    },
+    [router]
+  );
 
   const handleFilterStatus = useCallback(
     (event, newValue) => {
@@ -309,7 +313,7 @@ export default function TargetListView() {
                         onDeleteRow={() => handleDeleteRow(row.id)}
                         onEditRow={() => handleEditRow(row.id)}
                         onViewRow={() => handleViewRow(row.id)}
-                        onAssignTrainerTarget={() => handleAssignTrainerTarget(row.id)}
+                        onAssignTrainerTarget={handleAssignTrainerTarget}
                       />
                     ))}
 

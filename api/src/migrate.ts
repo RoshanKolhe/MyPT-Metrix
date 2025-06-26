@@ -17,6 +17,7 @@ export async function migrate(args: string[]) {
       'Trainer',
       'Target',
       'DepartmentTarget',
+      'TrainerTarget',
     ],
   });
 

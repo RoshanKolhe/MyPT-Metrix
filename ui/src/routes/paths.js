@@ -132,6 +132,7 @@ export const paths = {
       list: `${ROOTS.DASHBOARD}/target/list`,
       edit: (id) => `${ROOTS.DASHBOARD}/target/${id}/edit`,
       view: (id) => `${ROOTS.DASHBOARD}/target/${id}/view`,
+      assignTrainerTarget: (id) => `${ROOTS.DASHBOARD}/target/${id}/assign-trainer-target`,
     },
     department: {
       root: `${ROOTS.DASHBOARD}/department`,
