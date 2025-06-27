@@ -46,11 +46,11 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
 
   // ✅ Pre-fill trainers from trainerTargets (already included in currentDepartmentTarget)
   useEffect(() => {
-    const initializeTrainersFromTarget = () => {
-      const trainerData = currentDepartmentTarget?.trainerTargets || [];
+    const trainerData = currentDepartmentTarget?.trainerTargets || [];
 
+    const initializeTrainersFromTarget = () => {
       const allTrainers = trainerData.map((tt) => ({
-        ...tt.trainer, // include full trainer details
+        ...tt.trainer,
       }));
 
       const initialTargets = {};
@@ -62,8 +62,36 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
       setTrainerTargets(initialTargets);
     };
 
-    if (currentDepartmentTarget?.trainerTargets?.length > 0) {
+    const fetchTrainers = async () => {
+      try {
+        const { target, departmentId } = currentDepartmentTarget;
+
+        if (!target?.branchId || !departmentId) return;
+
+        const res = await axiosInstance.post('/trainers/by-branch-department', {
+          branchId: target.branchId,
+          departmentId,
+        });
+
+        const fetchedTrainers = res.data || [];
+
+        // Initialize targets with 0
+        const initialTargets = {};
+        fetchedTrainers.forEach((trainer) => {
+          initialTargets[trainer.id] = 0;
+        });
+
+        setTrainers(fetchedTrainers);
+        setTrainerTargets(initialTargets);
+      } catch (error) {
+        console.error('Failed to fetch trainers:', error);
+      }
+    };
+
+    if (trainerData.length > 0) {
       initializeTrainersFromTarget();
+    } else {
+      fetchTrainers();
     }
   }, [currentDepartmentTarget]);
 
