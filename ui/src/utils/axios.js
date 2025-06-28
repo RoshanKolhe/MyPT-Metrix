@@ -71,6 +71,11 @@ export const endpoints = {
     filterList: (filter) => `/departments?${filter}`,
     details: (id) => `/departments/${id}`,
   },
+  kpi: {
+    list: '/kpis',
+    filterList: (filter) => `/kpis?${filter}`,
+    details: (id) => `/kpis/${id}`,
+  },
   branch: {
     list: '/branches',
     filterList: (filter) => `/branches?${filter}`,

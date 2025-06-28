@@ -139,6 +139,11 @@ export const paths = {
       list: `${ROOTS.DASHBOARD}/department/list`,
       view: (id) => `${ROOTS.DASHBOARD}/department/${id}/view`,
     },
+    kpi: {
+      root: `${ROOTS.DASHBOARD}/kpi`,
+      list: `${ROOTS.DASHBOARD}/kpi/list`,
+      view: (id) => `${ROOTS.DASHBOARD}/kpi/${id}/view`,
+    },
     branch: {
       root: `${ROOTS.DASHBOARD}/branch`,
       new: `${ROOTS.DASHBOARD}/branch/new`,

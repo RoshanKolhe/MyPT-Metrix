@@ -32,6 +32,7 @@ const ICONS = {
   tour: icon('ic_tour'),
   order: icon('ic_order'),
   label: icon('ic_label'),
+  kpi: icon('ic_kpi'),
   blank: icon('ic_blank'),
   kanban: icon('ic_kanban'),
   folder: icon('ic_folder'),
@@ -116,6 +117,20 @@ export function useNavData() {
               {
                 title: t('list'),
                 path: paths.dashboard.department.list,
+                roles: ['super_admin'],
+              },
+            ],
+          },
+          // KPI
+          {
+            title: t('Kpi'),
+            path: paths.dashboard.kpi.root,
+            icon: ICONS.kpi,
+            roles: ['super_admin'],
+            children: [
+              {
+                title: t('list'),
+                path: paths.dashboard.kpi.list,
                 roles: ['super_admin'],
               },
             ],

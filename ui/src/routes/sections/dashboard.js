@@ -39,6 +39,12 @@ const DepartmentCreatePage = lazy(() => import('src/pages/dashboard/department/n
 const DepartmentEditPage = lazy(() => import('src/pages/dashboard/department/edit'));
 const DepartmentViewPage = lazy(() => import('src/pages/dashboard/department/view'));
 
+// KPI
+const KpiListPage = lazy(() => import('src/pages/dashboard/kpi/list'));
+const KpiCreatePage = lazy(() => import('src/pages/dashboard/kpi/new'));
+const KpiEditPage = lazy(() => import('src/pages/dashboard/kpi/edit'));
+const KpiViewPage = lazy(() => import('src/pages/dashboard/kpi/view'));
+
 // BRANCH
 const BranchListPage = lazy(() => import('src/pages/dashboard/branch/list'));
 const BranchCreatePage = lazy(() => import('src/pages/dashboard/branch/new'));
@@ -104,6 +110,15 @@ export const dashboardRoutes = [
           { element: <DepartmentListPage />, index: true },
           { path: 'list', element: <DepartmentListPage /> },
           { path: ':id/view', element: <DepartmentViewPage /> },
+        ],
+      },
+      {
+        path: 'kpi',
+        element: <RolesAuthRoute roles={['super_admin', 'admin']} />,
+        children: [
+          { element: <KpiListPage />, index: true },
+          { path: 'list', element: <KpiListPage /> },
+          { path: ':id/view', element: <KpiViewPage /> },
         ],
       },
       {

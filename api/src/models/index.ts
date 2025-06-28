@@ -7,3 +7,4 @@ export * from './trainer.model';
 export * from './target.model';
 export * from './department-target.model';
 export * from './trainer-target.model';
+export * from './kpi.model';
