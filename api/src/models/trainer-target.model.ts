@@ -1,6 +1,7 @@
 import {Entity, model, property, belongsTo} from '@loopback/repository';
 import {DepartmentTarget} from './department-target.model';
 import {Trainer} from './trainer.model';
+import {Kpi} from './kpi.model';
 
 @model()
 export class TrainerTarget extends Entity {
@@ -43,6 +44,9 @@ export class TrainerTarget extends Entity {
 
   @belongsTo(() => Trainer)
   trainerId: number;
+
+  @belongsTo(() => Kpi)
+  kpiId: number;
 
   constructor(data?: Partial<TrainerTarget>) {
     super(data);
