@@ -478,7 +478,6 @@ export class TargetController {
     });
   }
 
-  @authenticate('jwt')
   @post('/trainer-targets/assign')
   async assignTrainerTargets(
     @requestBody({
@@ -487,18 +486,28 @@ export class TargetController {
         'application/json': {
           schema: {
             type: 'object',
-            required: ['departmentTargetId', 'trainerTargets'],
+            required: ['departmentTargetId', 'trainerKpiTargets'],
             properties: {
               departmentTargetId: {type: 'number'},
-              trainerTargets: {
+              trainerKpiTargets: {
                 type: 'array',
                 items: {
                   type: 'object',
-                  required: ['trainerId', 'targetValue'],
+                  required: ['trainerId', 'kpiTargets'],
                   properties: {
                     trainerId: {type: 'number'},
-                    targetValue: {type: 'number'},
-                    trainerTargetId: {type: 'number'}, // optional for update
+                    kpiTargets: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        required: ['kpiId', 'targetValue'],
+                        properties: {
+                          kpiId: {type: 'number'},
+                          targetValue: {type: 'number'},
+                          trainerTargetId: {type: 'number'}, // optional for update
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -509,40 +518,49 @@ export class TargetController {
     })
     body: {
       departmentTargetId: number;
-      trainerTargets: {
+      trainerKpiTargets: {
         trainerId: number;
-        targetValue: number;
-        trainerTargetId?: number;
+        kpiTargets: {
+          kpiId: number;
+          targetValue: number;
+          trainerTargetId?: number;
+        }[];
       }[];
     },
   ) {
-    const {departmentTargetId, trainerTargets} = body;
+    const {departmentTargetId, trainerKpiTargets} = body;
     const result = [];
 
-    for (const {trainerId, targetValue, trainerTargetId} of trainerTargets) {
-      if (trainerTargetId) {
-        // Update existing
-        await this.trainerTargetRepository.updateById(trainerTargetId, {
-          targetValue,
-          updatedAt: new Date(),
-        });
-        result.push({trainerId, trainerTargetId, updated: true});
-      } else {
-        // Create new
-        const created = await this.trainerTargetRepository.create({
-          departmentTargetId,
-          trainerId,
-          targetValue,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          isDeleted: false,
-        });
-        result.push({trainerId, trainerTargetId: created.id, created: true});
+    for (const {trainerId, kpiTargets} of trainerKpiTargets) {
+      for (const {kpiId, targetValue, trainerTargetId} of kpiTargets) {
+        if (trainerTargetId) {
+          await this.trainerTargetRepository.updateById(trainerTargetId, {
+            targetValue,
+            updatedAt: new Date(),
+          });
+          result.push({trainerId, kpiId, trainerTargetId, updated: true});
+        } else {
+          const created = await this.trainerTargetRepository.create({
+            departmentTargetId,
+            trainerId,
+            kpiId,
+            targetValue,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            isDeleted: false,
+          });
+          result.push({
+            trainerId,
+            kpiId,
+            trainerTargetId: created.id,
+            created: true,
+          });
+        }
       }
     }
 
     return {
-      message: 'Trainer targets processed successfully',
+      message: 'Trainer KPI targets processed successfully',
       count: result.length,
       data: result,
     };

@@ -119,6 +119,7 @@ export const dashboardRoutes = [
           { element: <KpiListPage />, index: true },
           { path: 'list', element: <KpiListPage /> },
           { path: ':id/view', element: <KpiViewPage /> },
+          { path: 'new', element: <KpiCreatePage /> },
         ],
       },
       {

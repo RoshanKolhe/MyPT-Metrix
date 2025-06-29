@@ -73,7 +73,7 @@ export default function KpiNewEditForm({ currentKpi }) {
       }
       reset();
       enqueueSnackbar(currentKpi ? 'Update success!' : 'Create success!');
-      router.push(paths.dashboard.kpi.list);
+      // router.push(paths.dashboard.kpi.list);
     } catch (error) {
       console.error(error);
       enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
