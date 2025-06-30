@@ -29,7 +29,7 @@ export default function KpiTableRow({
   quickEdit,
   handleQuickEditRow,
 }) {
-  const { name, description, isActive } = row;
+  const { name, description, isActive, type } = row;
 
   const confirm = useBoolean();
 
@@ -42,6 +42,7 @@ export default function KpiTableRow({
 
         <TableCell sx={{ whiteSpace: 'nowrap' }}>{name}</TableCell>
         <TableCell sx={{ whiteSpace: 'nowrap' }}>{description}</TableCell>
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{type}</TableCell>
 
         <TableCell>
           <Label

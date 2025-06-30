@@ -100,7 +100,17 @@ export class BranchController {
     },
   })
   async find(@param.filter(Branch) filter?: Filter<Branch>): Promise<Branch[]> {
-    return this.branchRepository.find({...filter, include: ['departments']});
+    return this.branchRepository.find({
+      ...filter,
+      include: [
+        {
+          relation: 'departments',
+          scope: {
+            include: ['kpis'],
+          },
+        },
+      ],
+    });
   }
 
   @authenticate({
@@ -111,7 +121,6 @@ export class BranchController {
         PermissionKeys.ADMIN,
         PermissionKeys.CGM,
         PermissionKeys.HOD,
-
       ],
     },
   })

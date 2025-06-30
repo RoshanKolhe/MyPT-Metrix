@@ -143,6 +143,9 @@ export default function DepartmentNewEditForm({ currentDepartment }) {
                   <li {...props}>
                     <div>
                       <Typography variant="subtitle2">{`${option?.name}`}</Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        {option?.type}
+                      </Typography>
                     </div>
                   </li>
                 )}

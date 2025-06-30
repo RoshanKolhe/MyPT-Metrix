@@ -53,6 +53,7 @@ const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...COMMON_STATUS_OPTIONS
 const TABLE_HEAD = [
   { id: 'name', label: 'Kpi Name' },
   { id: 'description', label: 'Description', width: 180 },
+  { id: 'type', label: 'Type', width: 180 },
   { id: 'isActive', label: 'Status', width: 180 },
   { id: '', width: 88 },
 ];

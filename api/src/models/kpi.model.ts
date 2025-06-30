@@ -21,6 +21,15 @@ export class Kpi extends Entity {
   description?: string;
 
   @property({
+    type: 'string',
+    required: true,
+    jsonSchema: {
+      enum: ['sales', 'service'],
+    },
+  })
+  type: 'sales' | 'service';
+
+  @property({
     type: 'date',
   })
   createdAt?: Date;

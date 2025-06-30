@@ -83,9 +83,10 @@ export class TargetController {
                 type: 'array',
                 items: {
                   type: 'object',
-                  required: ['departmentId', 'targetValue'],
+                  required: ['departmentId', 'kpiId', 'targetValue'],
                   properties: {
                     departmentId: {type: 'number'},
+                    kpiId: {type: 'number'},
                     targetValue: {type: 'number'},
                   },
                 },
@@ -101,7 +102,11 @@ export class TargetController {
       targetValue: number;
       startDate: string;
       endDate: string;
-      departmentTargets: {departmentId: number; targetValue: number}[];
+      departmentTargets: {
+        departmentId: number;
+        kpiId: number;
+        targetValue: number;
+      }[];
     },
 
     @inject(AuthenticationBindings.CURRENT_USER)
@@ -127,23 +132,22 @@ export class TargetController {
         throw new HttpErrors.Forbidden('Only CEO can assign branch targets');
       }
 
-      // 1. Create the branch-level target
       const branchTarget = await this.targetRepository.create(
         {
           branchId,
           targetValue,
-          startDate: startDate,
-          endDate: endDate,
+          startDate,
+          endDate,
           assignedByUserId: currentUser.id,
           cgmApproverUserId,
         },
         {transaction: tx},
       );
 
-      // 2. Create related department-level targets
       const departmentTargetEntities = departmentTargets.map(dt => ({
         targetId: branchTarget.id,
         departmentId: dt.departmentId,
+        kpiId: dt.kpiId,
         targetValue: dt.targetValue,
       }));
 
@@ -157,7 +161,7 @@ export class TargetController {
       await tx.commit();
 
       return {
-        message: 'Branch and department targets assigned successfully',
+        message: 'Branch and department KPI targets assigned successfully',
         branchTarget,
         departmentsAssigned: departmentTargets.length,
       };
@@ -278,9 +282,10 @@ export class TargetController {
                 type: 'array',
                 items: {
                   type: 'object',
-                  required: ['departmentId', 'targetValue'],
+                  required: ['departmentId', 'kpiId', 'targetValue'],
                   properties: {
                     departmentId: {type: 'number'},
+                    kpiId: {type: 'number'},
                     targetValue: {type: 'number'},
                   },
                 },
@@ -297,7 +302,11 @@ export class TargetController {
       status?: number;
       cgmApproverUserId?: number;
       rejectedReason?: string;
-      departmentTargets?: {departmentId: number; targetValue: number}[];
+      departmentTargets?: {
+        departmentId: number;
+        kpiId: number;
+        targetValue: number;
+      }[];
     },
     @inject(AuthenticationBindings.CURRENT_USER)
     currentUser: UserProfile,
@@ -313,7 +322,6 @@ export class TargetController {
         throw new HttpErrors.Forbidden('Only CEO can update targets');
       }
 
-      // ✅ Clean input before updating the model
       const {departmentTargets, ...safeTargetData} = input;
 
       await this.targetRepository.updateById(
@@ -325,16 +333,19 @@ export class TargetController {
         {transaction: tx},
       );
 
-      // ✅ Handle departmentTargets separately if provided
+      // ✅ Handle departmentTargets with kpiId
       if (departmentTargets) {
+        // Remove all existing department+kpi targets for this target
         await this.departmentTargetRepository.deleteAll(
           {targetId: id},
           {transaction: tx},
         );
 
+        // Add new departmentTargets with kpiId
         const newDeptTargets = departmentTargets.map(dt => ({
           targetId: id,
           departmentId: dt.departmentId,
+          kpiId: dt.kpiId,
           targetValue: dt.targetValue,
         }));
 

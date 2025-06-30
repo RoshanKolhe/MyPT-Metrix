@@ -25,6 +25,7 @@ import { MenuItem } from '@mui/material';
 // ----------------------------------------------------------------------
 
 export default function KpiNewEditForm({ currentKpi }) {
+  console.log(currentKpi)
   const router = useRouter();
 
   const { enqueueSnackbar } = useSnackbar();
@@ -32,6 +33,7 @@ export default function KpiNewEditForm({ currentKpi }) {
   const NewKpiSchema = Yup.object().shape({
     kpiName: Yup.string().required('Kpi Name is required'),
     description: Yup.string(),
+    type: Yup.string().required('Type is required'),
     isActive: Yup.boolean(),
   });
 
@@ -39,6 +41,7 @@ export default function KpiNewEditForm({ currentKpi }) {
     () => ({
       kpiName: currentKpi?.name || '',
       description: currentKpi?.description || '',
+      type: currentKpi?.type || '',
       isActive: currentKpi ? (currentKpi?.isActive ? '1' : '0') : '1',
     }),
     [currentKpi]
@@ -63,6 +66,7 @@ export default function KpiNewEditForm({ currentKpi }) {
       const inputData = {
         name: formData.kpiName,
         description: formData.description,
+        type: formData.type,
         isActive: currentKpi ? formData.isActive : true,
       };
       if (!currentKpi) {
@@ -73,7 +77,7 @@ export default function KpiNewEditForm({ currentKpi }) {
       }
       reset();
       enqueueSnackbar(currentKpi ? 'Update success!' : 'Create success!');
-      // router.push(paths.dashboard.kpi.list);
+      router.push(paths.dashboard.kpi.list);
     } catch (error) {
       console.error(error);
       enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
@@ -117,6 +121,14 @@ export default function KpiNewEditForm({ currentKpi }) {
 
               <RHFTextField name="kpiName" label="Kpi Name" />
               <RHFTextField name="description" label="Description" />
+              <RHFSelect name="type" label="Type">
+                <MenuItem key="sales" value="sales">
+                  Sales
+                </MenuItem>
+                <MenuItem key="service" value="service">
+                  Service
+                </MenuItem>
+              </RHFSelect>
             </Box>
 
             <Stack alignItems="flex-end" sx={{ mt: 3 }}>
