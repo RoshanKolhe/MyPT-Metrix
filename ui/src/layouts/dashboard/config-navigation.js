@@ -119,6 +119,11 @@ export function useNavData() {
                 path: paths.dashboard.department.list,
                 roles: ['super_admin'],
               },
+              {
+                title: t('create'),
+                path: paths.dashboard.department.new,
+                roles: ['super_admin'],
+              },
             ],
           },
           // KPI
@@ -131,6 +136,11 @@ export function useNavData() {
               {
                 title: t('list'),
                 path: paths.dashboard.kpi.list,
+                roles: ['super_admin'],
+              },
+              {
+                title: t('create'),
+                path: paths.dashboard.kpi.new,
                 roles: ['super_admin'],
               },
             ],

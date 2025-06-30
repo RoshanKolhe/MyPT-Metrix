@@ -17,10 +17,11 @@ import { useRouter } from 'src/routes/hook';
 // components
 
 import { useSnackbar } from 'src/components/snackbar';
-import FormProvider, { RHFSelect, RHFTextField } from 'src/components/hook-form';
+import FormProvider, { RHFSelect, RHFTextField, RHFAutocomplete } from 'src/components/hook-form';
 import axiosInstance from 'src/utils/axios';
 import { COMMON_STATUS_OPTIONS } from 'src/utils/constants';
-import { MenuItem } from '@mui/material';
+import { Chip, MenuItem, Typography } from '@mui/material';
+import { useGetKpis } from 'src/api/kpi';
 
 // ----------------------------------------------------------------------
 
@@ -29,10 +30,13 @@ export default function DepartmentNewEditForm({ currentDepartment }) {
 
   const { enqueueSnackbar } = useSnackbar();
 
+  const { kpis, kpisLoading, kpisEmpty, refreshKpis } = useGetKpis();
+
   const NewDepartmentSchema = Yup.object().shape({
     departmentName: Yup.string().required('Department Name is required'),
     description: Yup.string(),
     isActive: Yup.boolean(),
+    kpis: Yup.array().min(1, 'Must have at least 1 Kpi'),
   });
 
   const defaultValues = useMemo(
@@ -40,6 +44,7 @@ export default function DepartmentNewEditForm({ currentDepartment }) {
       departmentName: currentDepartment?.name || '',
       description: currentDepartment?.description || '',
       isActive: currentDepartment ? (currentDepartment?.isActive ? '1' : '0') : '1',
+      kpis: currentDepartment?.kpis || [],
     }),
     [currentDepartment]
   );
@@ -64,21 +69,26 @@ export default function DepartmentNewEditForm({ currentDepartment }) {
         name: formData.departmentName,
         description: formData.description,
         isActive: currentDepartment ? formData.isActive : true,
+        kpiIds: formData.kpis?.map((kpi) => kpi.id) || [],
       };
+
       if (!currentDepartment) {
         await axiosInstance.post('/departments', inputData);
       } else {
-        console.log('here');
         await axiosInstance.patch(`/departments/${currentDepartment.id}`, inputData);
       }
+
       reset();
       enqueueSnackbar(currentDepartment ? 'Update success!' : 'Create success!');
       router.push(paths.dashboard.department.list);
     } catch (error) {
       console.error(error);
-      enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
-        variant: 'error',
-      });
+      enqueueSnackbar(
+        typeof error === 'string' ? error : error?.error?.message || 'Something went wrong.',
+        {
+          variant: 'error',
+        }
+      );
     }
   });
 
@@ -117,6 +127,38 @@ export default function DepartmentNewEditForm({ currentDepartment }) {
 
               <RHFTextField name="departmentName" label="Department Name" />
               <RHFTextField name="description" label="Description" />
+              <RHFAutocomplete
+                multiple
+                name="kpis"
+                label="Kpi"
+                options={kpis || []}
+                getOptionLabel={(option) => `${option?.name}` || ''}
+                filterOptions={(options, state) =>
+                  options.filter((option) =>
+                    option.name.toLowerCase().includes(state.inputValue.toLowerCase())
+                  )
+                }
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderOption={(props, option) => (
+                  <li {...props}>
+                    <div>
+                      <Typography variant="subtitle2">{`${option?.name}`}</Typography>
+                    </div>
+                  </li>
+                )}
+                renderTags={(selected, getTagProps) =>
+                  selected.map((option, tagIndex) => (
+                    <Chip
+                      {...getTagProps({ index: tagIndex })}
+                      key={option.id}
+                      label={`${option.name}`}
+                      size="small"
+                      color="info"
+                      variant="soft"
+                    />
+                  ))
+                }
+              />
             </Box>
 
             <Stack alignItems="flex-end" sx={{ mt: 3 }}>

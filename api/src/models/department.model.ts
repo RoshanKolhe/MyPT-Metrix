@@ -1,4 +1,6 @@
-import {Entity, model, property} from '@loopback/repository';
+import {Entity, model, property, hasMany} from '@loopback/repository';
+import {Kpi} from './kpi.model';
+import {DepartmentKpi} from './department-kpi.model';
 
 @model()
 export class Department extends Entity {
@@ -46,6 +48,9 @@ export class Department extends Entity {
     default: false,
   })
   isDeleted: boolean;
+
+  @hasMany(() => Kpi, {through: {model: () => DepartmentKpi}})
+  kpis: Kpi[];
 
   constructor(data?: Partial<Department>) {
     super(data);

@@ -43,16 +43,34 @@ export class DepartmentController {
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(Department, {
-            title: 'NewDepartment',
-            exclude: ['id'],
-          }),
+          schema: {
+            type: 'object',
+            required: ['name'], // add required fields as needed
+            properties: {
+              name: {type: 'string'}, // adjust for your fields
+              kpiIds: {
+                type: 'array',
+                items: {type: 'number'}, // or string if IDs are string
+              },
+            },
+          },
         },
       },
     })
-    department: Omit<Department, 'id'>,
+    requestBody: {name: string; kpiIds?: number[]}, // Adjust shape if needed
   ): Promise<Department> {
-    return this.departmentRepository.create(department);
+    const {kpiIds = [], ...departmentData} = requestBody;
+
+    // Create the Department
+    const createdDepartment =
+      await this.departmentRepository.create(departmentData);
+
+    // Attach KPIs through the pivot table
+    for (const kpiId of kpiIds) {
+      await this.departmentRepository.kpis(createdDepartment.id).link(kpiId);
+    }
+
+    return createdDepartment;
   }
 
   @authenticate({
@@ -80,7 +98,7 @@ export class DepartmentController {
   async find(
     @param.filter(Department) filter?: Filter<Department>,
   ): Promise<Department[]> {
-    return this.departmentRepository.find(filter);
+    return this.departmentRepository.find({...filter, include: ['kpis']});
   }
 
   @authenticate({
@@ -107,7 +125,10 @@ export class DepartmentController {
     @param.filter(Department, {exclude: 'where'})
     filter?: FilterExcludingWhere<Department>,
   ): Promise<Department> {
-    return this.departmentRepository.findById(id, filter);
+    return this.departmentRepository.findById(id, {
+      ...filter,
+      include: ['kpis'],
+    });
   }
 
   @authenticate({
@@ -123,13 +144,32 @@ export class DepartmentController {
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(Department, {partial: true}),
+          schema: {
+            type: 'object',
+            properties: {
+              name: {type: 'string'}, // your department fields
+              kpiIds: {
+                type: 'array',
+                items: {type: 'number'},
+              },
+            },
+          },
         },
       },
     })
-    department: Department,
+    requestBody: Partial<Department> & {kpiIds?: number[]},
   ): Promise<void> {
-    await this.departmentRepository.updateById(id, department);
+    const {kpiIds, ...departmentData} = requestBody;
+
+    await this.departmentRepository.updateById(id, departmentData);
+
+    if (kpiIds) {
+      await this.departmentRepository.kpis(id).delete();
+
+      for (const kpiId of kpiIds) {
+        await this.departmentRepository.kpis(id).link(kpiId);
+      }
+    }
   }
 
   @authenticate({

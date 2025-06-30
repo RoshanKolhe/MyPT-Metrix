@@ -109,7 +109,9 @@ export const dashboardRoutes = [
         children: [
           { element: <DepartmentListPage />, index: true },
           { path: 'list', element: <DepartmentListPage /> },
+          { path: 'new', element: <DepartmentCreatePage /> },
           { path: ':id/view', element: <DepartmentViewPage /> },
+          { path: ':id/edit', element: <DepartmentEditPage /> },
         ],
       },
       {
@@ -120,6 +122,7 @@ export const dashboardRoutes = [
           { path: 'list', element: <KpiListPage /> },
           { path: ':id/view', element: <KpiViewPage /> },
           { path: 'new', element: <KpiCreatePage /> },
+          { path: ':id/edit', element: <KpiEditPage /> },
         ],
       },
       {

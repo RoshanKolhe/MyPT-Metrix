@@ -200,6 +200,16 @@ export default function KpiListView() {
           sx={{
             mb: { xs: 3, md: 5 },
           }}
+          action={
+            <Button
+              component={RouterLink}
+              href={paths.dashboard.kpi.new}
+              variant="contained"
+              startIcon={<Iconify icon="mingcute:add-line" />}
+            >
+              New Kpi
+            </Button>
+          }
         />
 
         <Card>

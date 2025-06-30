@@ -138,11 +138,15 @@ export const paths = {
       root: `${ROOTS.DASHBOARD}/department`,
       list: `${ROOTS.DASHBOARD}/department/list`,
       view: (id) => `${ROOTS.DASHBOARD}/department/${id}/view`,
+      new: `${ROOTS.DASHBOARD}/department/new`,
+      edit: (id) => `${ROOTS.DASHBOARD}/department/${id}/edit`,
     },
     kpi: {
       root: `${ROOTS.DASHBOARD}/kpi`,
       list: `${ROOTS.DASHBOARD}/kpi/list`,
       view: (id) => `${ROOTS.DASHBOARD}/kpi/${id}/view`,
+      new: `${ROOTS.DASHBOARD}/kpi/new`,
+      edit: (id) => `${ROOTS.DASHBOARD}/kpi/${id}/edit`,
     },
     branch: {
       root: `${ROOTS.DASHBOARD}/branch`,

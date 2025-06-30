@@ -53,7 +53,7 @@ export default function KpiTableRow({
         </TableCell>
 
         <TableCell align="right" sx={{ px: 1, whiteSpace: 'nowrap' }}>
-          {/* <Tooltip title="Quick Edit" placement="top" arrow>
+          <Tooltip title="Edit" placement="top" arrow>
             <IconButton
               color={quickEdit.value ? 'inherit' : 'default'}
               onClick={() => {
@@ -62,7 +62,7 @@ export default function KpiTableRow({
             >
               <Iconify icon="solar:pen-bold" />
             </IconButton>
-          </Tooltip> */}
+          </Tooltip>
 
           <Tooltip title="View" placement="top" arrow>
             <IconButton

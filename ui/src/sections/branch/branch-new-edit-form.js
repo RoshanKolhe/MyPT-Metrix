@@ -37,6 +37,7 @@ export default function BranchNewEditForm({ currentBranch }) {
     branchName: Yup.string().required('Branch Name is required'),
     description: Yup.string(),
     isActive: Yup.boolean(),
+    departments: Yup.array().min(1, 'Must have at least 1 Department'),
   });
 
   const defaultValues = useMemo(
@@ -128,7 +129,11 @@ export default function BranchNewEditForm({ currentBranch }) {
                 label="Departments"
                 options={departments || []}
                 getOptionLabel={(option) => `${option?.name}` || ''}
-                filterOptions={(x) => x}
+                filterOptions={(options, state) =>
+                  options.filter((option) =>
+                    option.name.toLowerCase().includes(state.inputValue.toLowerCase())
+                  )
+                }
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 renderOption={(props, option) => (
                   <li {...props}>

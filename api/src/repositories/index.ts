@@ -8,3 +8,4 @@ export * from './target.repository';
 export * from './department-target.repository';
 export * from './trainer-target.repository';
 export * from './kpi.repository';
+export * from './department-kpi.repository';
