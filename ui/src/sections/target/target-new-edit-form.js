@@ -70,25 +70,25 @@ export default function TargetNewEditForm({ currentTarget }) {
 
   const branch = watch('branch');
 
- const { branchTarget, serviceTarget } = useMemo(() => {
-  let sales = 0;
-  let service = 0;
+  const { branchTarget, serviceTarget } = useMemo(() => {
+    let sales = 0;
+    let service = 0;
 
-  departments.forEach(dept => {
-    (dept.kpis || []).forEach(kpi => {
-      const key = `${dept.id}_${kpi.id}`;
-      const val = Number(kpiTargets[key] || 0);
+    departments.forEach((dept) => {
+      (dept.kpis || []).forEach((kpi) => {
+        const key = `${dept.id}_${kpi.id}`;
+        const val = Number(kpiTargets[key] || 0);
 
-      if (kpi.type === 'sales') {
-        sales += val;
-      } else if (kpi.type === 'service') {
-        service += val;
-      }
+        if (kpi.type === 'sales') {
+          sales += val;
+        } else if (kpi.type === 'service') {
+          service += val;
+        }
+      });
     });
-  });
 
-  return { branchTarget: sales, serviceTarget: service };
-}, [kpiTargets, departments]);
+    return { branchTarget: sales, serviceTarget: service };
+  }, [kpiTargets, departments]);
 
   const fetchCgmUsers = async (branchDetails) => {
     if (branchDetails?.id) {
@@ -137,8 +137,8 @@ export default function TargetNewEditForm({ currentTarget }) {
         departmentTargets: Object.entries(kpiTargets).map(([key, value]) => {
           const [departmentId, kpiId] = key.split('_');
           return {
-            departmentId,
-            kpiId,
+            departmentId: Number(departmentId),
+            kpiId: Number(kpiId),
             targetValue: +value,
           };
         }),
