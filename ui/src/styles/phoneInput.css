@@ -1,0 +1,13 @@
+.light-mode .react-tel-input .special-label {
+  background-color: #fff !important;
+  color: white !important;
+}
+
+.dark-mode .react-tel-input .special-label {
+  background-color: #212b36 !important;
+  color: #000 !important;
+}
+
+.dark-mode .react-tel-input .country-list {
+  color: #000;
+}

@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -32,15 +33,27 @@ import FormProvider, {
   RHFAutocomplete,
   RHFSelect,
 } from 'src/components/hook-form';
-import { Chip, IconButton, InputAdornment, MenuItem } from '@mui/material';
+import {
+  Chip,
+  FormControl,
+  FormHelperText,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  useTheme,
+} from '@mui/material';
 import { states } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useBoolean } from 'src/hooks/use-boolean';
 import { useGetBranchs } from 'src/api/branch';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/material.css';
 
 // ----------------------------------------------------------------------
 
 export default function UserViewForm({ currentUser }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const router = useRouter();
 
   const { enqueueSnackbar } = useSnackbar();
@@ -248,6 +261,12 @@ export default function UserViewForm({ currentUser }) {
     }
   }, [currentUser, defaultValues, reset]);
 
+  useEffect(() => {
+    console.log('here12');
+    document.body.classList.remove('light-mode', 'dark-mode');
+    document.body.classList.add(isDark ? 'dark-mode' : 'light-mode');
+  }, [isDark]);
+
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
       <Grid container spacing={3}>
@@ -302,7 +321,58 @@ export default function UserViewForm({ currentUser }) {
               <RHFTextField name="firstName" label="First Name" disabled />
               <RHFTextField name="lastName" label="Last Name" disabled />
               <RHFTextField name="email" label="Email Address" disabled />
-              <RHFTextField type="number" name="phoneNumber" label="Phone Number" disabled />
+              <Controller
+                name="phoneNumber"
+                control={control}
+                defaultValue=""
+                rules={{ required: 'Phone number is required' }}
+                render={({ field, fieldState: { error } }) => (
+                  <FormControl fullWidth error={!!error}>
+                    <PhoneInput
+                      {...field}
+                      value={field.value}
+                      country="ae"
+                      enableSearch
+                      disabled
+                      specialLabel={
+                        <span
+                          style={{
+                            backgroundColor: 'transparent',
+                            color: error
+                              ? '#f44336'
+                              : isDark
+                              ? '#fff'
+                              : theme.palette.text.secondary,
+                            fontSize: 12,
+                            fontWeight: 600,
+                          }}
+                        >
+                          Phone Number
+                        </span>
+                      }
+                      inputStyle={{
+                        width: '100%',
+                        height: '56px',
+                        fontSize: '16px',
+                        backgroundColor: 'transparent',
+                        borderColor: error ? '#f44336' : '#c4c4c4',
+                        borderRadius: '8px',
+                        color: isDark ? '#fff' : undefined,
+                        paddingLeft: '48px',
+                        paddingRight: '40px',
+                      }}
+                      containerStyle={{ width: '100%' }}
+                      onChange={(value) => field.onChange(value)}
+                      inputProps={{
+                        name: field.name,
+                        required: true,
+                      }}
+                    />
+
+                    {error && <FormHelperText>{error.message}</FormHelperText>}
+                  </FormControl>
+                )}
+              />
               <Controller
                 name="dob"
                 control={control}

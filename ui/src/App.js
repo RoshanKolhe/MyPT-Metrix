@@ -42,6 +42,9 @@ import SnackbarProvider from 'src/components/snackbar/snackbar-provider';
 import { SettingsProvider, SettingsDrawer } from 'src/components/settings';
 // auth
 import { AuthProvider, AuthConsumer } from 'src/auth/context/jwt';
+import { useTheme } from '@mui/material';
+import { useEffect } from 'react';
+import './styles/phoneInput.css';
 // import { AuthProvider, AuthConsumer } from 'src/auth/context/auth0';
 // import { AuthProvider, AuthConsumer } from 'src/auth/context/amplify';
 // import { AuthProvider, AuthConsumer } from 'src/auth/context/firebase';
@@ -49,20 +52,8 @@ import { AuthProvider, AuthConsumer } from 'src/auth/context/jwt';
 // ----------------------------------------------------------------------
 
 export default function App() {
-  const charAt = `
-
-  ░░░    ░░░ 
-  ▒▒▒▒  ▒▒▒▒ 
-  ▒▒ ▒▒▒▒ ▒▒ 
-  ▓▓  ▓▓  ▓▓ 
-  ██      ██ 
-  
-  `;
-
-  console.info(`%c${charAt}`, 'color: #5BE49B');
-
   useScrollToTop();
-
+  
   return (
     <AuthProvider>
       <ReduxProvider>

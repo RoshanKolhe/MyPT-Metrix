@@ -33,12 +33,23 @@ import FormProvider, {
   RHFAutocomplete,
   RHFSelect,
 } from 'src/components/hook-form';
-import { Chip, IconButton, InputAdornment, MenuItem } from '@mui/material';
+import {
+  Chip,
+  FormControl,
+  FormHelperText,
+  FormLabel,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  useTheme,
+} from '@mui/material';
 import { states } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useBoolean } from 'src/hooks/use-boolean';
 import { useGetBranchs } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/material.css';
 
 // ----------------------------------------------------------------------
 
@@ -51,8 +62,11 @@ const allRoles = [
 ];
 
 export default function UserNewEditForm({ currentUser }) {
+  console.log(currentUser);
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  console.log(isDark);
   const { user } = useAuthContext();
-  console.log(user);
   const userRole = user?.permissions?.[0];
   const roleOptions =
     userRole === 'hod'
@@ -60,8 +74,6 @@ export default function UserNewEditForm({ currentUser }) {
       : userRole === 'cgm'
       ? allRoles.filter((r) => r.value === 'hod' || r.value === 'sub_hod')
       : allRoles;
-
-  console.log(roleOptions);
 
   const router = useRouter();
 
@@ -86,14 +98,18 @@ export default function UserNewEditForm({ currentUser }) {
             .min(6, 'Password must be at least 6 characters')
             .required('Password is required')
         : Yup.string(),
-      confirmPassword: !currentUser
-        ? Yup.string()
+
+      confirmPassword: Yup.string().when('password', {
+        is: (val) => val && val.length > 0,
+        then: (schema) =>
+          schema
             .required('Confirm password is required')
-            .oneOf([Yup.ref('password')], 'Passwords must match')
-        : Yup.string(),
+            .oneOf([Yup.ref('password')], 'Passwords must match'),
+        otherwise: (schema) => schema.notRequired(),
+      }),
       phoneNumber: Yup.string()
         .required('Phone number is required')
-        .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
+        .matches(/^[0-9]{8,15}$/, 'Phone number must be between 8 and 15 digits'),
       dob: Yup.string(),
       address: Yup.string(),
       state: Yup.string(),
@@ -149,12 +165,9 @@ export default function UserNewEditForm({ currentUser }) {
   const values = watch();
   const role = watch('role');
 
-  console.log(role);
-
   const onSubmit = handleSubmit(async (formData) => {
     try {
       console.info('DATA', formData);
-
       const inputData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -319,8 +332,11 @@ export default function UserNewEditForm({ currentUser }) {
     }
   }, [user, userRole, currentUser]);
 
-  console.log('Available department options:', departmentOptions);
-  console.log('Selected departments from form:', watch('departments'));
+  useEffect(() => {
+    console.log('here12');
+    document.body.classList.remove('light-mode', 'dark-mode');
+    document.body.classList.add(isDark ? 'dark-mode' : 'light-mode');
+  }, [isDark]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -375,7 +391,57 @@ export default function UserNewEditForm({ currentUser }) {
               <RHFTextField name="firstName" label="First Name" />
               <RHFTextField name="lastName" label="Last Name" />
               <RHFTextField name="email" label="Email Address" />
-              <RHFTextField type="number" name="phoneNumber" label="Phone Number" />
+              <Controller
+                name="phoneNumber"
+                control={control}
+                defaultValue=""
+                rules={{ required: 'Phone number is required' }}
+                render={({ field, fieldState: { error } }) => (
+                  <FormControl fullWidth error={!!error}>
+                    <PhoneInput
+                      {...field}
+                      value={field.value}
+                      country="ae"
+                      enableSearch
+                      specialLabel={
+                        <span
+                          style={{
+                            backgroundColor: 'transparent',
+                            color: error
+                              ? '#f44336'
+                              : isDark
+                              ? '#fff'
+                              : theme.palette.text.secondary,
+                            fontSize: 12,
+                            fontWeight: 600,
+                          }}
+                        >
+                          Phone Number
+                        </span>
+                      }
+                      inputStyle={{
+                        width: '100%',
+                        height: '56px',
+                        fontSize: '16px',
+                        backgroundColor: 'transparent',
+                        borderColor: error ? '#f44336' : '#c4c4c4',
+                        borderRadius: '8px',
+                        color: isDark ? '#fff' : undefined,
+                        paddingLeft: '48px',
+                        paddingRight: '40px',
+                      }}
+                      containerStyle={{ width: '100%' }}
+                      onChange={(value) => field.onChange(value)}
+                      inputProps={{
+                        name: field.name,
+                        required: true,
+                      }}
+                    />
+
+                    {error && <FormHelperText>{error.message}</FormHelperText>}
+                  </FormControl>
+                )}
+              />
 
               {!currentUser ? (
                 <>

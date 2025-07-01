@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
@@ -23,6 +23,10 @@ import axiosInstance from 'src/utils/axios';
 import Iconify from 'src/components/iconify';
 import { countries } from 'src/assets/data';
 import { useAuthContext } from 'src/auth/hooks';
+import { FormControl, FormHelperText, useTheme } from '@mui/material';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/material.css';
+
 
 // ----------------------------------------------------------------------
 
@@ -35,6 +39,8 @@ const allRoles = [
 ];
 export default function UserQuickEditForm({ currentUser, open, onClose, refreshUsers }) {
   console.log(currentUser);
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   const { user } = useAuthContext();
   console.log(user);
@@ -55,7 +61,7 @@ export default function UserQuickEditForm({ currentUser, open, onClose, refreshU
     email: Yup.string().required('Email is required').email('Email must be a valid email address'),
     phoneNumber: Yup.string()
       .required('Phone number is required')
-      .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
+      .matches(/^[0-9]{8,15}$/, 'Phone number must be between 8 and 15 digits'),
     dob: Yup.string(),
     address: Yup.string(),
     state: Yup.string(),
@@ -122,6 +128,12 @@ export default function UserQuickEditForm({ currentUser, open, onClose, refreshU
     }
   });
 
+  useEffect(() => {
+    console.log('here12');
+    document.body.classList.remove('light-mode', 'dark-mode');
+    document.body.classList.add(isDark ? 'dark-mode' : 'light-mode');
+  }, [isDark]);
+
   return (
     <Dialog
       fullWidth
@@ -164,7 +176,53 @@ export default function UserQuickEditForm({ currentUser, open, onClose, refreshU
             <RHFTextField name="firstName" label="First Name" />
             <RHFTextField name="lastName" label="Last Name" />
             <RHFTextField name="email" label="Email Address" />
-            <RHFTextField type="number" name="phoneNumber" label="Phone Number" />
+            <Controller
+              name="phoneNumber"
+              control={control}
+              defaultValue=""
+              rules={{ required: 'Phone number is required' }}
+              render={({ field, fieldState: { error } }) => (
+                <FormControl fullWidth error={!!error}>
+                  <PhoneInput
+                    {...field}
+                    value={field.value}
+                    country="ae"
+                    enableSearch
+                    specialLabel={
+                      <span
+                        style={{
+                          backgroundColor: 'transparent',
+                          color: error ? '#f44336' : isDark ? '#fff' : theme.palette.text.secondary,
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Phone Number
+                      </span>
+                    }
+                    inputStyle={{
+                      width: '100%',
+                      height: '56px',
+                      fontSize: '16px',
+                      backgroundColor: 'transparent',
+                      borderColor: error ? '#f44336' : '#c4c4c4',
+                      borderRadius: '8px',
+                      color: isDark ? '#fff' : undefined,
+                      paddingLeft: '48px',
+                      paddingRight: '40px',
+                    }}
+                    containerStyle={{ width: '100%' }}
+                    onChange={(value) => field.onChange(value)}
+                    inputProps={{
+                      name: field.name,
+                      required: true,
+                    }}
+                  />
+
+                  {error && <FormHelperText>{error.message}</FormHelperText>}
+                </FormControl>
+              )}
+            />
 
             <Controller
               name="dob"
