@@ -10,13 +10,13 @@ import {
 import {TimeStampRepositoryMixin} from '../mixins/timestamp-repository-mixin';
 
 export class DepartmentKpiRepository extends TimeStampRepositoryMixin<
-  Department,
-  typeof Department.prototype.id,
+  DepartmentKpi,
+  typeof DepartmentKpi.prototype.id,
   Constructor<
     DefaultCrudRepository<
-      Department,
-      typeof Department.prototype.id,
-      DepartmentRelations
+      DepartmentKpi,
+      typeof DepartmentKpi.prototype.id,
+      DepartmentKpiRelations
     >
   >
 >(DefaultCrudRepository) {

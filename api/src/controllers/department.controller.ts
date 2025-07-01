@@ -18,7 +18,7 @@ import {
   response,
 } from '@loopback/rest';
 import {Department} from '../models';
-import {DepartmentRepository} from '../repositories';
+import {DepartmentKpiRepository, DepartmentRepository} from '../repositories';
 import {authenticate} from '@loopback/authentication';
 import {PermissionKeys} from '../authorization/permission-keys';
 
@@ -26,6 +26,8 @@ export class DepartmentController {
   constructor(
     @repository(DepartmentRepository)
     public departmentRepository: DepartmentRepository,
+    @repository(DepartmentKpiRepository)
+    public departmentKpiRepository: DepartmentKpiRepository,
   ) {}
 
   @authenticate({
@@ -45,19 +47,22 @@ export class DepartmentController {
         'application/json': {
           schema: {
             type: 'object',
-            required: ['name'], // add required fields as needed
+            required: ['name'],
             properties: {
-              name: {type: 'string'}, // adjust for your fields
+              name: {type: 'string'},
               kpiIds: {
                 type: 'array',
-                items: {type: 'number'}, // or string if IDs are string
+                items: {type: 'number'},
               },
             },
           },
         },
       },
     })
-    requestBody: {name: string; kpiIds?: number[]}, // Adjust shape if needed
+    requestBody: {
+      name: string;
+      kpiIds?: number[];
+    },
   ): Promise<Department> {
     const {kpiIds = [], ...departmentData} = requestBody;
 
@@ -65,11 +70,14 @@ export class DepartmentController {
     const createdDepartment =
       await this.departmentRepository.create(departmentData);
 
-    // Attach KPIs through the pivot table
-    for (const kpiId of kpiIds) {
-      await this.departmentRepository.kpis(createdDepartment.id).link(kpiId);
-    }
-
+    await Promise.all(
+      kpiIds.map(kpiId =>
+        this.departmentKpiRepository.create({
+          departmentId: createdDepartment.id,
+          kpiId: kpiId,
+        }),
+      ),
+    );
     return createdDepartment;
   }
 
@@ -164,11 +172,11 @@ export class DepartmentController {
     await this.departmentRepository.updateById(id, departmentData);
 
     if (kpiIds) {
-      await this.departmentRepository.kpis(id).delete();
+      await this.departmentKpiRepository.deleteAll({departmentId: id});
 
-      for (const kpiId of kpiIds) {
-        await this.departmentRepository.kpis(id).link(kpiId);
-      }
+      await Promise.all(
+        kpiIds.map(kpiId => this.departmentRepository.kpis(id).link(kpiId)),
+      );
     }
   }
 
