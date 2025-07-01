@@ -21,7 +21,7 @@ import FormProvider, { RHFSelect, RHFTextField, RHFAutocomplete } from 'src/comp
 import axiosInstance from 'src/utils/axios';
 import { COMMON_STATUS_OPTIONS } from 'src/utils/constants';
 import { Chip, MenuItem, Typography } from '@mui/material';
-import { useGetDepartments } from 'src/api/department';
+import { useGetDepartments, useGetDepartmentsWithFilter } from 'src/api/department';
 
 // ----------------------------------------------------------------------
 
@@ -30,8 +30,15 @@ export default function BranchNewEditForm({ currentBranch }) {
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const { departments, departmentsLoading, departmentsEmpty, refreshDepartments } =
-    useGetDepartments();
+  const rawFilter = {
+    where: {
+      isActive: true,
+    },
+  };
+
+  const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
+
+  const { filteredDepartments: departments } = useGetDepartmentsWithFilter(encodedFilter);
 
   const NewBranchSchema = Yup.object().shape({
     branchName: Yup.string().required('Branch Name is required'),
