@@ -126,6 +126,13 @@ export const paths = {
       edit: (id) => `${ROOTS.DASHBOARD}/staff/${id}/edit`,
       view: (id) => `${ROOTS.DASHBOARD}/staff/${id}/view`,
     },
+    sale: {
+      root: `${ROOTS.DASHBOARD}/sale`,
+      new: `${ROOTS.DASHBOARD}/sale/new`,
+      list: `${ROOTS.DASHBOARD}/sale/list`,
+      edit: (id) => `${ROOTS.DASHBOARD}/sale/${id}/edit`,
+      view: (id) => `${ROOTS.DASHBOARD}/sale/${id}/view`,
+    },
     target: {
       root: `${ROOTS.DASHBOARD}/target`,
       new: `${ROOTS.DASHBOARD}/target/new`,

@@ -9,3 +9,5 @@ export * from './department-target.model';
 export * from './trainer-target.model';
 export * from './kpi.model';
 export * from './department-kpi.model';
+export * from './sales.model';
+export * from './membership-details.model';

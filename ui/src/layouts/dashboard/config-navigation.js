@@ -101,6 +101,16 @@ export function useNavData() {
               { title: t('create'), path: paths.dashboard.staff.new },
             ],
           },
+          // SALE
+          {
+            title: t('sale'),
+            path: paths.dashboard.sale.root,
+            icon: ICONS.sale,
+            children: [
+              { title: t('list'), path: paths.dashboard.sale.list },
+              { title: t('create'), path: paths.dashboard.sale.new },
+            ],
+          },
         ],
       },
       // MASTERS
@@ -197,9 +207,7 @@ export function useNavData() {
             title: t('target'),
             path: paths.dashboard.target.root,
             icon: ICONS.target,
-            children: [
-              { title: t('list'), path: paths.dashboard.target.list },
-            ],
+            children: [{ title: t('list'), path: paths.dashboard.target.list }],
           },
           // STAFF
           {

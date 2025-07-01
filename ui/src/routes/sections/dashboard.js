@@ -26,6 +26,12 @@ const StaffCreatePage = lazy(() => import('src/pages/dashboard/staff/new'));
 const StaffEditPage = lazy(() => import('src/pages/dashboard/staff/edit'));
 const StaffViewPage = lazy(() => import('src/pages/dashboard/staff/view'));
 
+// STAFF
+const SaleListPage = lazy(() => import('src/pages/dashboard/sale/list'));
+const SaleCreatePage = lazy(() => import('src/pages/dashboard/sale/new'));
+const SaleEditPage = lazy(() => import('src/pages/dashboard/sale/edit'));
+const SaleViewPage = lazy(() => import('src/pages/dashboard/sale/view'));
+
 // TARGET
 const TargetListPage = lazy(() => import('src/pages/dashboard/target/list'));
 const TargetCreatePage = lazy(() => import('src/pages/dashboard/target/new'));
@@ -101,6 +107,17 @@ export const dashboardRoutes = [
           { path: 'new', element: <StaffCreatePage /> },
           { path: ':id/edit', element: <StaffEditPage /> },
           { path: ':id/view', element: <StaffViewPage /> },
+        ],
+      },
+      {
+        path: 'sale',
+        element: <RolesAuthRoute roles={['super_admin', 'admin', 'cgm', 'hod']} />,
+        children: [
+          { element: <SaleListPage />, index: true },
+          { path: 'list', element: <SaleListPage /> },
+          { path: 'new', element: <SaleCreatePage /> },
+          { path: ':id/edit', element: <SaleEditPage /> },
+          { path: ':id/view', element: <SaleViewPage /> },
         ],
       },
       {
