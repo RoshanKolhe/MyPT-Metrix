@@ -48,6 +48,7 @@ const ICONS = {
   analytics: icon('ic_analytics'),
   dashboard: icon('ic_dashboard'),
   branch: icon('ic_branch'),
+  sale: icon('ic_sale'),
 };
 
 // ----------------------------------------------------------------------

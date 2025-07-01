@@ -99,7 +99,7 @@ export class UserController {
     const tx = await repo.beginTransaction(IsolationLevel.READ_COMMITTED);
 
     try {
-      const rolesRequiringBranch = ['admin', 'hod', 'sub_hod'];
+      const rolesRequiringBranch = ['hod', 'sub_hod'];
 
       const role = userData.permissions?.[0]; // assuming single-role system
 
