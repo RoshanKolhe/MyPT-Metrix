@@ -41,7 +41,6 @@ export default function TargetViewForm({ currentTarget }) {
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [kpiTargets, setKpiTargets] = useState({});
-  const [serviceTarget, setServiceTarget] = useState(0);
 
   const defaultValues = useMemo(() => {
     const kpiMap =
@@ -68,7 +67,7 @@ export default function TargetViewForm({ currentTarget }) {
   }, [currentTarget]);
 
   const methods = useForm({ defaultValues });
-  const { handleSubmit, control, setValue } = methods;
+  const { handleSubmit, control, setValue, reset } = methods;
 
   const handleApproveTarget = async () => {
     setLoading(true);
@@ -113,8 +112,7 @@ export default function TargetViewForm({ currentTarget }) {
 
   useEffect(() => {
     setValue('targetValue', branchTarget);
-    setServiceTarget(serviceKpiTotal);
-  }, [branchTarget, serviceKpiTotal, setValue]);
+  }, [branchTarget, setValue]);
 
   const onRequestChange = handleSubmit(async (data) => {
     try {
@@ -150,6 +148,12 @@ export default function TargetViewForm({ currentTarget }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (currentTarget) {
+      reset(defaultValues);
+    }
+  }, [currentTarget, defaultValues, reset]);
 
   return (
     <FormProvider methods={methods} onSubmit={onRequestChange}>
@@ -225,16 +229,12 @@ export default function TargetViewForm({ currentTarget }) {
                 <RHFTextField name="targetValue" label="Branch Sales Target" disabled />
               </Grid>
 
-              <Grid item xs={12} md={6}>
-                <TextField label="Branch Service Target" value={serviceTarget} fullWidth disabled />
-              </Grid>
-
               {departments.map((dept) => (
                 <Grid item xs={12} key={dept.id}>
                   <Typography variant="subtitle2" gutterBottom>
                     {dept.name}
                   </Typography>
-                  <Grid container spacing={1}>
+                  <Grid container spacing={2} mt={1}>
                     {(dept.kpis || []).length > 0 ? (
                       dept.kpis.map((kpi) => {
                         const key = `${dept.id}_${kpi.id}`;
