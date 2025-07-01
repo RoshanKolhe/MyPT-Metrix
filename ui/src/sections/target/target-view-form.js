@@ -1,81 +1,57 @@
 import PropTypes from 'prop-types';
-import * as Yup from 'yup';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { Card, Stack, Grid, Typography, TextField, Button } from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import axiosInstance from 'src/utils/axios';
+import FormProvider, { RHFTextField, RHFAutocomplete } from 'src/components/hook-form';
 import { useSnackbar } from 'src/components/snackbar';
-import FormProvider, { RHFAutocomplete, RHFTextField } from 'src/components/hook-form';
-import { useGetBranchs } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
+import axiosInstance from 'src/utils/axios';
 import { useRouter } from 'src/routes/hook';
 import { paths } from 'src/routes/paths';
-import { LoadingButton } from '@mui/lab';
-import { useBoolean } from 'src/hooks/use-boolean';
 import { ConfirmDialog } from 'src/components/custom-dialog';
+import { useBoolean } from 'src/hooks/use-boolean';
+import { LoadingButton } from '@mui/lab';
 
 export default function TargetViewForm({ currentTarget }) {
-  console.log(currentTarget?.requestChangeReason);
   const { user } = useAuthContext();
 
   const isCGM = user?.permissions?.includes('cgm');
   const isSuperAdmin = user?.permissions?.includes('super_admin');
   const isHOD = user?.permissions?.includes('hod');
+  const { enqueueSnackbar } = useSnackbar();
   const router = useRouter();
 
-  const { branches } = useGetBranchs();
-  const { enqueueSnackbar } = useSnackbar();
   const confirm = useBoolean();
-
-  const [rejectError, setRejectError] = useState(false);
-  const [departments, setDepartments] = useState([]);
-  const [trainers, setTrainers] = useState([]);
-  const [cgmUsers, setCgmUsers] = useState([]);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [departmentTargets, setDepartmentTargets] = useState({});
-  const [trainerTargets, setTrainerTargets] = useState({});
-
-  const [validationSchema, setValidationSchema] = useState(
-    Yup.object({
-      startDate: Yup.string()
-        .required('Start Date is required')
-        .test('valid-start', 'Start Date cannot be after End Date', (value, context) => {
-          const { endDate } = context.parent;
-          return !endDate || new Date(value) <= new Date(endDate);
-        }),
-
-      endDate: Yup.string()
-        .required('End Date is required')
-        .test('valid-end', 'End Date cannot be before Start Date', (value, context) => {
-          const { startDate } = context.parent;
-          return !startDate || new Date(value) >= new Date(startDate);
-        }),
-      branch: isSuperAdmin
-        ? Yup.object().required('Branch is required')
-        : Yup.mixed().notRequired(),
-      cgmUser: isSuperAdmin
-        ? Yup.object().required('Cgm User is required')
-        : Yup.object().nullable(),
-      targetValue: isSuperAdmin
-        ? Yup.number()
-            .typeError('Must be a number')
-            .min(1, 'Must be 1 or greater')
-            .required('Required')
-        : Yup.mixed().notRequired(),
-      requestChangeReason: Yup.string(),
-    })
-  );
+  const [departments, setDepartments] = useState([]);
+  const [kpiTargets, setKpiTargets] = useState({});
+  const [serviceTarget, setServiceTarget] = useState(0);
 
   const defaultValues = useMemo(() => {
-    const departmentTargetMap =
+    const kpiMap =
       currentTarget?.departmentTargets?.reduce((acc, dt) => {
-        acc[dt.departmentId] = dt.targetValue;
+        const key = `${dt.departmentId}_${dt.kpiId}`;
+        acc[key] = dt.targetValue;
         return acc;
       }, {}) || {};
+
+    setKpiTargets(kpiMap);
 
     return {
       branch: currentTarget?.branch || null,
@@ -83,118 +59,16 @@ export default function TargetViewForm({ currentTarget }) {
       startDate: currentTarget?.startDate ? new Date(currentTarget.startDate) : null,
       endDate: currentTarget?.endDate ? new Date(currentTarget.endDate) : null,
       targetValue: currentTarget?.targetValue || 0,
-      ...Object.keys(departmentTargetMap).reduce((acc, deptId) => {
-        acc[`department_${deptId}`] = departmentTargetMap[deptId];
+      requestChangeReason: '',
+      ...Object.entries(kpiMap).reduce((acc, [key, value]) => {
+        acc[`kpi_${key}`] = value;
         return acc;
       }, {}),
-      requestChangeReason: currentTarget?.requestChangeReason || '',
     };
   }, [currentTarget]);
 
-  const methods = useForm({
-    resolver: yupResolver(validationSchema),
-    defaultValues,
-  });
-
-  const {
-    watch,
-    setValue,
-    handleSubmit,
-    control,
-    formState: { errors },
-  } = methods;
-
-  const values = watch();
-  const branch = watch('branch');
-
-  // Calculate the sum of all department targets
-  const branchTarget = useMemo(
-    () =>
-      Object.values(departmentTargets).reduce((sum, value) => {
-        const num = Number(value) || 0;
-        return sum + num;
-      }, 0),
-    [departmentTargets]
-  );
-
-  const onSubmit = handleSubmit(async (formData) => {
-    try {
-      const input = {
-        branchId: formData.branch?.id,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        cgmApproverUserId: formData.cgmUser?.id ?? null,
-        targetValue: +formData.targetValue,
-      };
-
-      // Include target assignments
-      if (isSuperAdmin) {
-        input.departmentTargets = Object.entries(departmentTargets).map(([deptId, target]) => ({
-          departmentId: +deptId,
-          targetValue: +target,
-        }));
-      } else if (isHOD) {
-        input.trainerTargets = Object.entries(trainerTargets).map(([trainerId, target]) => ({
-          trainerId: +trainerId,
-          targetValue: +target,
-        }));
-      }
-
-      // Decide POST or PATCH based on currentTarget
-      if (currentTarget) {
-        await axiosInstance.patch(`/targets/${currentTarget.id}`, input);
-        enqueueSnackbar('Target updated successfully!');
-      } else {
-        await axiosInstance.post('/targets', input);
-        enqueueSnackbar('Target is sent for approval!');
-      }
-
-      router.push(paths.dashboard.target.list);
-    } catch (error) {
-      enqueueSnackbar(error.message || 'Something went wrong', { variant: 'error' });
-    }
-  });
-
-  const fetchCgmUsers = async (branchDetails) => {
-    console.log(branchDetails);
-    try {
-      if (branchDetails && branchDetails?.id) {
-        const inputData = {
-          branchId: branchDetails?.id,
-        };
-        const { data } = await axiosInstance.post(`/cgms/by-branch`, inputData);
-        console.log(data);
-        setCgmUsers(data);
-      } else {
-        setCgmUsers([]);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleChangeRequest = async () => {
-    setLoading(true);
-    try {
-      const inputData = {
-        changeRequestReason: rejectReason,
-        status: 2,
-      };
-      await axiosInstance.patch(`/targets/${currentTarget.id}/status`, inputData);
-      enqueueSnackbar('Target Sent For Changes');
-      setRejectError(false);
-      confirm.onFalse();
-      router.push(paths.dashboard.target.list);
-    } catch (error) {
-      console.error('Error saving user details:', error);
-      enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
-        variant: 'error',
-      });
-      confirm.onFalse();
-    } finally {
-      setLoading(false);
-    }
-  };
+  const methods = useForm({ defaultValues });
+  const { handleSubmit, control, setValue } = methods;
 
   const handleApproveTarget = async () => {
     setLoading(true);
@@ -216,84 +90,69 @@ export default function TargetViewForm({ currentTarget }) {
   };
 
   useEffect(() => {
-    if (currentTarget) {
-      setValue('targetValue', currentTarget.targetValue);
-      setValue('startDate', new Date(currentTarget.startDate));
-      setValue('endDate', new Date(currentTarget.endDate));
-      setValue('branch', currentTarget.branch);
-      setValue('cgmUser', currentTarget.cgmApproverUser);
-      setValue('requestChangeReason', currentTarget.requestChangeReason);
-
-      if (currentTarget.departmentTargets) {
-        const deptTargets = {};
-        currentTarget.departmentTargets.forEach((dt) => {
-          setValue(`department_${dt.departmentId}`, dt.targetValue);
-          deptTargets[dt.departmentId] = dt.targetValue;
-        });
-        setDepartmentTargets(deptTargets);
-      }
+    if (currentTarget?.branch?.departments) {
+      setDepartments(currentTarget.branch.departments);
     }
-  }, [currentTarget, setValue]);
+  }, [currentTarget]);
 
-  useEffect(() => {
-    if (branch?.departments) {
-      setDepartments(branch.departments);
+  const { branchTarget, serviceKpiTotal } = useMemo(() => {
+    let sales = 0;
+    let service = 0;
 
-      // Initialize validation schema for each department
-      const departmentValidations = branch.departments.reduce((acc, dept) => {
-        acc[`department_${dept.id}`] = Yup.number()
-          .typeError('Must be a number')
-          .min(0, 'Must be 0 or greater')
-          .required('Required');
-        return acc;
-      }, {});
-
-      // Use functional update to avoid dependency on validationSchema
-      setValidationSchema((prevSchema) => {
-        const baseFields = {
-          startDate: Yup.date().required('Start date is required'),
-          endDate: Yup.date()
-            .required('End date is required')
-            .min(Yup.ref('startDate'), 'End date must be after start date'),
-          branch: isSuperAdmin
-            ? Yup.object().required('Branch is required')
-            : Yup.mixed().notRequired(),
-        };
-
-        return Yup.object({
-          ...baseFields,
-          ...departmentValidations,
-        });
+    departments.forEach((dept) => {
+      (dept.kpis || []).forEach((kpi) => {
+        const key = `${dept.id}_${kpi.id}`;
+        const val = Number(kpiTargets[key] || 0);
+        if (kpi.type === 'sales') sales += val;
+        else if (kpi.type === 'service') service += val;
       });
+    });
 
-      fetchCgmUsers(branch);
-    }
-  }, [branch, isSuperAdmin]);
-
-  // useEffect(() => {
-  //   if (isHOD && user?.branch) {
-  //     setValue('branch', user.branch);
-  //     setDepartments(user?.departments ?? []);
-
-  //     axiosInstance
-  //       .post('/trainers/by-department', {
-  //         departmentIds: user.departments?.map((d) => d.id),
-  //       })
-  //       .then((res) => setTrainers(res.data))
-  //       .catch(() => setTrainers([]));
-  //   }
-  // }, [isHOD, user, setValue]);
+    return { branchTarget: sales, serviceKpiTotal: service };
+  }, [kpiTargets, departments]);
 
   useEffect(() => {
-    if (branchTarget) {
-      setValue('targetValue', branchTarget, { shouldValidate: true });
-    }
-  }, [branchTarget, setValue]);
+    setValue('targetValue', branchTarget);
+    setServiceTarget(serviceKpiTotal);
+  }, [branchTarget, serviceKpiTotal, setValue]);
 
-  console.log(departments);
+  const onRequestChange = handleSubmit(async (data) => {
+    try {
+      await axiosInstance.patch(`/targets/${currentTarget.id}`, {
+        status: 2,
+        requestChangeReason: data.requestChangeReason,
+      });
+      enqueueSnackbar('Request change sent');
+      router.push(paths.dashboard.target.list);
+    } catch (err) {
+      enqueueSnackbar(err?.message || 'Something went wrong', { variant: 'error' });
+    }
+  });
+
+  const handleChangeRequest = async () => {
+    setLoading(true);
+    try {
+      const inputData = {
+        changeRequestReason: rejectReason,
+        status: 2,
+      };
+      await axiosInstance.patch(`/targets/${currentTarget.id}/status`, inputData);
+      enqueueSnackbar('Target Sent For Changes');
+      setRejectError(false);
+      confirm.onFalse();
+      router.push(paths.dashboard.target.list);
+    } catch (error) {
+      enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
+        variant: 'error',
+      });
+      confirm.onFalse();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <FormProvider methods={methods} onSubmit={onSubmit}>
+    <FormProvider methods={methods} onSubmit={onRequestChange}>
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Card sx={{ p: 3 }}>
@@ -301,208 +160,154 @@ export default function TargetViewForm({ currentTarget }) {
               <Grid item xs={12} md={6}>
                 <RHFAutocomplete
                   name="branch"
-                  label="Select Branch"
-                  options={branches || []}
+                  label="Branch"
+                  options={[currentTarget?.branch]}
                   getOptionLabel={(option) => option?.name || ''}
                   isOptionEqualToValue={(o, v) => o.id === v.id}
-                  fullWidth
                   disabled
                 />
               </Grid>
+
               <Grid item xs={12} md={6}>
                 <RHFAutocomplete
                   name="cgmUser"
-                  label="Cgm User"
-                  options={cgmUsers}
+                  label="CGM User"
+                  options={[currentTarget?.cgmApproverUser]}
                   getOptionLabel={(option) =>
-                    option && option.firstName && option.lastName
-                      ? `${option.firstName} ${option.lastName}`
-                      : ''
+                    `${option?.firstName || ''} ${option?.lastName || ''}`
                   }
-                  filterOptions={(x) => x}
-                  isOptionEqualToValue={(option, value) => option?.id === value?.id}
-                  renderOption={(props, option) => (
-                    <li {...props}>
-                      <div>
-                        <Typography variant="subtitle2" fontWeight="bold">
-                          {`${option?.firstName} ${option?.lastName}`}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {option.email}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {option.phoneNumber}
-                        </Typography>
-                      </div>
-                    </li>
-                  )}
+                  isOptionEqualToValue={(o, v) => o?.id === v?.id}
                   disabled
                 />
               </Grid>
+
               <Grid item xs={12} md={6}>
-                <RHFTextField label="Branch Target" name="targetValue" disabled />
-              </Grid>
-
-              <Grid item xs={12} container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="startDate"
-                    control={control}
-                    render={({ field, fieldState: { error } }) => (
-                      <DatePicker
-                        label="Start Date"
-                        value={field.value ? new Date(field.value) : null}
-                        onChange={(newValue) => {
-                          field.onChange(newValue);
-                        }}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            error: !!error,
-                            helperText: error?.message,
-                          },
-                        }}
-                        disabled
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Controller
-                    name="endDate"
-                    control={control}
-                    render={({ field, fieldState: { error } }) => (
-                      <DatePicker
-                        label="End Date"
-                        value={field.value ? new Date(field.value) : null}
-                        onChange={(newValue) => {
-                          field.onChange(newValue);
-                        }}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            error: !!error,
-                            helperText: error?.message,
-                          },
-                        }}
-                        disabled
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-
-              {departments.length > 0 && (
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Assign Targets to Departments</Typography>
-                  <Grid container spacing={2} sx={{ mt: 1 }}>
-                    {departments.map((dept) => (
-                      <Grid item xs={12} sm={6} key={dept.id}>
-                        <Controller
-                          name={`department_${dept.id}`}
-                          control={control}
-                          defaultValue=""
-                          render={({ field, fieldState: { error } }) => (
-                            <TextField
-                              {...field}
-                              fullWidth
-                              label={dept.name}
-                              type="number"
-                              error={!!error}
-                              helperText={error?.message}
-                              inputProps={{
-                                min: 0,
-                                step: 1,
-                              }}
-                              disabled
-                              onChange={(e) => {
-                                field.onChange(e);
-                                setDepartmentTargets((prev) => ({
-                                  ...prev,
-                                  [dept.id]: e.target.value,
-                                }));
-                              }}
-                            />
-                          )}
-                        />
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Grid>
-              )}
-
-              {isHOD && trainers.length > 0 && (
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Assign Targets to Trainers</Typography>
-                  <Grid container spacing={2} sx={{ mt: 1 }}>
-                    {trainers.map((trainer) => (
-                      <Grid item xs={12} sm={6} key={trainer.id}>
-                        <TextField
-                          fullWidth
-                          label={`${trainer.firstName} ${trainer.lastName}`}
-                          type="number"
-                          onChange={(e) =>
-                            setTrainerTargets((prev) => ({
-                              ...prev,
-                              [trainer.id]: e.target.value,
-                            }))
-                          }
-                          disabled
-                        />
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Grid>
-              )}
-
-              {/* <Grid item xs={12}>
-                <RHFTextField
-                  label="Change Request Reason"
-                  name="requestChangeReason"
-                  multiline
-                  rows={3}
+                <Controller
+                  name="startDate"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      label="Start Date"
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                        },
+                      }}
+                    />
+                  )}
                 />
-              </Grid> */}
+              </Grid>
 
-              <Grid item xs={12} container spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
-                {!isSuperAdmin && currentTarget && currentTarget?.status !== 1 && (
-                  <Grid item>
-                    <LoadingButton
-                      type="button"
-                      variant="contained"
-                      loading={loading}
-                      disabled={currentTarget?.status !== 0}
-                      onClick={() => {
-                        handleApproveTarget();
+              <Grid item xs={12} md={6}>
+                <Controller
+                  name="endDate"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      label="End Date"
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                        },
                       }}
-                    >
-                      Approve Target
-                    </LoadingButton>
-                  </Grid>
-                )}
+                    />
+                  )}
+                />
+              </Grid>
 
-                {!isSuperAdmin && currentTarget && currentTarget?.status !== 1 && (
-                  <Grid item>
-                    <LoadingButton
-                      color="error"
-                      variant="contained"
-                      loading={loading}
-                      onClick={() => {
-                        console.log('reject');
-                        confirm.onTrue();
-                      }}
-                      disabled={currentTarget?.status !== 0}
-                    >
-                      Request Change
-                    </LoadingButton>
+              <Grid item xs={12} md={6}>
+                <RHFTextField name="targetValue" label="Branch Sales Target" disabled />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField label="Branch Service Target" value={serviceTarget} fullWidth disabled />
+              </Grid>
+
+              {departments.map((dept) => (
+                <Grid item xs={12} key={dept.id}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    {dept.name}
+                  </Typography>
+                  <Grid container spacing={1}>
+                    {(dept.kpis || []).length > 0 ? (
+                      dept.kpis.map((kpi) => {
+                        const key = `${dept.id}_${kpi.id}`;
+                        return (
+                          <Grid item xs={12} sm={6} key={kpi.id}>
+                            <Controller
+                              name={`kpi_${key}`}
+                              control={control}
+                              defaultValue=""
+                              render={({ field }) => (
+                                <TextField
+                                  {...field}
+                                  label={kpi.name}
+                                  type="number"
+                                  fullWidth
+                                  disabled
+                                />
+                              )}
+                            />
+                          </Grid>
+                        );
+                      })
+                    ) : (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary">
+                          No KPIs found for this department.
+                        </Typography>
+                      </Grid>
+                    )}
                   </Grid>
-                )}
+                </Grid>
+              ))}
+
+              <Grid item xs={12}>
+                <Stack direction="row" spacing={2} justifyContent="flex-end">
+                  {!isSuperAdmin && currentTarget && currentTarget?.status !== 1 && (
+                    <Grid item>
+                      <LoadingButton
+                        color="error"
+                        variant="contained"
+                        loading={loading}
+                        onClick={() => {
+                          console.log('reject');
+                          confirm.onTrue();
+                        }}
+                        disabled={currentTarget?.status !== 0}
+                      >
+                        Request Change
+                      </LoadingButton>
+                    </Grid>
+                  )}
+                  {!isSuperAdmin && currentTarget && currentTarget?.status !== 1 && (
+                    <Grid item>
+                      <LoadingButton
+                        type="button"
+                        variant="contained"
+                        loading={loading}
+                        disabled={currentTarget?.status !== 0}
+                        onClick={() => {
+                          handleApproveTarget();
+                        }}
+                      >
+                        Approve Target
+                      </LoadingButton>
+                    </Grid>
+                  )}
+                </Stack>
               </Grid>
             </Grid>
           </Card>
         </Grid>
       </Grid>
+
       <ConfirmDialog
         open={confirm.value}
         onClose={confirm.onFalse}

@@ -200,14 +200,25 @@ export class TargetController {
         {
           relation: 'departmentTargets',
           scope: {
-            include: [{relation: 'department'}],
+            include: [
+              {
+                relation: 'department',
+              },
+            ],
           },
         },
         {relation: 'cgmApproverUser'},
         {
           relation: 'branch',
           scope: {
-            include: [{relation: 'departments'}],
+            include: [
+              {
+                relation: 'departments',
+                scope: {
+                  include: ['kpis'],
+                },
+              },
+            ],
           },
         },
       ],
@@ -241,7 +252,14 @@ export class TargetController {
         {
           relation: 'branch',
           scope: {
-            include: [{relation: 'departments'}],
+            include: [
+              {
+                relation: 'departments',
+                scope: {
+                  include: ['kpis'],
+                },
+              },
+            ],
           },
         },
       ],

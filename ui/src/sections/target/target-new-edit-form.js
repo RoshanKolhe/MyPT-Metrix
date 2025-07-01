@@ -13,8 +13,10 @@ import { useGetBranchs } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
 import { useRouter } from 'src/routes/hook';
 import { paths } from 'src/routes/paths';
+import { LoadingButton } from '@mui/lab';
 
 export default function TargetNewEditForm({ currentTarget }) {
+  console.log(currentTarget);
   const { user } = useAuthContext();
   const isSuperAdmin = user?.permissions?.includes('super_admin');
   const isHOD = user?.permissions?.includes('hod');
@@ -66,7 +68,14 @@ export default function TargetNewEditForm({ currentTarget }) {
     defaultValues,
   });
 
-  const { watch, setValue, handleSubmit, control } = methods;
+  const {
+    watch,
+    setValue,
+    handleSubmit,
+    reset,
+    control,
+    formState: { isSubmitting },
+  } = methods;
 
   const branch = watch('branch');
 
@@ -100,7 +109,7 @@ export default function TargetNewEditForm({ currentTarget }) {
   };
 
   useEffect(() => {
-    if (currentTarget?.departmentTargets) {
+    if (currentTarget?.departmentTargets && departments.length > 0) {
       const targetMap = {};
       currentTarget.departmentTargets.forEach((dt) => {
         const key = `${dt.departmentId}_${dt.kpiId}`;
@@ -109,7 +118,7 @@ export default function TargetNewEditForm({ currentTarget }) {
       });
       setKpiTargets(targetMap);
     }
-  }, [currentTarget, setValue]);
+  }, [currentTarget, departments, setValue]);
 
   useEffect(() => {
     if (branch?.departments) {
@@ -157,6 +166,12 @@ export default function TargetNewEditForm({ currentTarget }) {
       enqueueSnackbar(error?.message || 'Something went wrong', { variant: 'error' });
     }
   });
+
+  useEffect(() => {
+    if (currentTarget) {
+      reset(defaultValues);
+    }
+  }, [currentTarget, defaultValues, reset]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -308,9 +323,9 @@ export default function TargetNewEditForm({ currentTarget }) {
               )}
 
               <Grid item xs={12}>
-                <Button type="submit" variant="contained">
-                  {currentTarget ? 'Update Target' : 'Send for Approval'}
-                </Button>
+                <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
+                  {!currentTarget ? 'Send for Approval' : 'Update Target'}
+                </LoadingButton>
               </Grid>
             </Grid>
           </Card>

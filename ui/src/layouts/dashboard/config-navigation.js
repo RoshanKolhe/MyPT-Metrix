@@ -199,7 +199,6 @@ export function useNavData() {
             icon: ICONS.target,
             children: [
               { title: t('list'), path: paths.dashboard.target.list },
-              { title: t('create'), path: paths.dashboard.target.new },
             ],
           },
           // STAFF
