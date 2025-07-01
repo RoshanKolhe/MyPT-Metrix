@@ -75,7 +75,6 @@ export default function AccountGeneral() {
       const inputData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        permissions: [formData.role],
         email: formData.email,
         isActive: formData.isActive,
         dob: formData.dob,
@@ -188,13 +187,14 @@ export default function AccountGeneral() {
             >
               <RHFTextField name="firstName" label="First Name" />
               <RHFTextField name="lastName" label="Last Name" />
-              <RHFTextField name="email" label="Email Address" />
+              <RHFTextField name="email" label="Email Address" disabled/>
               <RHFSelect fullWidth name="role" label="Role" disabled>
                 {[
                   { value: 'super_admin', name: 'Super Admin' },
-                  { value: 'hut_user', name: 'Hut User' },
-                  { value: 'cluster_admin', name: 'Cluster Admin' },
-                  { value: 'group_admin', name: 'Group Admin' },
+                  { value: 'admin', name: 'Admin' },
+                  { value: 'cgm', name: 'CGM' },
+                  { value: 'hod', name: 'HOD' },
+                  { value: 'sub_hod', name: 'SUB HOD' },
                 ].map((option) => (
                   <MenuItem key={option.value} value={option.value}>
                     {option.name}
@@ -223,13 +223,8 @@ export default function AccountGeneral() {
                 )}
               />
               <RHFTextField name="fullAddress" label="Full Address" />
-              <RHFSelect fullWidth name="state" label="State">
-                {states.map((option) => (
-                  <MenuItem key={option.id} value={option.id}>
-                    {option.name}
-                  </MenuItem>
-                ))}
-              </RHFSelect>
+              <RHFTextField name="state" label="State/Region" />
+
               <RHFTextField name="city" label="City" />
             </Box>
 
