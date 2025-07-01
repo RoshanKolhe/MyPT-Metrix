@@ -9,7 +9,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'src/components/snackbar';
 import FormProvider, { RHFAutocomplete, RHFTextField } from 'src/components/hook-form';
-import { useGetBranchs } from 'src/api/branch';
+import { useGetBranchs, useGetBranchsWithFilter } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
 import { useRouter } from 'src/routes/hook';
 import { paths } from 'src/routes/paths';
@@ -21,7 +21,16 @@ export default function TargetNewEditForm({ currentTarget }) {
   const isSuperAdmin = user?.permissions?.includes('super_admin');
   const isHOD = user?.permissions?.includes('hod');
   const router = useRouter();
-  const { branches } = useGetBranchs();
+
+  const rawFilter = {
+    where: {
+      isActive: true,
+    },
+  };
+
+  const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
+  const { filteredbranches: branches } = useGetBranchsWithFilter(encodedFilter);
+
   const { enqueueSnackbar } = useSnackbar();
 
   const [departments, setDepartments] = useState([]);

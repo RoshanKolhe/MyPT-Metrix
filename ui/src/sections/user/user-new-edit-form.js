@@ -46,7 +46,7 @@ import {
 import { states } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useBoolean } from 'src/hooks/use-boolean';
-import { useGetBranchs } from 'src/api/branch';
+import {  useGetBranchsWithFilter } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
@@ -80,8 +80,15 @@ export default function UserNewEditForm({ currentUser }) {
   const { enqueueSnackbar } = useSnackbar();
 
   const password = useBoolean();
+  const rawFilter = {
+    where: {
+      isActive: true,
+    },
+  };
 
-  const { branches, branchesLoading, branchesEmpty, refreshBranches } = useGetBranchs();
+  const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
+
+  const { filteredbranches: branches } = useGetBranchsWithFilter(encodedFilter);
 
   const [departmentOptions, setDepartmentOptions] = useState([]);
 
