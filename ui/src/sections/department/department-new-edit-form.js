@@ -21,7 +21,7 @@ import FormProvider, { RHFSelect, RHFTextField, RHFAutocomplete } from 'src/comp
 import axiosInstance from 'src/utils/axios';
 import { COMMON_STATUS_OPTIONS } from 'src/utils/constants';
 import { Chip, MenuItem, Typography } from '@mui/material';
-import { useGetKpis } from 'src/api/kpi';
+import { useGetKpisWithFilter } from 'src/api/kpi';
 
 // ----------------------------------------------------------------------
 
@@ -30,7 +30,15 @@ export default function DepartmentNewEditForm({ currentDepartment }) {
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const { kpis, kpisLoading, kpisEmpty, refreshKpis } = useGetKpis();
+  const rawFilter = {
+    where: {
+      isActive: true,
+    },
+  };
+
+  const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
+
+  const { filteredKpis: kpis } = useGetKpisWithFilter(encodedFilter);
 
   const NewDepartmentSchema = Yup.object().shape({
     departmentName: Yup.string().required('Department Name is required'),
