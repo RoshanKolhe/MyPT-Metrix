@@ -150,9 +150,9 @@ export default function TargetListView() {
   );
 
   const handleAssignTrainerTarget = useCallback(
-    (id) => {
-      console.log(id);
-      router.push(paths.dashboard.target.assignTrainerTarget(id));
+    (targetId, deptId) => {
+      console.log(targetId);
+      router.push(paths.dashboard.target.assignTrainerTarget(targetId, deptId));
     },
     [router]
   );

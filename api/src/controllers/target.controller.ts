@@ -22,6 +22,7 @@ import {
 } from '@loopback/rest';
 import {DepartmentTarget, Target} from '../models';
 import {
+  DepartmentRepository,
   DepartmentTargetRepository,
   TargetRepository,
   TrainerTargetRepository,
@@ -37,6 +38,8 @@ export class TargetController {
     public dataSource: MyptMetrixDataSource,
     @repository(TargetRepository)
     public targetRepository: TargetRepository,
+    @repository(DepartmentRepository)
+    public departmentRepository: DepartmentRepository,
     @repository(DepartmentTargetRepository)
     public departmentTargetRepository: DepartmentTargetRepository,
     @repository(TrainerTargetRepository)
@@ -471,43 +474,52 @@ export class TargetController {
   }
 
   @authenticate('jwt')
-  @get('/department-target/{id}')
+  @get('/department-targets/{departmentId}/{targetId}')
   @response(200, {
-    description: 'Target model instance',
+    description: 'List of DepartmentTarget with relations',
     content: {
       'application/json': {
-        schema: getModelSchemaRef(Target, {includeRelations: true}),
+        schema: {
+          type: 'array',
+          items: getModelSchemaRef(DepartmentTarget, {includeRelations: true}),
+        },
       },
     },
   })
-  async findByIdDepartmentTarget(
-    @param.path.number('id') id: number,
-    @param.filter(DepartmentTarget, {exclude: 'where'})
-    filter?: FilterExcludingWhere<DepartmentTarget>,
-  ): Promise<DepartmentTarget> {
-    return this.departmentTargetRepository.findById(id, {
-      ...filter,
+  async findDepartmentTargets(
+    @param.path.number('departmentId') departmentId: number,
+    @param.path.number('targetId') targetId: number,
+  ): Promise<any> {
+    const target = await this.targetRepository.findById(targetId);
+    const department = await this.departmentRepository.findById(departmentId);
+    const departmentTargets = await this.departmentTargetRepository.find({
+      where: {
+        departmentId,
+        targetId,
+      },
       include: [
-        {
-          relation: 'department',
-        },
-        {
-          relation: 'target',
-          scope: {
-            include: ['branch'],
-          },
-        },
+        {relation: 'department'},
         {
           relation: 'trainerTargets',
           scope: {
-            include: ['trainer'],
+            include: ['trainer', 'kpi'],
           },
         },
+        {relation: 'kpi'},
       ],
+    });
+
+    return Promise.resolve({
+      success: true,
+      data: {target, departmentTargets, department},
     });
   }
 
   @post('/trainer-targets/assign')
+  @response(200, {
+    description: 'Trainer KPI targets processed successfully',
+    content: {'application/json': {schema: {type: 'object'}}},
+  })
   async assignTrainerTargets(
     @requestBody({
       required: true,
@@ -515,9 +527,8 @@ export class TargetController {
         'application/json': {
           schema: {
             type: 'object',
-            required: ['departmentTargetId', 'trainerKpiTargets'],
+            required: ['trainerKpiTargets'],
             properties: {
-              departmentTargetId: {type: 'number'},
               trainerKpiTargets: {
                 type: 'array',
                 items: {
@@ -529,11 +540,16 @@ export class TargetController {
                       type: 'array',
                       items: {
                         type: 'object',
-                        required: ['kpiId', 'targetValue'],
+                        required: [
+                          'kpiId',
+                          'targetValue',
+                          'departmentTargetId',
+                        ],
                         properties: {
                           kpiId: {type: 'number'},
+                          departmentTargetId: {type: 'number'},
                           targetValue: {type: 'number'},
-                          trainerTargetId: {type: 'number'}, // optional for update
+                          trainerTargetId: {type: 'number'}, // optional
                         },
                       },
                     },
@@ -546,52 +562,102 @@ export class TargetController {
       },
     })
     body: {
-      departmentTargetId: number;
       trainerKpiTargets: {
         trainerId: number;
         kpiTargets: {
           kpiId: number;
+          departmentTargetId: number;
           targetValue: number;
           trainerTargetId?: number;
         }[];
       }[];
     },
-  ) {
-    const {departmentTargetId, trainerKpiTargets} = body;
-    const result = [];
+  ): Promise<{
+    message: string;
+    count: number;
+    data: {
+      trainerId: number;
+      kpiId: number;
+      departmentTargetId: number;
+      trainerTargetId: number;
+      created?: boolean;
+      updated?: boolean;
+    }[];
+  }> {
+    const {trainerKpiTargets} = body;
+    const result: {
+      trainerId: number;
+      kpiId: number;
+      departmentTargetId: number;
+      trainerTargetId: number;
+      created?: boolean;
+      updated?: boolean;
+    }[] = [];
 
-    for (const {trainerId, kpiTargets} of trainerKpiTargets) {
-      for (const {kpiId, targetValue, trainerTargetId} of kpiTargets) {
-        if (trainerTargetId) {
-          await this.trainerTargetRepository.updateById(trainerTargetId, {
-            targetValue,
-            updatedAt: new Date(),
-          });
-          result.push({trainerId, kpiId, trainerTargetId, updated: true});
-        } else {
-          const created = await this.trainerTargetRepository.create({
-            departmentTargetId,
-            trainerId,
-            kpiId,
-            targetValue,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            isDeleted: false,
-          });
-          result.push({
-            trainerId,
-            kpiId,
-            trainerTargetId: created.id,
-            created: true,
-          });
+    const tx = await this.trainerTargetRepository.dataSource.beginTransaction(
+      IsolationLevel.READ_COMMITTED,
+    );
+
+    try {
+      const repo = this.trainerTargetRepository;
+
+      for (const {trainerId, kpiTargets} of trainerKpiTargets) {
+        for (const {
+          kpiId,
+          targetValue,
+          departmentTargetId,
+          trainerTargetId,
+        } of kpiTargets) {
+          if (trainerTargetId) {
+            await repo.updateById(
+              trainerTargetId,
+              {
+                targetValue,
+                updatedAt: new Date(),
+              },
+              {transaction: tx},
+            );
+            result.push({
+              trainerId,
+              kpiId,
+              departmentTargetId,
+              trainerTargetId,
+              updated: true,
+            });
+          } else {
+            const created = await repo.create(
+              {
+                departmentTargetId,
+                trainerId,
+                kpiId,
+                targetValue,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                isDeleted: false,
+              },
+              {transaction: tx},
+            );
+            result.push({
+              trainerId,
+              kpiId,
+              departmentTargetId,
+              trainerTargetId: created.id!,
+              created: true,
+            });
+          }
         }
       }
-    }
 
-    return {
-      message: 'Trainer KPI targets processed successfully',
-      count: result.length,
-      data: result,
-    };
+      await tx.commit();
+
+      return {
+        message: 'Trainer KPI targets processed successfully',
+        count: result.length,
+        data: result,
+      };
+    } catch (error) {
+      await tx.rollback();
+      throw error;
+    }
   }
 }

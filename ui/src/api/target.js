@@ -47,8 +47,8 @@ export function useGetTarget(targetId) {
 
 // ----------------------------------------------------------------------
 
-export function useGetDepartmentTarget(depTargetId) {
-  const URL = depTargetId ? [endpoints.target.depTarget(depTargetId)] : null;
+export function useGetDepartmentTarget(targetId, depTargetId) {
+  const URL = depTargetId && targetId ? [endpoints.target.depTarget(targetId, depTargetId)] : null;
   const { data, isLoading, error, isValidating } = useSWR(URL, fetcher);
 
   const memoizedValue = useMemo(

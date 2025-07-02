@@ -69,7 +69,7 @@ export const endpoints = {
     list: '/targets',
     filterList: (filter) => `/targets?${filter}`,
     details: (id) => `/targets/${id}`,
-    depTarget: (id) => `/department-target/${id}`,
+    depTarget: (targetId, deptId) => `/department-targets/${deptId}/${targetId}`,
   },
   department: {
     list: '/departments',

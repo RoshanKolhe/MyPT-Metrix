@@ -20,12 +20,11 @@ import {
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'src/components/snackbar';
 import FormProvider from 'src/components/hook-form';
-import { useGetKpis } from 'src/api/kpi';
 
 export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget }) {
   const { enqueueSnackbar } = useSnackbar();
-  const { kpis, kpisLoading } = useGetKpis();
 
+  const [kpis, setKpis] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [trainerTargets, setTrainerTargets] = useState({});
   const [trainerTargetIds, setTrainerTargetIds] = useState({});
@@ -49,18 +48,50 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
     defaultValues,
   });
 
-  const { handleSubmit, formState: { errors }, reset } = methods;
+  const {
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = methods;
+
+  const onSubmit = async () => {
+    try {
+      const trainerKpiTargetPayload = trainers.map((trainer) => ({
+        trainerId: trainer.id,
+        kpiTargets: kpis.map((kpi) => {
+          const key = `${kpi.id}_${kpi.departmentTargetId}`;
+
+          return {
+            kpiId: kpi.id,
+            departmentTargetId: kpi.departmentTargetId,
+            targetValue: trainerTargets[trainer.id]?.[key] ?? 0,
+            trainerTargetId: trainerTargetIds[trainer.id]?.[key] ?? undefined,
+          };
+        }),
+      }));
+      console.log('trainerKpiTargetPayload', trainerKpiTargetPayload);
+      await axiosInstance.post('/trainer-targets/assign', {
+        trainerKpiTargets: trainerKpiTargetPayload,
+      });
+
+      enqueueSnackbar('Trainer KPI targets saved successfully!', { variant: 'success' });
+    } catch (error) {
+      console.error(error);
+      enqueueSnackbar(error?.message || 'Something went wrong', { variant: 'error' });
+    }
+  };
 
   // Fetch trainers and initialize target values (for create and edit)
   useEffect(() => {
     const fetchTrainers = async () => {
       try {
-        const { target, departmentId } = currentDepartmentTarget;
-        if (!target?.branchId || !departmentId) return;
+        const { target, department } = currentDepartmentTarget;
+        console.log(target, department);
+        if (!target?.branchId || !department?.id) return;
 
         const res = await axiosInstance.post('/trainers/by-branch-department', {
           branchId: target.branchId,
-          departmentId,
+          departmentId: department?.id,
         });
 
         const fetchedTrainers = res.data || [];
@@ -84,61 +115,41 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
 
   // Initialize targets from currentDepartmentTarget if editing
   useEffect(() => {
-    if (
-      currentDepartmentTarget?.trainerTargets &&
-      currentDepartmentTarget.trainerTargets.length > 0 &&
-      trainers.length > 0 &&
-      kpis.length > 0
-    ) {
-      const initialTargets = {};
-      const idMap = {};
+    const initialTargets = {};
+    const idMap = {};
 
-      trainers.forEach((trainer) => {
-        initialTargets[trainer.id] = {};
-        idMap[trainer.id] = {};
-        kpis.forEach((kpi) => {
-          initialTargets[trainer.id][kpi.id] = 0;
-          idMap[trainer.id][kpi.id] = null;
-        });
-      });
+    currentDepartmentTarget?.departmentTargets?.forEach((deptTarget) => {
+      const departmentTargetId = deptTarget.id;
+      const kpiId = deptTarget.kpi.id;
 
-      currentDepartmentTarget.trainerTargets.forEach((tt) => {
-        const { trainerId, kpiId, targetValue, id } = tt;
+      deptTarget.trainerTargets?.forEach((tt) => {
+        const { trainerId } = tt;
+        const key = `${kpiId}_${departmentTargetId}`;
+
         if (!initialTargets[trainerId]) initialTargets[trainerId] = {};
         if (!idMap[trainerId]) idMap[trainerId] = {};
 
-        initialTargets[trainerId][kpiId] = targetValue;
-        idMap[trainerId][kpiId] = id;
+        initialTargets[trainerId][key] = tt.targetValue;
+        idMap[trainerId][key] = tt.id;
       });
+    });
 
-      setTrainerTargets(initialTargets);
-      setTrainerTargetIds(idMap);
+    setTrainerTargets(initialTargets);
+    setTrainerTargetIds(idMap);
+  }, [currentDepartmentTarget]);
+
+  useEffect(() => {
+    if (currentDepartmentTarget?.departmentTargets) {
+      const kpisFromTarget = currentDepartmentTarget.departmentTargets.map((dt) => ({
+        id: dt.kpi.id,
+        name: dt.kpi.name,
+        targetValue: dt.targetValue,
+        departmentTargetId: dt.id,
+      }));
+
+      setKpis(kpisFromTarget);
     }
-  }, [currentDepartmentTarget, trainers, kpis]);
-
-  // Submit form
-  const onSubmit = async () => {
-    const trainerKpiTargetPayload = trainers.map((trainer) => ({
-      trainerId: trainer.id,
-      kpiTargets: kpis.map((kpi) => ({
-        kpiId: kpi.id,
-        targetValue: trainerTargets[trainer.id]?.[kpi.id] ?? 0,
-        trainerTargetId: trainerTargetIds[trainer.id]?.[kpi.id] ?? undefined,
-      })),
-    }));
-
-    try {
-      await axiosInstance.post('/trainer-targets/assign', {
-        departmentTargetId: currentDepartmentTarget.id,
-        trainerKpiTargets: trainerKpiTargetPayload,
-      });
-
-      enqueueSnackbar('Trainer KPI targets saved successfully!', { variant: 'success' });
-    } catch (error) {
-      console.error(error);
-      enqueueSnackbar(error?.message || 'Something went wrong', { variant: 'error' });
-    }
-  };
+  }, [currentDepartmentTarget]);
 
   return (
     <FormProvider methods={methods} onSubmit={handleSubmit(onSubmit)}>
@@ -146,26 +157,9 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
         <Grid item xs={12}>
           <Card sx={{ p: 3 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Department Target"
-                  value={deptTargetValue}
-                  fullWidth
-                  disabled
-                  error={!!errors.deptTargetValue}
-                  helperText={errors.deptTargetValue?.message}
-                />
-              </Grid>
-
-              {errorMessage && (
-                <Grid item xs={12}>
-                  <Alert severity="error">{errorMessage}</Alert>
-                </Grid>
-              )}
-
               <Grid item xs={12}>
                 <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                  Assign KPI Targets
+                  Assign Trainer Targets
                 </Typography>
 
                 <TableContainer sx={{ overflowX: 'auto' }}>
@@ -173,8 +167,13 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
                     <TableHead>
                       <TableRow>
                         <TableCell>Trainer</TableCell>
-                        {kpis?.map((kpi) => (
-                          <TableCell key={kpi.id}>{kpi.name}</TableCell>
+                        {kpis.map((kpi) => (
+                          <TableCell key={kpi.id}>
+                            {kpi.name}
+                            <Typography component="span" color="text.secondary">
+                              ({kpi.targetValue})
+                            </Typography>
+                          </TableCell>
                         ))}
                       </TableRow>
                     </TableHead>
@@ -185,26 +184,30 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
                           <TableCell>
                             {trainer.firstName} {trainer.lastName}
                           </TableCell>
-                          {kpis.map((kpi) => (
-                            <TableCell key={kpi.id}>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={trainerTargets[trainer.id]?.[kpi.id] ?? 0}
-                                onChange={(e) => {
-                                  const value = Number(e.target.value);
-                                  setTrainerTargets((prev) => ({
-                                    ...prev,
-                                    [trainer.id]: {
-                                      ...prev[trainer.id],
-                                      [kpi.id]: value,
-                                    },
-                                  }));
-                                }}
-                                inputProps={{ min: 0 }}
-                              />
-                            </TableCell>
-                          ))}
+                          {kpis.map((kpi) => {
+                            const key = `${kpi.id}_${kpi.departmentTargetId}`; // ✅ must be declared here
+
+                            return (
+                              <TableCell key={key}>
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  type="number"
+                                  value={trainerTargets[trainer.id]?.[key] ?? 0}
+                                  onChange={(e) => {
+                                    const value = Number(e.target.value);
+                                    setTrainerTargets((prev) => ({
+                                      ...prev,
+                                      [trainer.id]: {
+                                        ...prev[trainer.id],
+                                        [key]: value,
+                                      },
+                                    }));
+                                  }}
+                                />
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       ))}
                     </TableBody>

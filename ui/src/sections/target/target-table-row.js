@@ -35,8 +35,8 @@ export default function TargetTableRow({
   const { user } = useAuthContext();
   const isSuperOrAdmin =
     user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
-  const { startDate, endDate, status, departmentTargets, branch } = row;
-
+  const { id, startDate, endDate, status, branch } = row;
+  console.log(row);
   const confirm = useBoolean();
 
   const popover = usePopover();
@@ -140,15 +140,12 @@ export default function TargetTableRow({
                 Department Name
               </Grid>
               <Grid item xs={3}>
-                Target
-              </Grid>
-              <Grid item xs={3}>
                 Action
               </Grid>
             </Grid>
 
             {/* Table Rows */}
-            {departmentTargets?.map((item) => (
+            {branch?.departments?.map((item) => (
               <Grid
                 container
                 key={item.id}
@@ -158,18 +155,15 @@ export default function TargetTableRow({
                 }}
               >
                 <Grid item xs={3}>
-                  {item?.department?.name}
-                </Grid>
-                <Grid item xs={3}>
-                  {item?.targetValue}
+                  {item?.name}
                 </Grid>
                 <Grid item xs={3}>
                   {status === 1 ? (
-                    <Tooltip title="Assign Target">
+                    <Tooltip title="Assign Trainer Target">
                       <IconButton
                         color="primary"
                         size="small"
-                        onClick={() => onAssignTrainerTarget(item.id)}
+                        onClick={() => onAssignTrainerTarget(id, item.id)}
                       >
                         <Iconify icon="ic:baseline-assignment" />
                       </IconButton>

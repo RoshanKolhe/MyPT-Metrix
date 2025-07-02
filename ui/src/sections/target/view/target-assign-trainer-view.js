@@ -20,9 +20,8 @@ export default function TargetAssignTrainerView() {
 
   const params = useParams();
 
-  const { id } = params;
-
-  const { depTarget: currentDepartmentTarget } = useGetDepartmentTarget(id);
+  const { targetId, deptId } = params;
+  const { depTarget: currentDepartmentTarget } = useGetDepartmentTarget(targetId, deptId);
 
   console.log('currentDepartmentTarget', currentDepartmentTarget);
 
@@ -40,7 +39,7 @@ export default function TargetAssignTrainerView() {
             href: paths.dashboard.target.root,
           },
           {
-            name: currentDepartmentTarget?.department?.name,
+            name: currentDepartmentTarget?.data?.department?.name,
           },
         ]}
         sx={{
@@ -48,7 +47,7 @@ export default function TargetAssignTrainerView() {
         }}
       />
 
-      <TargetNewEditAssignTrainerForm currentDepartmentTarget={currentDepartmentTarget} />
+      <TargetNewEditAssignTrainerForm currentDepartmentTarget={currentDepartmentTarget?.data} />
     </Container>
   );
 }

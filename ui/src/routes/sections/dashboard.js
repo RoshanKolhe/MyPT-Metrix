@@ -95,7 +95,7 @@ export const dashboardRoutes = [
           { path: 'new', element: <TargetCreatePage /> },
           { path: ':id/edit', element: <TargetEditPage /> },
           { path: ':id/view', element: <TargetViewPage /> },
-          { path: ':id/assign-trainer-target', element: <TargetAssignTargetPage /> },
+          { path: ':targetId/assign-trainer-target/:deptId', element: <TargetAssignTargetPage /> },
         ],
       },
       {
