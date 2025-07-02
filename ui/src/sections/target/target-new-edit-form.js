@@ -37,21 +37,27 @@ export default function TargetNewEditForm({ currentTarget }) {
   const [cgmUsers, setCgmUsers] = useState([]);
   const [kpiTargets, setKpiTargets] = useState({});
 
-  const validationSchema = Yup.object({
-    startDate: Yup.date().required('Start date is required'),
-    endDate: Yup.date()
-      .required('End date is required')
-      .min(Yup.ref('startDate'), 'End date must be after start date'),
-    branch: isSuperAdmin ? Yup.object().required('Branch is required') : Yup.mixed().notRequired(),
-    cgmUser: isSuperAdmin ? Yup.object().required('Cgm User is required') : Yup.object().nullable(),
-    targetValue: isSuperAdmin
-      ? Yup.number()
-          .typeError('Must be a number')
-          .min(1, 'Must be 1 or greater')
-          .required('Required')
-      : Yup.mixed().notRequired(),
-    requestChangeReason: Yup.string(),
-  });
+  const [validationSchema, setValidationSchema] = useState(
+    Yup.object({
+      startDate: Yup.date().required('Start date is required'),
+      endDate: Yup.date()
+        .required('End date is required')
+        .min(Yup.ref('startDate'), 'End date must be after start date'),
+      branch: isSuperAdmin
+        ? Yup.object().required('Branch is required')
+        : Yup.mixed().notRequired(),
+      cgmUser: isSuperAdmin
+        ? Yup.object().required('Cgm User is required')
+        : Yup.object().nullable(),
+      targetValue: isSuperAdmin
+        ? Yup.number()
+            .typeError('Must be a number')
+            .min(1, 'Must be 1 or greater')
+            .required('Required')
+        : Yup.mixed().notRequired(),
+      requestChangeReason: Yup.string(),
+    })
+  );
 
   const defaultValues = useMemo(() => {
     const kpiMap =
@@ -68,7 +74,9 @@ export default function TargetNewEditForm({ currentTarget }) {
       endDate: currentTarget?.endDate ? new Date(currentTarget.endDate) : null,
       targetValue: currentTarget?.targetValue || 0,
       requestChangeReason: currentTarget?.requestChangeReason || '',
-      ...Object.fromEntries(Object.entries(kpiMap).map(([key, value]) => [`kpi_${key}`, value])),
+      ...Object.fromEntries(
+        Object.entries(kpiMap).map(([key, value]) => [`kpi_${key}`, value ?? 0])
+      ),
     };
   }, [currentTarget]);
 
@@ -117,31 +125,6 @@ export default function TargetNewEditForm({ currentTarget }) {
     }
   };
 
-  useEffect(() => {
-    if (currentTarget?.departmentTargets && departments.length > 0) {
-      const targetMap = {};
-      currentTarget.departmentTargets.forEach((dt) => {
-        const key = `${dt.departmentId}_${dt.kpiId}`;
-        targetMap[key] = dt.targetValue;
-        setValue(`kpi_${key}`, dt.targetValue);
-      });
-      setKpiTargets(targetMap);
-    }
-  }, [currentTarget, departments, setValue]);
-
-  useEffect(() => {
-    if (branch?.departments) {
-      setDepartments(branch.departments);
-      fetchCgmUsers(branch);
-    }
-  }, [branch]);
-
-  useEffect(() => {
-    if (branchTarget) {
-      setValue('targetValue', branchTarget);
-    }
-  }, [branchTarget, setValue]);
-
   const onSubmit = handleSubmit(async (formData) => {
     try {
       const input = {
@@ -177,10 +160,52 @@ export default function TargetNewEditForm({ currentTarget }) {
   });
 
   useEffect(() => {
+    if (currentTarget?.departmentTargets && departments.length > 0) {
+      const targetMap = {};
+      currentTarget.departmentTargets.forEach((dt) => {
+        const key = `${dt.departmentId}_${dt.kpiId}`;
+        targetMap[key] = dt.targetValue;
+        setValue(`kpi_${key}`, dt.targetValue);
+      });
+      setKpiTargets(targetMap);
+    }
+  }, [currentTarget, departments, setValue]);
+
+  useEffect(() => {
+    if (branch?.departments) {
+      setDepartments(branch.departments);
+      fetchCgmUsers(branch);
+    }
+  }, [branch]);
+
+  useEffect(() => {
+    if (branchTarget) {
+      setValue('targetValue', branchTarget);
+    }
+  }, [branchTarget, setValue]);
+
+  useEffect(() => {
     if (currentTarget) {
       reset(defaultValues);
     }
   }, [currentTarget, defaultValues, reset]);
+
+  useEffect(() => {
+    setValidationSchema((prev) =>
+      prev.shape(
+        departments.reduce((acc, dept) => {
+          (dept.kpis || []).forEach((kpi) => {
+            const key = `kpi_${dept.id}_${kpi.id}`;
+            acc[key] = Yup.number()
+              .typeError('Must be a number')
+              .min(0, 'Must be at least 0')
+              .required('Required');
+          });
+          return acc;
+        }, {})
+      )
+    );
+  }, [departments]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -290,7 +315,7 @@ export default function TargetNewEditForm({ currentTarget }) {
                                 <Controller
                                   name={`kpi_${key}`}
                                   control={control}
-                                  defaultValue=""
+                                  defaultValue={Number(defaultValues[`kpi_${key}`] ?? 0)}
                                   render={({ field, fieldState: { error } }) => (
                                     <TextField
                                       {...field}
