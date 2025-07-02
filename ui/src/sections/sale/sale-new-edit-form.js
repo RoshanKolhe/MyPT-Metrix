@@ -1,22 +1,19 @@
 /* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
 import LoadingButton from '@mui/lab/LoadingButton';
-import Box from '@mui/material/Box';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import Switch from '@mui/material/Switch';
 import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
 // components
 import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/components/hook-form';
-import { CardHeader, Chip, MenuItem } from '@mui/material';
+import { Chip, MenuItem } from '@mui/material';
 import { useRouter } from 'src/routes/hook';
 import { useSnackbar } from 'notistack';
 
@@ -205,12 +202,35 @@ export default function SaleNewEditForm({ currentSale }) {
               </Grid>
               {memberType === 'new' ? (
                 <Grid item xs={12} sm={6}>
-                  <RHFTextField name="sourceOfLead" label="Source of Lead" />
+                  <RHFSelect name="sourceOfLead" label="Source of Lead">
+                    <MenuItem value="leads_update">Leads Update</MenuItem>
+                    <MenuItem value="walkins">Walkins</MenuItem>
+                    <MenuItem value="phoneins">Phoneins</MenuItem>
+                    <MenuItem value="whatsa_app_direct">Whatsa app direct</MenuItem>
+                    <MenuItem value="website_form">Website form</MenuItem>
+                    <MenuItem value="google_ads">Google Ads</MenuItem>
+                    <MenuItem value="meta_ads">Meta Ads</MenuItem>
+                    <MenuItem value="insta_direct_message">Insta Direct message</MenuItem>
+                    <MenuItem value="mypt_app">MyPT App</MenuItem>
+                    <MenuItem value="referral">Referral</MenuItem>
+                    <MenuItem value="outreach">Outreach</MenuItem>
+                    <MenuItem value="other_source">Other Source</MenuItem>
+                    <MenuItem value="total">Total</MenuItem>
+                  </RHFSelect>
                 </Grid>
               ) : null}
               <Grid item xs={12} sm={6}>
                 <RHFTextField name="contractNumber" label="Contract Number" />
               </Grid>
+            </Grid>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={12}>
+          <Card sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Membership Details
+            </Typography>
+            <Grid container spacing={2} mt={2}>
               <Grid item xs={12} sm={6}>
                 <RHFAutocomplete
                   multiple
@@ -253,15 +273,6 @@ export default function SaleNewEditForm({ currentSale }) {
                   }
                 />
               </Grid>
-            </Grid>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={12}>
-          <Card sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Membership Details
-            </Typography>
-            <Grid container spacing={2} mt={2}>
               <Grid item xs={12} sm={6}>
                 <Controller
                   name="purchaseDate"
