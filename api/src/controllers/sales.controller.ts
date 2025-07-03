@@ -18,14 +18,18 @@ import {
   response,
 } from '@loopback/rest';
 import {MembershipDetails, Sales} from '../models';
-import {SalesRepository} from '../repositories';
-import {authenticate} from '@loopback/authentication';
+import {SalesRepository, UserRepository} from '../repositories';
+import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {PermissionKeys} from '../authorization/permission-keys';
+import {inject} from '@loopback/core';
+import {UserProfile} from '@loopback/security';
 
 export class SalesController {
   constructor(
     @repository(SalesRepository)
     public salesRepository: SalesRepository,
+    @repository(UserRepository)
+    public userRepository: UserRepository,
   ) {}
 
   @authenticate({
@@ -98,8 +102,16 @@ export class SalesController {
       },
     },
   })
-  async find(@param.filter(Sales) filter?: Filter<Sales>): Promise<Sales[]> {
-    return this.salesRepository.find({
+  async find(
+    @inject(AuthenticationBindings.CURRENT_USER) currnetUser: UserProfile,
+    @param.filter(Sales) filter?: Filter<Sales>,
+  ): Promise<Sales[]> {
+    const user = await this.userRepository.findById(currnetUser.id);
+    const isAdmin =
+      user.permissions?.includes(PermissionKeys.SUPER_ADMIN) ||
+      user.permissions?.includes(PermissionKeys.ADMIN);
+    const isCGM = user.permissions?.includes(PermissionKeys.CGM);
+    const updatedFilter: Filter<Sales> = {
       ...filter,
       include: [
         {
@@ -113,7 +125,17 @@ export class SalesController {
         {relation: 'trainer'},
         {relation: 'membershipDetails'},
       ],
-    });
+    };
+
+    // Apply branch filter only for CGM (not for super_admin or admin)
+    if (isCGM && user.branchId) {
+      updatedFilter.where = {
+        ...(updatedFilter.where ?? {}),
+        branchId: user.branchId,
+      };
+    }
+
+    return this.salesRepository.find(updatedFilter);
   }
 
   @authenticate({

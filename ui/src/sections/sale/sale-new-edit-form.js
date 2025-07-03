@@ -30,6 +30,14 @@ export default function SaleNewEditForm({ currentSale }) {
 
   const { user } = useAuthContext();
 
+  const isSuperOrAdmin =
+    user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
+  const isCGM = user?.permissions?.includes('cgm');
+  const isDepartmentUser =
+    user?.permissions?.includes('hod') || user?.permissions?.includes('sub_hod');
+
+  const shouldAutoAssignBranch = !currentSale && (isCGM || isDepartmentUser);
+
   const rawFilter = {
     where: {
       isActive: true,
@@ -218,10 +226,15 @@ export default function SaleNewEditForm({ currentSale }) {
   }, [department, setValue]);
 
   useEffect(() => {
-    const isSuperOrAdmin =
-      user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
-    const isCGM = user?.permissions?.includes('cgm');
+    if (shouldAutoAssignBranch && user?.branch) {
+      const userBranch = branches?.find((b) => b.id === user.branch.id);
+      if (userBranch) {
+        setValue('branch', userBranch);
+      }
+    }
+  }, [shouldAutoAssignBranch, user?.branch, branches, setValue]);
 
+  useEffect(() => {
     if (isSuperOrAdmin) {
       setSalesSchema((prev) =>
         prev.concat(
@@ -250,7 +263,7 @@ export default function SaleNewEditForm({ currentSale }) {
         )
       );
     }
-  }, [user?.permissions]);
+  }, [isCGM, isSuperOrAdmin, user.permissions]);
 
   useEffect(() => {
     const fetchTrainers = async () => {
@@ -329,6 +342,7 @@ export default function SaleNewEditForm({ currentSale }) {
                       />
                     ))
                   }
+                  disabled={shouldAutoAssignBranch}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>

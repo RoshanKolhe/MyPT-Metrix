@@ -44,6 +44,15 @@ import { useAuthContext } from 'src/auth/hooks';
 
 export default function StaffNewEditForm({ currentStaff }) {
   const { user } = useAuthContext();
+
+  const isSuperOrAdmin =
+    user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
+  const isCGM = user?.permissions?.includes('cgm');
+  const isHODorSubHOD =
+    user?.permissions?.includes('hod') || user?.permissions?.includes('sub_hod');
+
+  const isCreating = !currentStaff;
+  const shouldAutoAssignBranch = isCreating && (isCGM || isHODorSubHOD);
   const router = useRouter();
 
   const { enqueueSnackbar } = useSnackbar();
@@ -209,10 +218,6 @@ export default function StaffNewEditForm({ currentStaff }) {
   }, [branch, department, setValue, currentStaff]);
 
   useEffect(() => {
-    const isSuperOrAdmin =
-      user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
-    const isCGM = user?.permissions?.includes('cgm');
-
     if (isSuperOrAdmin) {
       setValidationSchema((prev) =>
         prev.concat(
@@ -244,7 +249,16 @@ export default function StaffNewEditForm({ currentStaff }) {
         )
       );
     }
-  }, [user?.permissions]);
+  }, [isCGM, isSuperOrAdmin, user.permissions]);
+
+  useEffect(() => {
+    if (shouldAutoAssignBranch && user?.branch) {
+      const userBranch = branches?.find((b) => b.id === user.branch.id);
+      if (userBranch) {
+        setValue('branch', userBranch);
+      }
+    }
+  }, [shouldAutoAssignBranch, user?.branch, branches, setValue]);
 
   useEffect(() => {
     if (!branch) {
@@ -384,6 +398,7 @@ export default function StaffNewEditForm({ currentStaff }) {
                           />
                         ))
                       }
+                      disabled={shouldAutoAssignBranch}
                     />
 
                     {/* Department Select */}
