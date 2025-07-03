@@ -19,14 +19,18 @@ import {
   HttpErrors,
 } from '@loopback/rest';
 import {Trainer} from '../models';
-import {TrainerRepository} from '../repositories';
-import {authenticate} from '@loopback/authentication';
+import {TrainerRepository, UserRepository} from '../repositories';
+import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {PermissionKeys} from '../authorization/permission-keys';
+import {inject} from '@loopback/core';
+import {UserProfile} from '@loopback/security';
 
 export class TrainerController {
   constructor(
     @repository(TrainerRepository)
     public trainerRepository: TrainerRepository,
+    @repository(UserRepository)
+    public userRepository: UserRepository,
   ) {}
 
   @authenticate({
@@ -84,9 +88,16 @@ export class TrainerController {
     },
   })
   async find(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
     @param.filter(Trainer) filter?: Filter<Trainer>,
   ): Promise<Trainer[]> {
-    return this.trainerRepository.find({
+    const user = await this.userRepository.findById(currentUser.id);
+    const isSuperOrAdmin =
+      user.permissions?.includes(PermissionKeys.SUPER_ADMIN) ||
+      user.permissions?.includes(PermissionKeys.ADMIN);
+    const isCGM = user.permissions?.includes(PermissionKeys.CGM);
+    const isHOD = user.permissions?.includes(PermissionKeys.HOD);
+    const updatedFilter: Filter<Trainer> = {
       ...filter,
       include: [
         {relation: 'department'},
@@ -101,7 +112,24 @@ export class TrainerController {
           },
         },
       ],
-    });
+    };
+
+    if (isHOD) {
+      console.log('here', user.id);
+      // HOD should see only trainers where they are the supervisor
+      updatedFilter.where = {
+        ...updatedFilter.where,
+        supervisorId: user.id,
+      };
+    } else if (isCGM && user.branchId) {
+      // CGM should see only trainers in their branch
+      updatedFilter.where = {
+        ...updatedFilter.where,
+        branchId: user.branchId,
+      };
+    }
+
+    return this.trainerRepository.find(updatedFilter);
   }
 
   @authenticate({

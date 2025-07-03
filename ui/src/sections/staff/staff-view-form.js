@@ -32,7 +32,7 @@ import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
-export default function StaffNewEditForm({ currentStaff }) {
+export default function StaffViewForm({ currentStaff }) {
   const { user } = useAuthContext();
   const router = useRouter();
 
@@ -291,6 +291,7 @@ export default function StaffNewEditForm({ currentStaff }) {
                     <br /> max size of {fData(3145728)}
                   </Typography>
                 }
+                disabled
               />
             </Box>
           </Card>
@@ -307,10 +308,10 @@ export default function StaffNewEditForm({ currentStaff }) {
                 sm: 'repeat(2, 1fr)',
               }}
             >
-              <RHFTextField name="firstName" label="First Name" />
-              <RHFTextField name="lastName" label="Last Name" />
-              <RHFTextField name="email" label="Email Address" />
-              <RHFTextField type="number" name="phoneNumber" label="Phone Number" />
+              <RHFTextField name="firstName" label="First Name" disabled />
+              <RHFTextField name="lastName" label="Last Name" disabled />
+              <RHFTextField name="email" label="Email Address" disabled />
+              <RHFTextField type="number" name="phoneNumber" label="Phone Number" disabled />
 
               <Controller
                 name="dob"
@@ -329,6 +330,7 @@ export default function StaffNewEditForm({ currentStaff }) {
                         helperText: error?.message,
                       },
                     }}
+                    disabled
                   />
                 )}
               />
@@ -362,6 +364,7 @@ export default function StaffNewEditForm({ currentStaff }) {
                           />
                         ))
                       }
+                      disabled
                     />
 
                     {/* Department Select */}
@@ -405,6 +408,7 @@ export default function StaffNewEditForm({ currentStaff }) {
                             </div>
                           </li>
                         )}
+                        disabled
                       />
                     )}
                   </>
@@ -439,6 +443,7 @@ export default function StaffNewEditForm({ currentStaff }) {
                           <Typography variant="subtitle2">{option?.name}</Typography>
                         </li>
                       )}
+                      disabled
                     />
 
                     {/* Reporting User Select */}
@@ -467,18 +472,13 @@ export default function StaffNewEditForm({ currentStaff }) {
                             </div>
                           </li>
                         )}
+                        disabled
                       />
                     )}
                   </>
                 ) : null}
               </>
             </Box>
-
-            <Stack alignItems="flex-end" sx={{ mt: 3 }}>
-              <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
-                {!currentStaff ? 'Create Staff' : 'Save Changes'}
-              </LoadingButton>
-            </Stack>
           </Card>
         </Grid>
       </Grid>
@@ -486,6 +486,6 @@ export default function StaffNewEditForm({ currentStaff }) {
   );
 }
 
-StaffNewEditForm.propTypes = {
+StaffViewForm.propTypes = {
   currentStaff: PropTypes.object,
 };
