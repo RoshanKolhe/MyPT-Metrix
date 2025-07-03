@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
@@ -16,14 +16,35 @@ import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/comp
 import { Chip, MenuItem } from '@mui/material';
 import { useRouter } from 'src/routes/hook';
 import { useSnackbar } from 'notistack';
+import { useGetBranchsWithFilter } from 'src/api/branch';
+import { useAuthContext } from 'src/auth/hooks';
+import axiosInstance from 'src/utils/axios';
+import { paths } from 'src/routes/paths';
 
 // ----------------------------------------------------------------------
 
 export default function SaleNewEditForm({ currentSale }) {
-  console.log('currentSale', currentSale);
   const router = useRouter();
 
   const { enqueueSnackbar } = useSnackbar();
+
+  const { user } = useAuthContext();
+
+  const rawFilter = {
+    where: {
+      isActive: true,
+    },
+  };
+
+  const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
+
+  const { filteredbranches: branches } = useGetBranchsWithFilter(encodedFilter);
+
+  const [departments, setDepartments] = useState([]);
+
+  const [trainers, setTrainers] = useState([]);
+  const [salesTrainers, setSalesTrainers] = useState([]);
+  const [serviceTrainers, setServiceTrainers] = useState([]);
 
   const [salesSchema, setSalesSchema] = useState(
     Yup.object().shape({
@@ -53,23 +74,31 @@ export default function SaleNewEditForm({ currentSale }) {
 
   const defaultValues = useMemo(
     () => ({
+      department: currentSale?.department || null,
+      branch: currentSale?.branch || null,
       memberName: currentSale?.memberName || '',
       gender: currentSale?.gender || '',
-      salesPerson: currentSale?.salesPerson || null,
-      trainerName: currentSale?.trainerName || null,
+      salesPerson: currentSale?.salesTrainer || null,
+      trainerName: currentSale?.trainer || null,
       trainingAt: currentSale?.trainingAt || '',
       memberType: currentSale?.memberType || '',
       sourceOfLead: currentSale?.sourceOfLead || '',
       contractNumber: currentSale?.contractNumber || '',
-      membershipType: currentSale?.membershipType || [],
-      purchaseDate: currentSale?.purchaseDate || null,
-      price: currentSale?.price || '',
-      validityDays: currentSale?.validityDays || '',
-      freeDays: currentSale?.freeDays || '',
-      numberOfFreeSessions: currentSale?.numberOfFreeSessions || '',
-      startDate: currentSale?.startDate ? new Date(currentSale.startDate) : null,
-      expiryDate: currentSale?.expiryDate || null,
-      freezingDays: currentSale?.freezingDays || '',
+      membershipType: currentSale?.membershipDetails?.membershipType || [],
+      purchaseDate: currentSale?.membershipDetails?.purchaseDate
+        ? new Date(currentSale?.membershipDetails?.purchaseDate)
+        : null,
+      price: currentSale?.membershipDetails?.price || '',
+      validityDays: currentSale?.membershipDetails?.validityDays || '',
+      freeDays: currentSale?.membershipDetails?.freeDays || '',
+      numberOfFreeSessions: currentSale?.membershipDetails?.freeSessions || '',
+      startDate: currentSale?.membershipDetails?.startDate
+        ? new Date(currentSale?.membershipDetails?.startDate)
+        : null,
+      expiryDate: currentSale?.membershipDetails?.expiryDate
+        ? new Date(currentSale?.membershipDetails?.expiryDate)
+        : null,
+      freezingDays: currentSale?.membershipDetails?.freezingDays || '',
       paymentMode: currentSale?.paymentMode || '',
       paymentReceiptNumber: currentSale?.paymentReceiptNumber || '',
     }),
@@ -86,15 +115,53 @@ export default function SaleNewEditForm({ currentSale }) {
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { isSubmitting, errors },
   } = methods;
 
+  const branch = watch('branch');
+  const department = watch('department');
   const memberType = watch('memberType');
 
-  console.log(errors);
+  const prevBranchRef = useRef(null);
+  const prevDeptRef = useRef(null);
+
   const onSubmit = handleSubmit(async (formData) => {
-    console.log('Submitted data', formData);
     // handle create or update
+    const inputData = {
+      memberName: formData.memberName,
+      gender: formData.gender,
+      departmentId: formData.department?.id || null,
+      branchId: formData.branch.id,
+      salesTrainerId: formData.salesPerson.id,
+      trainerId: formData.trainerName.id,
+      trainingAt: formData.trainingAt,
+      memberType: formData.memberType,
+      sourceOfLead: formData.sourceOfLead,
+      contractNumber: formData.contractNumber,
+      paymentMode: formData.paymentMode,
+      paymentReceiptNumber: formData.paymentReceiptNumber,
+      membershipDetails: {
+        membershipType: formData.membershipType,
+        purchaseDate: formData.purchaseDate,
+        price: formData.price,
+        validityDays: formData.validityDays,
+        freeDays: formData.freeDays,
+        freeSessions: formData.numberOfFreeSessions,
+        startDate: formData.startDate,
+        expiryDate: formData.expiryDate,
+        freezingDays: formData.freezingDays,
+      },
+    };
+
+    if (!currentSale) {
+      await axiosInstance.post('/sales', inputData);
+    } else {
+      await axiosInstance.patch(`/sales/${currentSale.id}`, inputData);
+    }
+    reset();
+    enqueueSnackbar(currentSale ? 'Update success!' : 'Create success!');
+    router.push(paths.dashboard.sale.list);
   });
 
   useEffect(() => {
@@ -114,12 +181,187 @@ export default function SaleNewEditForm({ currentSale }) {
     }
   }, [currentSale, defaultValues, reset]);
 
+  useEffect(() => {
+    const prevBranch = prevBranchRef.current;
+
+    const isBranchChanged = prevBranch && branch && prevBranch.id !== branch.id;
+    const isBranchCleared = prevBranch && !branch;
+
+    if (isBranchChanged || isBranchCleared) {
+      setValue('department', null);
+      setDepartments([]);
+      setValue('salesPerson', null);
+      setValue('trainerName', null);
+      setSalesTrainers([]);
+      setServiceTrainers([]);
+    }
+
+    // update departments when branch changes
+    setDepartments(branch?.departments || []);
+    prevBranchRef.current = branch;
+  }, [branch, setValue]);
+
+  useEffect(() => {
+    const prevDept = prevDeptRef.current;
+
+    const isDeptChanged = prevDept && department && prevDept.id !== department.id;
+    const isDeptCleared = prevDept && !department;
+
+    if (isDeptChanged || isDeptCleared) {
+      setValue('salesPerson', null);
+      setValue('trainerName', null);
+      setSalesTrainers([]);
+      setServiceTrainers([]);
+    }
+
+    prevDeptRef.current = department;
+  }, [department, setValue]);
+
+  useEffect(() => {
+    const isSuperOrAdmin =
+      user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
+    const isCGM = user?.permissions?.includes('cgm');
+
+    if (isSuperOrAdmin) {
+      setSalesSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            branch: Yup.object().required('Branch is required'),
+            department: Yup.object().required('Department is required'),
+          })
+        )
+      );
+    } else if (isCGM) {
+      setSalesSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            branch: Yup.mixed().notRequired(),
+            department: Yup.object().required('Department is required'),
+          })
+        )
+      );
+    } else {
+      setSalesSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            branch: Yup.mixed().notRequired(),
+            department: Yup.mixed().notRequired(),
+          })
+        )
+      );
+    }
+  }, [user?.permissions]);
+
+  useEffect(() => {
+    const fetchTrainers = async () => {
+      console.log(branch, department);
+      if (!branch || !department) return;
+      try {
+        const res = await axiosInstance.post('/trainers/by-branch-department', {
+          branchId: branch.id,
+          departmentId: department?.id,
+        });
+
+        const fetchedTrainers = res.data || [];
+        setTrainers(fetchedTrainers);
+      } catch (error) {
+        setTrainers([]);
+        console.error('Failed to fetch trainers:', error);
+      }
+    };
+
+    fetchTrainers();
+  }, [branch, department]);
+
+  useEffect(() => {
+    if (trainers.length > 0) {
+      const sales = [];
+      const service = [];
+      trainers.forEach((trainer) => {
+        const kpiTypes = trainer.department?.kpis?.map((kpi) => kpi.type) || [];
+
+        if (kpiTypes.includes('sales')) {
+          sales.push(trainer);
+        }
+        if (kpiTypes.includes('service')) {
+          service.push(trainer);
+        }
+      });
+
+      setSalesTrainers(sales);
+      setServiceTrainers(service);
+    } else {
+      setSalesTrainers([]);
+      setServiceTrainers([]);
+    }
+  }, [trainers]);
+
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
       <Grid container spacing={3}>
         <Grid xs={12} md={12}>
           <Card sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <RHFAutocomplete
+                  name="branch"
+                  label="Branch"
+                  options={branches || []}
+                  getOptionLabel={(option) => `${option?.name}` || ''}
+                  filterOptions={(x) => x}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  renderOption={(props, option) => (
+                    <li {...props}>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {option?.name}
+                      </Typography>
+                    </li>
+                  )}
+                  renderTags={(selected, getTagProps) =>
+                    selected.map((option, tagIndex) => (
+                      <Chip
+                        {...getTagProps({ index: tagIndex })}
+                        key={option.id}
+                        label={option.name}
+                        size="small"
+                        color="info"
+                        variant="soft"
+                      />
+                    ))
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFAutocomplete
+                  name="department"
+                  label="Department"
+                  options={departments || []}
+                  getOptionLabel={(option) => `${option?.name}` || ''}
+                  filterOptions={(x) => x}
+                  isOptionEqualToValue={(option, value) => option?.id === value?.id}
+                  renderOption={(props, option) => (
+                    <li {...props}>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {option?.name}
+                      </Typography>
+                    </li>
+                  )}
+                  renderTags={(selected, getTagProps) =>
+                    selected.map((option, tagIndex) => (
+                      <Chip
+                        {...getTagProps({ index: tagIndex })}
+                        key={option.id}
+                        label={option.name}
+                        size="small"
+                        color="info"
+                        variant="soft"
+                      />
+                    ))
+                  }
+                />
+              </Grid>
+            </Grid>
+            <Typography variant="h6" gutterBottom mt={2}>
               Member Details
             </Typography>
             <Grid container spacing={2} mt={2}>
@@ -136,13 +378,20 @@ export default function SaleNewEditForm({ currentSale }) {
                 <RHFAutocomplete
                   name="salesPerson"
                   label="Sales Person"
-                  options={[]}
-                  getOptionLabel={(option) => `${option?.name}` || ''}
+                  options={salesTrainers}
+                  getOptionLabel={(option) => `${option?.firstName} ${option?.lastName}` || ''}
                   filterOptions={(x) => x}
                   isOptionEqualToValue={(option, value) => option.id === value.id}
                   renderOption={(props, option) => (
                     <li {...props}>
-                      <Typography variant="subtitle2">{option?.name}</Typography>
+                      <div>
+                        <Typography variant="subtitle2">
+                          {`${option?.firstName} ${option?.lastName}`}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          {option.email}
+                        </Typography>
+                      </div>
                     </li>
                   )}
                   renderTags={(selected, getTagProps) =>
@@ -163,13 +412,20 @@ export default function SaleNewEditForm({ currentSale }) {
                 <RHFAutocomplete
                   name="trainerName"
                   label="Trainer Name"
-                  options={[]}
-                  getOptionLabel={(option) => `${option?.name}` || ''}
+                  options={serviceTrainers}
+                  getOptionLabel={(option) => `${option?.firstName} ${option?.lastName}` || ''}
                   filterOptions={(x) => x}
                   isOptionEqualToValue={(option, value) => option.id === value.id}
                   renderOption={(props, option) => (
                     <li {...props}>
-                      <Typography variant="subtitle2">{option?.name}</Typography>
+                      <div>
+                        <Typography variant="subtitle2">
+                          {`${option?.firstName} ${option?.lastName}`}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          {option.email}
+                        </Typography>
+                      </div>
                     </li>
                   )}
                   renderTags={(selected, getTagProps) =>

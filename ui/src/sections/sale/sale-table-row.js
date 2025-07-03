@@ -16,6 +16,7 @@ import Label from 'src/components/label';
 import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
 import { ConfirmDialog } from 'src/components/custom-dialog';
+import { fDate } from 'src/utils/format-time';
 //
 
 // ----------------------------------------------------------------------
@@ -30,87 +31,94 @@ export default function SaleTableRow({
   quickEdit,
   handleQuickEditRow,
 }) {
-  const { firstName, lastName, avatar, isActive, email, phoneNumber } = row;
+  const {
+    memberName,
+    gender,
+    trainingAt,
+    memberType,
+    contractNumber,
+    sourceOfLead,
+    paymentMode,
+    paymentReceiptNumber,
+    createdAt,
+    branch,
+    salesTrainer,
+    trainer,
+    membershipDetails,
+  } = row;
 
   const confirm = useBoolean();
-
   const popover = usePopover();
+
+  const membershipLabels = membershipDetails?.membershipType?.map((m) => m.label).join(', ') || '';
+  const purchaseDate = fDate(membershipDetails?.purchaseDate);
+  const expiryDate = fDate(membershipDetails?.expiryDate);
 
   return (
     <>
       <TableRow hover selected={selected}>
-        {/* <TableCell padding="checkbox">
-          <Checkbox checked={selected} onClick={onSelectRow} />
-        </TableCell> */}
+        {/* Member Info */}
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{memberName}</TableCell>
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{gender}</TableCell>
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{trainingAt}</TableCell>
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{memberType}</TableCell>
 
-        <TableCell sx={{ display: 'flex', alignItems: 'center' }}>
-          <Avatar alt={firstName} src={avatar?.fileUrl} sx={{ mr: 2 }} />
-
+        {/* Sales Trainer */}
+        <TableCell>
           <ListItemText
-            primary={`${firstName} ${lastName || ''}`}
-            secondary={email}
+            primary={`${salesTrainer?.firstName} ${salesTrainer?.lastName || ''}`}
+            secondary={salesTrainer?.email}
             primaryTypographyProps={{ typography: 'body2' }}
             secondaryTypographyProps={{ component: 'span', color: 'text.disabled' }}
           />
         </TableCell>
 
-        <TableCell sx={{ whiteSpace: 'nowrap' }}>{phoneNumber}</TableCell>
-
+        {/* Trainer */}
         <TableCell>
-          <Label
-            variant="soft"
-            color={(isActive && 'success') || (!isActive && 'error') || 'default'}
-          >
-            {isActive ? 'Active' : 'In-Active'}
-          </Label>
+          <ListItemText
+            primary={`${trainer?.firstName} ${trainer?.lastName || ''}`}
+            secondary={trainer?.email}
+            primaryTypographyProps={{ typography: 'body2' }}
+            secondaryTypographyProps={{ component: 'span', color: 'text.disabled' }}
+          />
         </TableCell>
 
-        <TableCell align="right" sx={{ px: 1, whiteSpace: 'nowrap' }}>
-          <>
-            <Tooltip title="Quick Edit" placement="top" arrow>
-              <IconButton
-                color={quickEdit.value ? 'inherit' : 'default'}
-                onClick={() => {
-                  handleQuickEditRow(row);
-                }}
-              >
-                <Iconify icon="solar:pen-bold" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="View Sale" placement="top" arrow>
-              <IconButton
-                onClick={() => {
-                  onViewRow();
-                }}
-              >
-                <Iconify icon="solar:eye-bold" />
-              </IconButton>
-            </Tooltip>
+        {/* Other Info */}
+        <TableCell>{branch?.name}</TableCell>
+        <TableCell>{contractNumber}</TableCell>
+        <TableCell>{purchaseDate}</TableCell>
+        <TableCell>{membershipLabels}</TableCell>
+        <TableCell>{membershipDetails?.price}</TableCell>
+        <TableCell>{paymentMode}</TableCell>
+        <TableCell>{paymentReceiptNumber}</TableCell>
+        <TableCell>{membershipDetails?.validityDays}</TableCell>
+        <TableCell>{expiryDate}</TableCell>
+        <TableCell>{membershipDetails?.freezingDays}</TableCell>
+        <TableCell>{fDate(createdAt)}</TableCell>
 
-            <IconButton color={popover.open ? 'inherit' : 'default'} onClick={popover.onOpen}>
-              <Iconify icon="eva:more-vertical-fill" />
+        {/* Actions */}
+        <TableCell align="right" sx={{ px: 1, whiteSpace: 'nowrap' }}>
+          <Tooltip title="Quick Edit" placement="top" arrow>
+            <IconButton color={quickEdit.value ? 'inherit' : 'default'} onClick={() => onEditRow()}>
+              <Iconify icon="solar:pen-bold" />
             </IconButton>
-          </>
+          </Tooltip>
+
+          <Tooltip title="View Sale" placement="top" arrow>
+            <IconButton onClick={onViewRow}>
+              <Iconify icon="solar:eye-bold" />
+            </IconButton>
+          </Tooltip>
         </TableCell>
       </TableRow>
 
+      {/* Popover Menu */}
       <CustomPopover
         open={popover.open}
         onClose={popover.onClose}
         arrow="right-top"
         sx={{ width: 140 }}
       >
-        {/* <MenuItem
-          onClick={() => {
-            confirm.onTrue();
-            popover.onClose();
-          }}
-          sx={{ color: 'error.main' }}
-        >
-          <Iconify icon="solar:trash-bin-trash-bold" />
-          Delete
-        </MenuItem> */}
-
         <MenuItem
           onClick={() => {
             onEditRow();
@@ -120,13 +128,27 @@ export default function SaleTableRow({
           <Iconify icon="solar:pen-bold" />
           Edit
         </MenuItem>
+        {/* Optional Delete */}
+        {/* 
+        <MenuItem
+          onClick={() => {
+            confirm.onTrue();
+            popover.onClose();
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          <Iconify icon="solar:trash-bin-trash-bold" />
+          Delete
+        </MenuItem>
+        */}
       </CustomPopover>
 
+      {/* Delete Confirmation */}
       <ConfirmDialog
         open={confirm.value}
         onClose={confirm.onFalse}
         title="Delete"
-        content="Are you sure want to delete?"
+        content="Are you sure you want to delete?"
         action={
           <Button variant="contained" color="error" onClick={onDeleteRow}>
             Delete

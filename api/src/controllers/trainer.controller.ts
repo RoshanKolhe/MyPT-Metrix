@@ -241,6 +241,14 @@ export class TrainerController {
         isDeleted: false,
         isActive: true,
       },
+      include: [
+        {
+          relation: 'department',
+          scope: {
+            include: ['kpis'],
+          },
+        },
+      ],
     });
 
     return trainers;

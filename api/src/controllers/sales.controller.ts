@@ -99,7 +99,21 @@ export class SalesController {
     },
   })
   async find(@param.filter(Sales) filter?: Filter<Sales>): Promise<Sales[]> {
-    return this.salesRepository.find(filter);
+    return this.salesRepository.find({
+      ...filter,
+      include: [
+        {
+          relation: 'branch',
+          scope: {
+            include: ['departments'],
+          },
+        },
+        {relation: 'department'},
+        {relation: 'salesTrainer'},
+        {relation: 'trainer'},
+        {relation: 'membershipDetails'},
+      ],
+    });
   }
 
   @authenticate({
@@ -128,7 +142,21 @@ export class SalesController {
     @param.filter(Sales, {exclude: 'where'})
     filter?: FilterExcludingWhere<Sales>,
   ): Promise<Sales> {
-    return this.salesRepository.findById(id, filter);
+    return this.salesRepository.findById(id, {
+      ...filter,
+      include: [
+        {
+          relation: 'branch',
+          scope: {
+            include: ['departments'],
+          },
+        },
+        {relation: 'department'},
+        {relation: 'salesTrainer'},
+        {relation: 'trainer'},
+        {relation: 'membershipDetails'},
+      ],
+    });
   }
 
   @authenticate({

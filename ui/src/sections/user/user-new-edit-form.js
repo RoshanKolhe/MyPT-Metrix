@@ -46,7 +46,7 @@ import {
 import { states } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useBoolean } from 'src/hooks/use-boolean';
-import {  useGetBranchsWithFilter } from 'src/api/branch';
+import { useGetBranchsWithFilter } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
@@ -62,10 +62,8 @@ const allRoles = [
 ];
 
 export default function UserNewEditForm({ currentUser }) {
-  console.log(currentUser);
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  console.log(isDark);
   const { user } = useAuthContext();
   const userRole = user?.permissions?.[0];
   const roleOptions =
@@ -285,7 +283,7 @@ export default function UserNewEditForm({ currentUser }) {
     if (userRole === 'hod') {
       return;
     }
-
+    console.log('here12');
     setDepartmentOptions(fetchedDepartments);
 
     // Only clear departments for new user if not HOD
@@ -310,8 +308,14 @@ export default function UserNewEditForm({ currentUser }) {
   useEffect(() => {
     if (!currentUser && (userRole === 'cgm' || userRole === 'hod') && user) {
       const selectedBranch = user.branch || null;
-      const selectedUserDepartments = user.departments || [];
+      let selectedUserDepartments;
 
+      if (userRole === 'cgm') {
+        selectedUserDepartments = user?.branch?.departments;
+      } else {
+        selectedUserDepartments = user.departments || [];
+      }
+      console.log(selectedBranch);
       reset((prev) => ({
         ...prev,
         branch: selectedBranch,

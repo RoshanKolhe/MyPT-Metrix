@@ -45,12 +45,26 @@ import SaleQuickEditForm from '../sale-quick-edit-form';
 
 // ----------------------------------------------------------------------
 
-const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...USER_STATUS_OPTIONS];
+const STATUS_OPTIONS = [{ value: 'all', label: 'All' }];
 
 const TABLE_HEAD = [
-  { id: 'name', label: 'Name' },
-  { id: 'phoneNumber', label: 'Phone Number', width: 180 },
-  { id: 'status', label: 'Status', width: 100 },
+  { id: 'memberName', label: 'Member Name' },
+  { id: 'gender', label: 'Gender', width: 100 },
+  { id: 'trainingAt', label: 'Training At', width: 120 },
+  { id: 'memberType', label: 'Member Type' },
+  { id: 'salesPerson', label: 'Sales Person', width: 180 },
+  { id: 'trainerName', label: 'Trainer', width: 180 },
+  { id: 'branch', label: 'Branch', width: 140 },
+  { id: 'contractNumber', label: 'Contract No.', width: 150 },
+  { id: 'purchaseDate', label: 'Purchase Date', width: 150 },
+  { id: 'membershipType', label: 'Membership Type(s)', width: 200 },
+  { id: 'price', label: 'Price (₹)', width: 120 },
+  { id: 'paymentMode', label: 'Payment Mode', width: 130 },
+  { id: 'paymentReceiptNumber', label: 'Receipt No.', width: 150 },
+  { id: 'validityDays', label: 'Validity (Days)', width: 130 },
+  { id: 'expiryDate', label: 'Expiry Date', width: 150 },
+  { id: 'freezingDays', label: 'Freezing Days', width: 130 },
+  { id: 'createdAt', label: 'Created At' },
   { id: '', width: 88 },
 ];
 
@@ -393,16 +407,12 @@ function applyFilter({ inputData, comparator, filters }) {
 
   if (name) {
     inputData = inputData.filter((sale) =>
-      Object.values(sale).some((value) =>
-        String(value).toLowerCase().includes(name.toLowerCase())
-      )
+      Object.values(sale).some((value) => String(value).toLowerCase().includes(name.toLowerCase()))
     );
   }
 
   if (status !== 'all') {
-    inputData = inputData.filter((sale) =>
-      status === '1' ? sale.isActive : !sale.isActive
-    );
+    inputData = inputData.filter((sale) => (status === '1' ? sale.isActive : !sale.isActive));
   }
 
   if (role.length) {

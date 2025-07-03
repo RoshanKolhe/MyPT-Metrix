@@ -11,6 +11,12 @@ export class MembershipDetails extends Entity {
   id?: number;
 
   @property({
+    type: 'array',
+    itemType: 'object',
+  })
+  membershipType: object[];
+
+  @property({
     type: 'string',
     required: true,
   })
@@ -38,12 +44,6 @@ export class MembershipDetails extends Entity {
     type: 'number',
     required: true,
   })
-  numberOfSessions: number;
-
-  @property({
-    type: 'number',
-    required: true,
-  })
   freeSessions: number;
 
   @property({
@@ -63,6 +63,7 @@ export class MembershipDetails extends Entity {
     required: true,
   })
   freezingDays: number;
+
 
   @property({
     type: 'date',

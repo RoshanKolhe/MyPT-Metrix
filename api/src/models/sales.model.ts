@@ -1,5 +1,8 @@
-import {Entity, model, property, hasOne} from '@loopback/repository';
+import {Entity, model, property, hasOne, belongsTo} from '@loopback/repository';
 import {MembershipDetails} from './membership-details.model';
+import {Trainer} from './trainer.model';
+import {Branch} from './branch.model';
+import {Department} from './department.model';
 
 @model()
 export class Sales extends Entity {
@@ -44,6 +47,16 @@ export class Sales extends Entity {
   contractNumber?: string;
 
   @property({
+    type: 'string',
+  })
+  paymentMode?: string;
+
+  @property({
+    type: 'string',
+  })
+  paymentReceiptNumber?: string;
+
+  @property({
     type: 'date',
   })
   createdAt?: Date;
@@ -66,6 +79,18 @@ export class Sales extends Entity {
 
   @hasOne(() => MembershipDetails)
   membershipDetails: MembershipDetails;
+
+  @belongsTo(() => Trainer)
+  trainerId: number;
+
+  @belongsTo(() => Trainer)
+  salesTrainerId: number;
+
+  @belongsTo(() => Branch)
+  branchId: number;
+
+  @belongsTo(() => Department)
+  departmentId: number;
 
   constructor(data?: Partial<Sales>) {
     super(data);

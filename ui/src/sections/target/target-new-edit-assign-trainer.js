@@ -20,9 +20,12 @@ import {
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'src/components/snackbar';
 import FormProvider from 'src/components/hook-form';
+import { useRouter } from 'src/routes/hook';
+import { paths } from 'src/routes/paths';
 
 export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget }) {
   const { enqueueSnackbar } = useSnackbar();
+  const router = useRouter();
 
   const [kpis, setKpis] = useState([]);
   const [trainers, setTrainers] = useState([]);
@@ -75,6 +78,8 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
       });
 
       enqueueSnackbar('Trainer KPI targets saved successfully!', { variant: 'success' });
+      reset();
+      router.push(paths.dashboard.target.list);
     } catch (error) {
       console.error(error);
       enqueueSnackbar(error?.message || 'Something went wrong', { variant: 'error' });

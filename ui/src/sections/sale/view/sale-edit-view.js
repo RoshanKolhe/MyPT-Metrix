@@ -44,7 +44,7 @@ export default function SaleEditView() {
             href: paths.dashboard.sale.root,
           },
           {
-            name: `${currentSale?.firstName} ${currentSale?.lastName ? currentSale?.lastName : ''}`,
+            name: currentSale?.memberName || 'Sale Detail',
           },
         ]}
         sx={{

@@ -181,7 +181,15 @@ export class UserController {
     const userData = _.omit(user, 'password');
     const token = await this.jwtService.generateToken(userProfile);
     const allUserData = await this.userRepository.findById(userData.id, {
-      include: ['branch', 'departments'],
+      include: [
+        {
+          relation: 'branch',
+          scope: {
+            include: ['departments'],
+          },
+        },
+        {relation: 'departments'},
+      ],
     });
     return Promise.resolve({
       accessToken: token,
@@ -199,7 +207,15 @@ export class UserController {
       where: {
         id: currnetUser.id,
       },
-      include: ['branch', 'departments'],
+      include: [
+        {
+          relation: 'branch',
+          scope: {
+            include: ['departments'],
+          },
+        },
+        {relation: 'departments'},
+      ],
     });
     const userData = _.omit(user, 'password');
     return Promise.resolve({

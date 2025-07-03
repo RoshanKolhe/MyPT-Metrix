@@ -37,7 +37,7 @@ import { Chip, IconButton, InputAdornment, MenuItem } from '@mui/material';
 import { states } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useBoolean } from 'src/hooks/use-boolean';
-import { useGetBranchs } from 'src/api/branch';
+import { useGetBranchsWithFilter } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
@@ -48,7 +48,15 @@ export default function StaffNewEditForm({ currentStaff }) {
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const { branches, branchesLoading, branchesEmpty, refreshBranches } = useGetBranchs();
+  const rawFilter = {
+    where: {
+      isActive: true,
+    },
+  };
+
+  const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
+
+  const { filteredbranches: branches } = useGetBranchsWithFilter(encodedFilter);
 
   const [departments, setDepartments] = useState([]);
 
