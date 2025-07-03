@@ -263,7 +263,6 @@ export default function TargetNewEditForm({ currentTarget }) {
                       label="Start Date"
                       value={field.value}
                       onChange={field.onChange}
-                      minDate={new Date()}
                       slotProps={{
                         textField: {
                           fullWidth: true,
@@ -285,7 +284,6 @@ export default function TargetNewEditForm({ currentTarget }) {
                       label="End Date"
                       value={field.value}
                       onChange={field.onChange}
-                      minDate={new Date()}
                       slotProps={{
                         textField: {
                           fullWidth: true,
