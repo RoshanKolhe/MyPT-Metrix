@@ -279,6 +279,16 @@ export function useNavData() {
               { title: t('create'), path: paths.dashboard.staff.new },
             ],
           },
+          // SALE
+          {
+            title: t('sale'),
+            path: paths.dashboard.sale.root,
+            icon: ICONS.sale,
+            children: [
+              { title: t('list'), path: paths.dashboard.sale.list },
+              { title: t('create'), path: paths.dashboard.sale.new },
+            ],
+          },
         ],
       },
     ];

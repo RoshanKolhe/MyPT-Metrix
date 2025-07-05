@@ -196,10 +196,8 @@ export class TargetController {
 
     let whereFilter: any = {};
     if (isCGM) {
-      // Filter targets where CGM is the approver
       whereFilter.cgmApproverUserId = currentUser.id;
     } else if (isHOD) {
-      // Filter targets only for the HOD's branch
       whereFilter.branchId = currentUser.branchId;
     }
 

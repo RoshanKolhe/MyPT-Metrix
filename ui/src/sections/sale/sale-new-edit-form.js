@@ -29,7 +29,6 @@ export default function SaleNewEditForm({ currentSale }) {
   const { enqueueSnackbar } = useSnackbar();
 
   const { user } = useAuthContext();
-
   const isSuperOrAdmin =
     user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
   const isCGM = user?.permissions?.includes('cgm');
@@ -204,10 +203,19 @@ export default function SaleNewEditForm({ currentSale }) {
       setServiceTrainers([]);
     }
 
-    // update departments when branch changes
-    setDepartments(branch?.departments || []);
+    // ✅ Only update departments from branch if user is NOT a department user
+    if (!isDepartmentUser) {
+      setDepartments(branch?.departments || []);
+    }
+
     prevBranchRef.current = branch;
-  }, [branch, setValue]);
+  }, [branch, setValue, isDepartmentUser]);
+
+  useEffect(() => {
+    if (!currentSale && isDepartmentUser && user?.departments?.length > 0) {
+      setDepartments(user.departments);
+    }
+  }, [user?.departments, isDepartmentUser, currentSale]);
 
   useEffect(() => {
     const prevDept = prevDeptRef.current;
@@ -263,7 +271,7 @@ export default function SaleNewEditForm({ currentSale }) {
         )
       );
     }
-  }, [isCGM, isSuperOrAdmin, user.permissions]);
+  }, [isCGM, isSuperOrAdmin, user?.permissions]);
 
   useEffect(() => {
     const fetchTrainers = async () => {
