@@ -11,3 +11,4 @@ export * from './kpi.repository';
 export * from './department-kpi.repository';
 export * from './membership-details.repository';
 export * from './sales.repository';
+export * from './conduction.repository';

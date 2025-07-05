@@ -5,5 +5,5 @@ export * from './department.controller';
 export * from './trainer.controller';
 export * from './target.controller';
 export * from './kpi.controller';
-export * from './department-target-kpi.controller';
 export * from './sales.controller';
+export * from './conduction.controller';

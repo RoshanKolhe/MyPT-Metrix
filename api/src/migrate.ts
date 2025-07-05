@@ -22,6 +22,7 @@ export async function migrate(args: string[]) {
       'DepartmentKpi',
       'Sales',
       'MembershipDetails',
+      'Conduction',
     ],
   });
 
