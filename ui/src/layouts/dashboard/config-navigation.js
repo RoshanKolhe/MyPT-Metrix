@@ -49,6 +49,7 @@ const ICONS = {
   dashboard: icon('ic_dashboard'),
   branch: icon('ic_branch'),
   sale: icon('ic_sale'),
+  conduction: icon('ic_conduction'),
 };
 
 // ----------------------------------------------------------------------
@@ -110,6 +111,16 @@ export function useNavData() {
             children: [
               { title: t('list'), path: paths.dashboard.sale.list },
               { title: t('create'), path: paths.dashboard.sale.new },
+            ],
+          },
+          // CONDUCTION
+          {
+            title: t('conduction'),
+            path: paths.dashboard.conduction.root,
+            icon: ICONS.conduction,
+            children: [
+              { title: t('list'), path: paths.dashboard.conduction.list },
+              { title: t('create'), path: paths.dashboard.conduction.new },
             ],
           },
         ],

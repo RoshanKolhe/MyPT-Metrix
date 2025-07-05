@@ -1,0 +1,310 @@
+/* eslint-disable no-nested-ternary */
+import PropTypes from 'prop-types';
+import * as Yup from 'yup';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+// @mui
+import LoadingButton from '@mui/lab/LoadingButton';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
+import Grid from '@mui/material/Unstable_Grid2';
+import Typography from '@mui/material/Typography';
+// components
+import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/components/hook-form';
+import { Chip, MenuItem } from '@mui/material';
+import { useRouter } from 'src/routes/hook';
+import { useSnackbar } from 'notistack';
+import { useGetBranchsWithFilter } from 'src/api/branch';
+import { useAuthContext } from 'src/auth/hooks';
+import axiosInstance from 'src/utils/axios';
+import { paths } from 'src/routes/paths';
+
+// ----------------------------------------------------------------------
+
+export default function ConductionNewEditForm({ currentConduction }) {
+  const router = useRouter();
+
+  const { enqueueSnackbar } = useSnackbar();
+
+  const { user } = useAuthContext();
+  const isSuperOrAdmin =
+    user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
+  const isCGM = user?.permissions?.includes('cgm');
+  const isDepartmentUser =
+    user?.permissions?.includes('hod') || user?.permissions?.includes('sub_hod');
+
+  const shouldAutoAssignBranch = !currentConduction && (isCGM || isDepartmentUser);
+
+  const rawFilter = {
+    where: {
+      isActive: true,
+    },
+  };
+
+  const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
+
+  const { filteredbranches: branches } = useGetBranchsWithFilter(encodedFilter);
+
+  const [departments, setDepartments] = useState([]);
+
+  const [trainers, setTrainers] = useState([]);
+
+  const [conductionsSchema, setConductionsSchema] = useState(
+    Yup.object().shape({
+      trainer: Yup.object().nullable().required('Trainer is required'),
+      conductionDate: Yup.date().required('Conduction date is required'),
+    })
+  );
+
+  const defaultValues = useMemo(
+    () => ({
+      department: currentConduction?.department || null,
+      branch: currentConduction?.branch || null,
+      trainer: currentConduction?.trainer || null,
+      conductionDate: currentConduction?.membershipDetails?.conductionDate
+        ? new Date(currentConduction?.membershipDetails?.conductionDate)
+        : null,
+    }),
+    [currentConduction]
+  );
+
+  const methods = useForm({
+    resolver: yupResolver(conductionsSchema),
+    defaultValues,
+  });
+
+  const {
+    reset,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    formState: { isSubmitting, errors },
+  } = methods;
+
+  const branch = watch('branch');
+  const department = watch('department');
+
+  const onSubmit = handleSubmit(async (formData) => {
+    // handle create or update
+    const inputData = {
+      memberName: formData.memberName,
+      gender: formData.gender,
+      departmentId: formData.department?.id || null,
+      branchId: formData.branch.id,
+      conductionsTrainerId: formData.conductionsPerson.id,
+      trainerId: formData.trainerName.id,
+      trainingAt: formData.trainingAt,
+      memberType: formData.memberType,
+      sourceOfLead: formData.sourceOfLead,
+      contractNumber: formData.contractNumber,
+      paymentMode: formData.paymentMode,
+      paymentReceiptNumber: formData.paymentReceiptNumber,
+      membershipDetails: {
+        membershipType: formData.membershipType,
+        purchaseDate: formData.purchaseDate,
+        price: formData.price,
+        validityDays: formData.validityDays,
+        freeDays: formData.freeDays,
+        freeSessions: formData.numberOfFreeSessions,
+        startDate: formData.startDate,
+        expiryDate: formData.expiryDate,
+        freezingDays: formData.freezingDays,
+      },
+    };
+
+    if (!currentConduction) {
+      await axiosInstance.post('/conductions', inputData);
+    } else {
+      await axiosInstance.patch(`/conductions/${currentConduction.id}`, inputData);
+    }
+    reset();
+    enqueueSnackbar(currentConduction ? 'Update success!' : 'Create success!');
+    router.push(paths.dashboard.conduction.list);
+  });
+
+  useEffect(() => {
+    if (currentConduction) {
+      reset(defaultValues);
+    }
+  }, [currentConduction, defaultValues, reset]);
+
+  useEffect(() => {
+    if (!currentConduction && isDepartmentUser && user?.departments?.length > 0) {
+      setDepartments(user.departments);
+    }
+  }, [user?.departments, isDepartmentUser, currentConduction]);
+
+  useEffect(() => {
+    if (shouldAutoAssignBranch && user?.branch) {
+      const userBranch = branches?.find((b) => b.id === user.branch.id);
+      if (userBranch) {
+        setValue('branch', userBranch);
+      }
+    }
+  }, [shouldAutoAssignBranch, user?.branch, branches, setValue]);
+
+  useEffect(() => {
+    if (isSuperOrAdmin) {
+      setConductionsSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            branch: Yup.object().required('Branch is required'),
+            department: Yup.object().required('Department is required'),
+          })
+        )
+      );
+    } else if (isCGM) {
+      setConductionsSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            branch: Yup.mixed().notRequired(),
+            department: Yup.object().required('Department is required'),
+          })
+        )
+      );
+    } else {
+      setConductionsSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            branch: Yup.mixed().notRequired(),
+            department: Yup.mixed().notRequired(),
+          })
+        )
+      );
+    }
+  }, [isCGM, isSuperOrAdmin, user?.permissions]);
+
+  useEffect(() => {
+    const fetchTrainers = async () => {
+      console.log(branch, department);
+      if (!branch || !department) return;
+      try {
+        const res = await axiosInstance.post('/trainers/by-branch-department', {
+          branchId: branch.id,
+          departmentId: department?.id,
+        });
+
+        const fetchedTrainers = res.data || [];
+        setTrainers(fetchedTrainers);
+      } catch (error) {
+        setTrainers([]);
+        console.error('Failed to fetch trainers:', error);
+      }
+    };
+
+    fetchTrainers();
+  }, [branch, department]);
+
+  return (
+    <FormProvider methods={methods} onSubmit={onSubmit}>
+      <Grid container spacing={3}>
+        <Grid xs={12} md={12}>
+          <Card sx={{ p: 3 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <RHFAutocomplete
+                  name="branch"
+                  label="Branch"
+                  options={branches || []}
+                  getOptionLabel={(option) => `${option?.name}` || ''}
+                  filterOptions={(x) => x}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  renderOption={(props, option) => (
+                    <li {...props}>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {option?.name}
+                      </Typography>
+                    </li>
+                  )}
+                  renderTags={(selected, getTagProps) =>
+                    selected.map((option, tagIndex) => (
+                      <Chip
+                        {...getTagProps({ index: tagIndex })}
+                        key={option.id}
+                        label={option.name}
+                        size="small"
+                        color="info"
+                        variant="soft"
+                      />
+                    ))
+                  }
+                  disabled={shouldAutoAssignBranch}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFAutocomplete
+                  name="department"
+                  label="Department"
+                  options={departments || []}
+                  getOptionLabel={(option) => `${option?.name}` || ''}
+                  filterOptions={(x) => x}
+                  isOptionEqualToValue={(option, value) => option?.id === value?.id}
+                  renderOption={(props, option) => (
+                    <li {...props}>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {option?.name}
+                      </Typography>
+                    </li>
+                  )}
+                  renderTags={(selected, getTagProps) =>
+                    selected.map((option, tagIndex) => (
+                      <Chip
+                        {...getTagProps({ index: tagIndex })}
+                        key={option.id}
+                        label={option.name}
+                        size="small"
+                        color="info"
+                        variant="soft"
+                      />
+                    ))
+                  }
+                />
+              </Grid>
+            </Grid>
+            <Typography variant="h6" gutterBottom mt={2}>
+              Details
+            </Typography>
+            <Grid container spacing={2} mt={2}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="conductionDate"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <DatePicker
+                      label="Conduction Date"
+                      value={field.value}
+                      onChange={(newValue) => {
+                        field.onChange(newValue);
+                      }}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          error: !!error,
+                          helperText: error?.message,
+                        },
+                      }}
+                    />
+                  )}
+                />
+              </Grid>
+            </Grid>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={12}>
+          <Stack alignItems="flex-end" sx={{ mt: 3 }}>
+            <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
+              {currentConduction ? 'Update Conduction' : 'Create Conduction'}
+            </LoadingButton>
+          </Stack>
+        </Grid>
+      </Grid>
+    </FormProvider>
+  );
+}
+
+ConductionNewEditForm.propTypes = {
+  currentConduction: PropTypes.object,
+};

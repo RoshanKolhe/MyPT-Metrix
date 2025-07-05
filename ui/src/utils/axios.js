@@ -65,6 +65,11 @@ export const endpoints = {
     filterList: (filter) => `/sales?${filter}`,
     details: (id) => `/sales/${id}`,
   },
+  conduction: {
+    list: '/conductions',
+    filterList: (filter) => `/conductions?${filter}`,
+    details: (id) => `/conductions/${id}`,
+  },
   target: {
     list: '/targets',
     filterList: (filter) => `/targets?${filter}`,

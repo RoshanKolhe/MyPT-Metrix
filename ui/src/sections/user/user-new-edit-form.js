@@ -283,6 +283,7 @@ export default function UserNewEditForm({ currentUser }) {
     if (userRole === 'hod') {
       return;
     }
+    
     console.log('here12');
     setDepartmentOptions(fetchedDepartments);
 

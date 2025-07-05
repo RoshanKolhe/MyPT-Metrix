@@ -26,11 +26,17 @@ const StaffCreatePage = lazy(() => import('src/pages/dashboard/staff/new'));
 const StaffEditPage = lazy(() => import('src/pages/dashboard/staff/edit'));
 const StaffViewPage = lazy(() => import('src/pages/dashboard/staff/view'));
 
-// STAFF
+// SALE
 const SaleListPage = lazy(() => import('src/pages/dashboard/sale/list'));
 const SaleCreatePage = lazy(() => import('src/pages/dashboard/sale/new'));
 const SaleEditPage = lazy(() => import('src/pages/dashboard/sale/edit'));
 const SaleViewPage = lazy(() => import('src/pages/dashboard/sale/view'));
+
+// CONDUCTION
+const ConductionListPage = lazy(() => import('src/pages/dashboard/conduction/list'));
+const ConductionCreatePage = lazy(() => import('src/pages/dashboard/conduction/new'));
+const ConductionEditPage = lazy(() => import('src/pages/dashboard/conduction/edit'));
+const ConductionViewPage = lazy(() => import('src/pages/dashboard/conduction/view'));
 
 // TARGET
 const TargetListPage = lazy(() => import('src/pages/dashboard/target/list'));
@@ -118,6 +124,17 @@ export const dashboardRoutes = [
           { path: 'new', element: <SaleCreatePage /> },
           { path: ':id/edit', element: <SaleEditPage /> },
           { path: ':id/view', element: <SaleViewPage /> },
+        ],
+      },
+      {
+        path: 'conduction',
+        element: <RolesAuthRoute roles={['super_admin', 'admin', 'cgm', 'hod']} />,
+        children: [
+          { element: <ConductionListPage />, index: true },
+          { path: 'list', element: <ConductionListPage /> },
+          { path: 'new', element: <ConductionCreatePage /> },
+          { path: ':id/edit', element: <ConductionEditPage /> },
+          { path: ':id/view', element: <ConductionViewPage /> },
         ],
       },
       {
