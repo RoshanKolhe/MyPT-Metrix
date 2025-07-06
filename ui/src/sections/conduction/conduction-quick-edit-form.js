@@ -16,39 +16,46 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 // components
 import { useSnackbar } from 'src/components/snackbar';
-import FormProvider, { RHFSelect, RHFTextField } from 'src/components/hook-form';
+import FormProvider, { RHFAutocomplete, RHFSelect, RHFTextField } from 'src/components/hook-form';
 import { COMMON_STATUS_OPTIONS } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
 
-export default function ConductionQuickEditForm({ currentConduction, open, onClose, refreshConductions }) {
+export default function ConductionQuickEditForm({
+  currentConduction,
+  open,
+  onClose,
+  refreshConductions,
+}) {
   console.log(currentConduction);
   const { enqueueSnackbar } = useSnackbar();
 
   const NewConductionSchema = Yup.object().shape({
-    firstName: Yup.string().required('First Name is required'),
-    lastName: Yup.string().required('Last Name is required'),
-    email: Yup.string().required('Email is required').email('Email must be a valid email address'),
-    phoneNumber: Yup.string()
-      .required('Phone number is required')
-      .matches(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
-    dob: Yup.string(),
-    avatarUrl: Yup.mixed().nullable(),
-    isActive: Yup.boolean(),
+    conductionDate: Yup.date().required('Conduction Date is required'),
+    conductions: Yup.number()
+      .transform((value, originalValue) =>
+        String(originalValue).trim() === '' ? undefined : value
+      )
+      .typeError('Conduction value must be a number')
+      .required('Value is required')
+      .min(0, 'Value must be 0 or more'),
+    trainer: Yup.object().nullable().required('Trainer is required'),
+    kpi: Yup.object().nullable().required('KPI is required'),
+    branch: Yup.object().nullable().required('Branch is required'),
+    department: Yup.object().nullable().required('Department is required'),
   });
 
   const defaultValues = useMemo(
     () => ({
-      firstName: currentConduction?.firstName || '',
-      lastName: currentConduction?.lastName || '',
-      dob: currentConduction?.dob || '',
-      email: currentConduction?.email || '',
-      isActive: currentConduction?.isActive ? '1' : '0' || '',
-      avatarUrl: currentConduction?.avatar?.fileUrl || null,
-      phoneNumber: currentConduction?.phoneNumber || '',
-      department: currentConduction?.department || null,
+      conductionDate: currentConduction?.conductionDate
+        ? new Date(currentConduction.conductionDate)
+        : null,
+      conductions: currentConduction?.conductions || '',
+      trainer: currentConduction?.trainer || null,
+      kpi: currentConduction?.kpi || null,
       branch: currentConduction?.branch || null,
+      department: currentConduction?.department || null,
     }),
     [currentConduction]
   );
@@ -67,20 +74,21 @@ export default function ConductionQuickEditForm({ currentConduction, open, onClo
 
   const onSubmit = handleSubmit(async (formData) => {
     try {
-      const inputData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        isActive: formData.isActive,
-        dob: formData.dob,
+      const payload = {
+        conductionDate: formData.conductionDate,
+        conductions: Number(formData.conductions),
+        trainerId: formData.trainer.id,
+        kpiId: formData.kpi.id,
+        branchId: formData.branch.id,
+        departmentId: formData.department.id,
       };
-      await axiosInstance.patch(`/trainers/${currentConduction.id}`, inputData);
+
+      await axiosInstance.patch(`/conductions/${currentConduction.id}`, payload);
+
       refreshConductions();
       reset();
       onClose();
       enqueueSnackbar('Update success!');
-      console.info('DATA', formData);
     } catch (error) {
       console.error(error);
     }
@@ -100,12 +108,6 @@ export default function ConductionQuickEditForm({ currentConduction, open, onClo
         <DialogTitle>Quick Update</DialogTitle>
 
         <DialogContent>
-          {!currentConduction?.isActive && (
-            <Alert variant="outlined" severity="error" sx={{ mb: 3 }}>
-              Trainer is In-Active
-            </Alert>
-          )}
-
           <Box
             mt={2}
             rowGap={3}
@@ -116,30 +118,14 @@ export default function ConductionQuickEditForm({ currentConduction, open, onClo
               sm: 'repeat(2, 1fr)',
             }}
           >
-            <RHFSelect name="isActive" label="Status">
-              {COMMON_STATUS_OPTIONS.map((status) => (
-                <MenuItem key={status.value} value={status.value}>
-                  {status.label}
-                </MenuItem>
-              ))}
-            </RHFSelect>
-            <Box sx={{ display: { xs: 'none', sm: 'block' } }} />
-
-            <RHFTextField name="firstName" label="First Name" />
-            <RHFTextField name="lastName" label="Last Name" />
-            <RHFTextField name="email" label="Email Address" />
-            <RHFTextField type="number" name="phoneNumber" label="Phone Number" />
-
             <Controller
-              name="dob"
+              name="conductionDate"
               control={control}
               render={({ field, fieldState: { error } }) => (
                 <DatePicker
-                  label="DOB"
-                  value={new Date(field.value)}
-                  onChange={(newValue) => {
-                    field.onChange(newValue);
-                  }}
+                  label="Conduction Date"
+                  value={field.value}
+                  onChange={(newValue) => field.onChange(newValue)}
                   slotProps={{
                     textField: {
                       fullWidth: true,
@@ -149,6 +135,44 @@ export default function ConductionQuickEditForm({ currentConduction, open, onClo
                   }}
                 />
               )}
+            />
+
+            <RHFTextField name="conductions" label="Conductions" type="number" />
+
+            <RHFAutocomplete
+              name="trainer"
+              label="Trainer"
+              options={[currentConduction?.trainer]}
+              getOptionLabel={(option) => `${option?.firstName || ''} ${option?.lastName || ''}`}
+              isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              disabled
+            />
+
+            <RHFAutocomplete
+              name="kpi"
+              label="KPI"
+              options={[currentConduction?.kpi]}
+              getOptionLabel={(option) => option?.name || ''}
+              isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              disabled
+            />
+
+            <RHFAutocomplete
+              name="branch"
+              label="Branch"
+              options={[currentConduction?.branch]}
+              getOptionLabel={(option) => option?.name || ''}
+              isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              disabled
+            />
+
+            <RHFAutocomplete
+              name="department"
+              label="Department"
+              options={[currentConduction?.department]}
+              getOptionLabel={(option) => option?.name || ''}
+              isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              disabled
             />
           </Box>
         </DialogContent>

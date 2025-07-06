@@ -48,23 +48,13 @@ import ConductionQuickEditForm from '../conduction-quick-edit-form';
 const STATUS_OPTIONS = [{ value: 'all', label: 'All' }];
 
 const TABLE_HEAD = [
-  { id: 'memberName', label: 'Member Name' },
-  { id: 'gender', label: 'Gender', width: 100 },
-  { id: 'trainingAt', label: 'Training At', width: 120 },
-  { id: 'memberType', label: 'Member Type' },
-  { id: 'conductionsPerson', label: 'Conductions Person', width: 180 },
-  { id: 'trainerName', label: 'Trainer', width: 180 },
+  { id: 'conductionDate', label: 'Conduction Date', width: 150 },
+  { id: 'trainer', label: 'Trainer', width: 180 },
   { id: 'branch', label: 'Branch', width: 140 },
-  { id: 'contractNumber', label: 'Contract No.', width: 150 },
-  { id: 'purchaseDate', label: 'Purchase Date', width: 150 },
-  { id: 'membershipType', label: 'Membership Type(s)', width: 200 },
-  { id: 'price', label: 'Price (₹)', width: 120 },
-  { id: 'paymentMode', label: 'Payment Mode', width: 130 },
-  { id: 'paymentReceiptNumber', label: 'Receipt No.', width: 150 },
-  { id: 'validityDays', label: 'Validity (Days)', width: 130 },
-  { id: 'expiryDate', label: 'Expiry Date', width: 150 },
-  { id: 'freezingDays', label: 'Freezing Days', width: 130 },
-  { id: 'createdAt', label: 'Created At' },
+  { id: 'department', label: 'Department', width: 140 },
+  { id: 'kpi', label: 'KPI', width: 180 },
+  { id: 'conductions', label: 'Value', width: 120 },
+  { id: 'createdAt', label: 'Created At', width: 160 },
   { id: '', width: 88 },
 ];
 
@@ -93,7 +83,8 @@ export default function ConductionListView() {
 
   const [filters, setFilters] = useState(defaultFilters);
 
-  const { conductions, conductionsLoading, conductionsEmpty, refreshConductions } = useGetConductions();
+  const { conductions, conductionsLoading, conductionsEmpty, refreshConductions } =
+    useGetConductions();
 
   const dataFiltered = applyFilter({
     inputData: tableData,
@@ -235,9 +226,11 @@ export default function ConductionListView() {
                     }
                   >
                     {tab.value === 'all' && tableData.length}
-                    {tab.value === '1' && tableData.filter((conduction) => conduction.isActive).length}
+                    {tab.value === '1' &&
+                      tableData.filter((conduction) => conduction.isActive).length}
 
-                    {tab.value === '0' && tableData.filter((conduction) => !conduction.isActive).length}
+                    {tab.value === '0' &&
+                      tableData.filter((conduction) => !conduction.isActive).length}
                   </Label>
                 }
               />
@@ -406,13 +399,27 @@ function applyFilter({ inputData, comparator, filters }) {
   inputData = stabilizedThis.map((el) => el[0]);
 
   if (name) {
+    const keyword = name.toLowerCase();
+
     inputData = inputData.filter((conduction) =>
-      Object.values(conduction).some((value) => String(value).toLowerCase().includes(name.toLowerCase()))
+      Object.values(conduction).some((value) => {
+        if (value === null || value === undefined) return false;
+
+        if (typeof value === 'object') {
+          return Object.values(value).some((nested) =>
+            String(nested).toLowerCase().includes(keyword)
+          );
+        }
+
+        return String(value).toLowerCase().includes(keyword);
+      })
     );
   }
 
   if (status !== 'all') {
-    inputData = inputData.filter((conduction) => (status === '1' ? conduction.isActive : !conduction.isActive));
+    inputData = inputData.filter((conduction) =>
+      status === '1' ? conduction.isActive : !conduction.isActive
+    );
   }
 
   if (role.length) {

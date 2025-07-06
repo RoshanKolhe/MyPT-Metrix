@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
@@ -51,6 +51,8 @@ export default function ConductionNewEditForm({ currentConduction }) {
 
   const [trainers, setTrainers] = useState([]);
 
+  const [kpis, setKpis] = useState([]);
+
   const [conductionsSchema, setConductionsSchema] = useState(
     Yup.object().shape({
       trainer: Yup.object().nullable().required('Trainer is required'),
@@ -66,6 +68,7 @@ export default function ConductionNewEditForm({ currentConduction }) {
       conductionDate: currentConduction?.membershipDetails?.conductionDate
         ? new Date(currentConduction?.membershipDetails?.conductionDate)
         : null,
+      kpiValues: {},
     }),
     [currentConduction]
   );
@@ -83,46 +86,39 @@ export default function ConductionNewEditForm({ currentConduction }) {
     setValue,
     formState: { isSubmitting, errors },
   } = methods;
-
+  console.log(errors);
   const branch = watch('branch');
   const department = watch('department');
 
   const onSubmit = handleSubmit(async (formData) => {
-    // handle create or update
-    const inputData = {
-      memberName: formData.memberName,
-      gender: formData.gender,
-      departmentId: formData.department?.id || null,
-      branchId: formData.branch.id,
-      conductionsTrainerId: formData.conductionsPerson.id,
-      trainerId: formData.trainerName.id,
-      trainingAt: formData.trainingAt,
-      memberType: formData.memberType,
-      sourceOfLead: formData.sourceOfLead,
-      contractNumber: formData.contractNumber,
-      paymentMode: formData.paymentMode,
-      paymentReceiptNumber: formData.paymentReceiptNumber,
-      membershipDetails: {
-        membershipType: formData.membershipType,
-        purchaseDate: formData.purchaseDate,
-        price: formData.price,
-        validityDays: formData.validityDays,
-        freeDays: formData.freeDays,
-        freeSessions: formData.numberOfFreeSessions,
-        startDate: formData.startDate,
-        expiryDate: formData.expiryDate,
-        freezingDays: formData.freezingDays,
-      },
-    };
+    try {
+      const {
+        branch: branchDetails,
+        department: departmentDetails,
+        trainer: trainerDetails,
+        conductionDate,
+        kpiValues: kpiInputValues,
+      } = formData;
 
-    if (!currentConduction) {
-      await axiosInstance.post('/conductions', inputData);
-    } else {
-      await axiosInstance.patch(`/conductions/${currentConduction.id}`, inputData);
+      const conductionPayloads = Object.entries(kpiInputValues || {}).map(([kpiId, value]) => ({
+        conductionDate,
+        conductions: Number(value),
+        trainerId: trainerDetails.id,
+        kpiId: Number(kpiId),
+        branchId: branchDetails.id,
+        departmentId: departmentDetails.id,
+      }));
+      console.log('Conduction Payloads:', conductionPayloads);
+
+      await axiosInstance.post('/conductions/bulk', conductionPayloads);
+
+      enqueueSnackbar('Conductions submitted successfully!');
+      reset();
+      router.push(paths.dashboard.conduction.list);
+    } catch (error) {
+      console.error('Error submitting conduction:', error);
+      enqueueSnackbar('Failed to submit conductions', { variant: 'error' });
     }
-    reset();
-    enqueueSnackbar(currentConduction ? 'Update success!' : 'Create success!');
-    router.push(paths.dashboard.conduction.list);
   });
 
   useEffect(() => {
@@ -178,6 +174,13 @@ export default function ConductionNewEditForm({ currentConduction }) {
   }, [isCGM, isSuperOrAdmin, user?.permissions]);
 
   useEffect(() => {
+    if (branch && branch.departments) {
+      const activeDepartments = branch.departments.filter((dept) => dept.isActive);
+      setDepartments(activeDepartments);
+    }
+  }, [branch]);
+
+  useEffect(() => {
     const fetchTrainers = async () => {
       console.log(branch, department);
       if (!branch || !department) return;
@@ -197,6 +200,47 @@ export default function ConductionNewEditForm({ currentConduction }) {
 
     fetchTrainers();
   }, [branch, department]);
+
+  useEffect(() => {
+    const fetchServiceKpis = async () => {
+      if (!department?.id) return;
+
+      try {
+        const res = await axiosInstance.get(`/departments/${department.id}/service-kpis`);
+        const activeServiceKpis = res.data;
+        setKpis(activeServiceKpis);
+
+        // Initialize KPI values with empty inputs
+        const initialKpiValues = {};
+        activeServiceKpis.forEach((kpi) => {
+          initialKpiValues[kpi.id] = '';
+        });
+        setValue('kpiValues', initialKpiValues);
+      } catch (error) {
+        console.error('Error fetching service KPIs:', error);
+        setKpis([]);
+      }
+    };
+
+    fetchServiceKpis();
+  }, [department, setValue]);
+
+  useEffect(() => {
+    if (kpis.length > 0) {
+      const kpiFieldShape = {};
+      kpis.forEach((kpi) => {
+        kpiFieldShape[kpi.id] = Yup.string().required(`${kpi.name} is required`);
+      });
+
+      setConductionsSchema((prev) =>
+        prev.concat(
+          Yup.object().shape({
+            kpiValues: Yup.object().shape(kpiFieldShape),
+          })
+        )
+      );
+    }
+  }, [kpis]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -290,15 +334,64 @@ export default function ConductionNewEditForm({ currentConduction }) {
                   )}
                 />
               </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFAutocomplete
+                  name="trainer"
+                  label="Trainer"
+                  options={trainers}
+                  getOptionLabel={(option) => `${option?.firstName} ${option?.lastName}` || ''}
+                  isOptionEqualToValue={(a, b) => a?.id === b?.id}
+                  renderOption={(props, option) => (
+                    <li {...props}>
+                      <div>
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          {`${option?.firstName} ${option?.lastName}`}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          {option.email}
+                        </Typography>
+                      </div>
+                    </li>
+                  )}
+                  renderTags={(selected, getTagProps) =>
+                    selected.map((option, index) => (
+                      <Chip
+                        {...getTagProps({ index })}
+                        key={option.id}
+                        label={option.name}
+                        size="small"
+                        color="info"
+                        variant="soft"
+                      />
+                    ))
+                  }
+                />
+              </Grid>
+              {kpis.length > 0 && (
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom>
+                    KPI Inputs
+                  </Typography>
+                  <Grid container spacing={2} mt={2}>
+                    {kpis.map((kpi) => (
+                      <Fragment key={kpi.id}>
+                        <Grid item xs={12} sm={6}>
+                          <RHFTextField name={`kpiValues.${kpi.id}`} label={kpi.name} fullWidth />
+                        </Grid>
+                      </Fragment>
+                    ))}
+                  </Grid>
+                </Grid>
+              )}
+              <Grid item xs={12} md={12}>
+                <Stack alignItems="flex-end" sx={{ mt: 3 }}>
+                  <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
+                    {currentConduction ? 'Update Conduction' : 'Create Conduction'}
+                  </LoadingButton>
+                </Stack>
+              </Grid>
             </Grid>
           </Card>
-        </Grid>
-        <Grid item xs={12} md={12}>
-          <Stack alignItems="flex-end" sx={{ mt: 3 }}>
-            <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
-              {currentConduction ? 'Update Conduction' : 'Create Conduction'}
-            </LoadingButton>
-          </Stack>
         </Grid>
       </Grid>
     </FormProvider>

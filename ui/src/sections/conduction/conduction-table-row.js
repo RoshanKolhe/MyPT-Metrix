@@ -31,49 +31,15 @@ export default function ConductionTableRow({
   quickEdit,
   handleQuickEditRow,
 }) {
-  const {
-    memberName,
-    gender,
-    trainingAt,
-    memberType,
-    contractNumber,
-    sourceOfLead,
-    paymentMode,
-    paymentReceiptNumber,
-    createdAt,
-    branch,
-    conductionsTrainer,
-    trainer,
-    membershipDetails,
-  } = row;
+  const { branch, conductionDate, createdAt, department, kpi, conductions, trainer } = row;
 
   const confirm = useBoolean();
   const popover = usePopover();
 
-  const membershipLabels = membershipDetails?.membershipType?.map((m) => m.label).join(', ') || '';
-  const purchaseDate = fDate(membershipDetails?.purchaseDate);
-  const expiryDate = fDate(membershipDetails?.expiryDate);
-
   return (
     <>
       <TableRow hover selected={selected}>
-        {/* Member Info */}
-        <TableCell sx={{ whiteSpace: 'nowrap' }}>{memberName}</TableCell>
-        <TableCell sx={{ whiteSpace: 'nowrap' }}>{gender}</TableCell>
-        <TableCell sx={{ whiteSpace: 'nowrap' }}>{trainingAt}</TableCell>
-        <TableCell sx={{ whiteSpace: 'nowrap' }}>{memberType}</TableCell>
-
-        {/* Conductions Trainer */}
-        <TableCell>
-          <ListItemText
-            primary={`${conductionsTrainer?.firstName} ${conductionsTrainer?.lastName || ''}`}
-            secondary={conductionsTrainer?.email}
-            primaryTypographyProps={{ typography: 'body2' }}
-            secondaryTypographyProps={{ component: 'span', color: 'text.disabled' }}
-          />
-        </TableCell>
-
-        {/* Trainer */}
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{fDate(conductionDate)}</TableCell>
         <TableCell>
           <ListItemText
             primary={`${trainer?.firstName} ${trainer?.lastName || ''}`}
@@ -82,33 +48,30 @@ export default function ConductionTableRow({
             secondaryTypographyProps={{ component: 'span', color: 'text.disabled' }}
           />
         </TableCell>
-
-        {/* Other Info */}
-        <TableCell>{branch?.name}</TableCell>
-        <TableCell>{contractNumber}</TableCell>
-        <TableCell>{purchaseDate}</TableCell>
-        <TableCell>{membershipLabels}</TableCell>
-        <TableCell>{membershipDetails?.price}</TableCell>
-        <TableCell>{paymentMode}</TableCell>
-        <TableCell>{paymentReceiptNumber}</TableCell>
-        <TableCell>{membershipDetails?.validityDays}</TableCell>
-        <TableCell>{expiryDate}</TableCell>
-        <TableCell>{membershipDetails?.freezingDays}</TableCell>
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{branch?.name}</TableCell>
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{department?.name}</TableCell>
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{kpi?.name}</TableCell>
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{conductions}</TableCell>
         <TableCell>{fDate(createdAt)}</TableCell>
 
         {/* Actions */}
         <TableCell align="right" sx={{ px: 1, whiteSpace: 'nowrap' }}>
           <Tooltip title="Quick Edit" placement="top" arrow>
-            <IconButton color={quickEdit.value ? 'inherit' : 'default'} onClick={() => onEditRow()}>
+            <IconButton
+              color={quickEdit.value ? 'inherit' : 'default'}
+              onClick={() => {
+                handleQuickEditRow(row);
+              }}
+            >
               <Iconify icon="solar:pen-bold" />
             </IconButton>
           </Tooltip>
 
-          <Tooltip title="View Conduction" placement="top" arrow>
+          {/* <Tooltip title="View Conduction" placement="top" arrow>
             <IconButton onClick={onViewRow}>
               <Iconify icon="solar:eye-bold" />
             </IconButton>
-          </Tooltip>
+          </Tooltip> */}
         </TableCell>
       </TableRow>
 

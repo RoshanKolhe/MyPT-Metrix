@@ -23,7 +23,7 @@ import {ConductionRepository} from '../repositories';
 export class ConductionController {
   constructor(
     @repository(ConductionRepository)
-    public conductionRepository : ConductionRepository,
+    public conductionRepository: ConductionRepository,
   ) {}
 
   @post('/conductions')
@@ -62,7 +62,10 @@ export class ConductionController {
   async find(
     @param.filter(Conduction) filter?: Filter<Conduction>,
   ): Promise<Conduction[]> {
-    return this.conductionRepository.find(filter);
+    return this.conductionRepository.find({
+      ...filter,
+      include: ['trainer', 'kpi', 'branch', 'department'],
+    });
   }
 
   @get('/conductions/{id}')
@@ -76,9 +79,13 @@ export class ConductionController {
   })
   async findById(
     @param.path.number('id') id: number,
-    @param.filter(Conduction, {exclude: 'where'}) filter?: FilterExcludingWhere<Conduction>
+    @param.filter(Conduction, {exclude: 'where'})
+    filter?: FilterExcludingWhere<Conduction>,
   ): Promise<Conduction> {
-    return this.conductionRepository.findById(id, filter);
+    return this.conductionRepository.findById(id, {
+      ...filter,
+      include: ['trainer', 'kpi', 'branch', 'department'],
+    });
   }
 
   @patch('/conductions/{id}')
@@ -105,5 +112,36 @@ export class ConductionController {
   })
   async deleteById(@param.path.number('id') id: number): Promise<void> {
     await this.conductionRepository.deleteById(id);
+  }
+
+  @post('/conductions/bulk')
+  @response(200, {
+    description: 'Create multiple conduction entries',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'array',
+          items: getModelSchemaRef(Conduction),
+        },
+      },
+    },
+  })
+  async createBulk(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'array',
+            items: getModelSchemaRef(Conduction, {
+              title: 'NewConduction',
+              exclude: ['id'],
+            }),
+          },
+        },
+      },
+    })
+    conductions: Omit<Conduction, 'id'>[],
+  ): Promise<Conduction[]> {
+    return this.conductionRepository.createAll(conductions);
   }
 }

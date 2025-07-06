@@ -17,7 +17,7 @@ import {
   requestBody,
   response,
 } from '@loopback/rest';
-import {Department} from '../models';
+import {Department, Kpi} from '../models';
 import {DepartmentKpiRepository, DepartmentRepository} from '../repositories';
 import {authenticate} from '@loopback/authentication';
 import {PermissionKeys} from '../authorization/permission-keys';
@@ -190,5 +190,40 @@ export class DepartmentController {
   })
   async deleteById(@param.path.number('id') id: number): Promise<void> {
     await this.departmentRepository.deleteById(id);
+  }
+
+  @authenticate({
+    strategy: 'jwt',
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+      ],
+    },
+  })
+  @get('/departments/{id}/service-kpis')
+  @response(200, {
+    description: 'Array of active service KPIs for a given department',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'array',
+          items: {
+            // Adjust this depending on whether you want full model schema or specific fields
+            $ref: '#/components/schemas/Kpi',
+          },
+        },
+      },
+    },
+  })
+  async getActiveServiceKpisByDepartmentId(
+    @param.path.number('id') id: number,
+  ): Promise<Kpi[]> {
+    return this.departmentRepository.kpis(id).find({
+      where: {
+        and: [{isActive: true}, {type: 'service'}],
+      },
+    });
   }
 }
