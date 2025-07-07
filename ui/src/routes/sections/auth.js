@@ -10,60 +10,13 @@ import { SplashScreen } from 'src/components/loading-screen';
 
 // ----------------------------------------------------------------------
 
-// AMPLIFY
-const AmplifyLoginPage = lazy(() => import('src/pages/auth/amplify/login'));
-const AmplifyRegisterPage = lazy(() => import('src/pages/auth/amplify/register'));
-const AmplifyVerifyPage = lazy(() => import('src/pages/auth/amplify/verify'));
-const AmplifyNewPasswordPage = lazy(() => import('src/pages/auth/amplify/new-password'));
-const AmplifyForgotPasswordPage = lazy(() => import('src/pages/auth/amplify/forgot-password'));
-
 // JWT
 const JwtLoginPage = lazy(() => import('src/pages/auth/jwt/login'));
 const JwtRegisterPage = lazy(() => import('src/pages/auth/jwt/register'));
 const JwtForgotPasswordPage = lazy(() => import('src/pages/auth/jwt/forgot-password'));
+const JwtNewPasswordPage = lazy(() => import('src/pages/auth/jwt/new-password'));
 
 // ----------------------------------------------------------------------
-
-const authAmplify = {
-  path: 'amplify',
-  element: (
-    <GuestGuard>
-      <Suspense fallback={<SplashScreen />}>
-        <Outlet />
-      </Suspense>
-    </GuestGuard>
-  ),
-  children: [
-    {
-      path: 'login',
-      element: (
-        <AuthClassicLayout>
-          <AmplifyLoginPage />
-        </AuthClassicLayout>
-      ),
-    },
-    {
-      path: 'register',
-      element: (
-        <AuthClassicLayout title="Manage the job more effectively with Minimal">
-          <AmplifyRegisterPage />
-        </AuthClassicLayout>
-      ),
-    },
-    {
-      element: (
-        <CompactLayout>
-          <Outlet />
-        </CompactLayout>
-      ),
-      children: [
-        { path: 'verify', element: <AmplifyVerifyPage /> },
-        { path: 'new-password', element: <AmplifyNewPasswordPage /> },
-        { path: 'forgot-password', element: <AmplifyForgotPasswordPage /> },
-      ],
-    },
-  ],
-};
 
 const authJwt = {
   path: 'jwt',
@@ -98,8 +51,7 @@ const authJwt = {
         </CompactLayout>
       ),
       children: [
-        { path: 'verify', element: <AmplifyVerifyPage /> },
-        { path: 'new-password', element: <AmplifyNewPasswordPage /> },
+        { path: 'new-password', element: <JwtNewPasswordPage /> },
         { path: 'forgot-password', element: <JwtForgotPasswordPage /> },
       ],
     },
@@ -109,6 +61,6 @@ const authJwt = {
 export const authRoutes = [
   {
     path: 'auth',
-    children: [authAmplify, authJwt],
+    children: [authJwt],
   },
 ];

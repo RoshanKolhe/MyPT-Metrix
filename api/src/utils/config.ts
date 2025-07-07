@@ -16,9 +16,9 @@ const SITE_SETTINGS = {
 };
 export default SITE_SETTINGS;
 
-export const TWILIO_SITE_SETTINGS = {
+export const getTwilioSettings = () => ({
   sendgrid: {
-    apiKey: process.env.TWILIO_MAIL_API_KEY || '',
-    fromEmail: 'your@email.com',
+    apiKey: process.env.TWILIO_MAIL_API_KEY ?? '',
+    fromEmail: 'noreply@sqonefitness.com',
   },
-};
+});

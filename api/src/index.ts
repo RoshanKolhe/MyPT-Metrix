@@ -1,10 +1,12 @@
 import {ApplicationConfig, MyPtMetrixApplication} from './application';
 
 export * from './application';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 export async function main(options: ApplicationConfig = {}) {
   const app = new MyPtMetrixApplication(options);
-  const dotenv = require('dotenv').config();
+
   await app.boot();
   await app.start();
 
