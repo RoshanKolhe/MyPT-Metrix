@@ -13,7 +13,7 @@ import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
 // components
 import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/components/hook-form';
-import { Box, Chip, FormControl, FormHelperText, MenuItem, useTheme } from '@mui/material';
+import { Chip, FormControl, FormHelperText, MenuItem, useTheme } from '@mui/material';
 import { useRouter } from 'src/routes/hook';
 import { useSnackbar } from 'notistack';
 import { useGetBranchsWithFilter } from 'src/api/branch';
@@ -153,7 +153,7 @@ export default function SaleNewEditForm({ currentSale }) {
     control,
     watch,
     setValue,
-    formState: { isSubmitting, errors },
+    formState: { isSubmitting },
   } = methods;
 
   const branch = watch('branch');
