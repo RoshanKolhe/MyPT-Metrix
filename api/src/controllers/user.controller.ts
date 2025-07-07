@@ -122,15 +122,12 @@ export class UserController {
       const departments = userData.departments ?? [];
 
       delete (userData as any).departments;
-      // 🔐 Hash password
       userData.password = await this.hasher.hashPassword(userData.password);
 
-      // 🧑 Create user
       const savedUser = await this.userRepository.create(userData, {
         transaction: tx,
       });
 
-      // 🔗 Link to departments (if any)
       for (const deptId of departments) {
         await this.userDepartmentRepository.create(
           {

@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
@@ -12,8 +12,8 @@ import Stack from '@mui/material/Stack';
 import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
 // components
-import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/components/hook-form';
-import { Chip, MenuItem } from '@mui/material';
+import FormProvider, { RHFTextField, RHFAutocomplete } from 'src/components/hook-form';
+import { Chip } from '@mui/material';
 import { useRouter } from 'src/routes/hook';
 import { useSnackbar } from 'notistack';
 import { useGetBranchsWithFilter } from 'src/api/branch';

@@ -67,8 +67,17 @@ export default function SaleNewEditForm({ currentSale }) {
       purchaseDate: Yup.date().required('Purchase date is required'),
       price: Yup.number().typeError('Price must be a number').positive().required(),
       validityDays: Yup.number().typeError('Validity days are required').min(1).required(),
-      freeDays: Yup.number().typeError('Free days are required').min(0).required(),
-      numberOfFreeSessions: Yup.number().typeError('Free sessions are required').min(0).required(),
+      freeDays: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? null : value))
+        .typeError('Free days must be a number')
+        .min(0, 'Free days cannot be negative')
+        .nullable(),
+
+      numberOfFreeSessions: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? null : value))
+        .typeError('Free sessions must be a number')
+        .min(0, 'Free sessions cannot be negative')
+        .nullable(),
       startDate: Yup.date().required('Start date is required'),
       expiryDate: Yup.date()
         .required('Expiry date is required')
