@@ -272,21 +272,33 @@ export default function StaffNewEditForm({ currentStaff }) {
     }
   }, [shouldAutoAssignBranch, user?.branch, branches, setValue]);
 
+  // useEffect(() => {
+  //   if (!branch) {
+  //     setDepartments([]);
+  //     setValue('departments', []);
+  //     return;
+  //   }
+
+  //   const fetchedDepartments = branch?.departments || [];
+
+  //   setDepartments(fetchedDepartments);
+
+  //   if (!currentStaff) {
+  //     setValue('departments', []);
+  //   }
+  // }, [branch, currentStaff, setValue]);
   useEffect(() => {
-    if (!branch) {
-      setDepartments([]);
-      setValue('departments', []);
-      return;
-    }
+  if (!branch) {
+    setDepartments([]);
+    setValue('department', null);
+    return;
+  }
 
-    const fetchedDepartments = branch?.departments || [];
+  const selectedBranch = branches?.find((b) => b.id === branch.id);
+  const availableDepartments = selectedBranch?.departments || [];
 
-    setDepartments(fetchedDepartments);
-
-    if (!currentStaff) {
-      setValue('departments', []);
-    }
-  }, [branch, currentStaff, setValue]);
+  setDepartments(availableDepartments);
+}, [branch, branches, setValue]);
 
   useEffect(() => {
     if (currentStaff) {
