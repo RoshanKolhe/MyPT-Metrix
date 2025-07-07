@@ -119,6 +119,7 @@ export default function SaleNewEditForm({ currentSale }) {
       memberType: currentSale?.memberType || '',
       sourceOfLead: currentSale?.sourceOfLead || '',
       contactNumber: currentSale?.contactNumber || '',
+      email: currentSale?.email || '',
       membershipType: currentSale?.membershipDetails?.membershipType || [],
       purchaseDate: currentSale?.membershipDetails?.purchaseDate
         ? new Date(currentSale?.membershipDetails?.purchaseDate)
@@ -182,6 +183,7 @@ export default function SaleNewEditForm({ currentSale }) {
       memberType: formData.memberType,
       sourceOfLead: formData.sourceOfLead,
       contactNumber: formData.contactNumber,
+      email: formData.email,
       paymentMode: formData.paymentMode,
       paymentReceiptNumber: formData.paymentReceiptNumber,
       membershipDetails: {
