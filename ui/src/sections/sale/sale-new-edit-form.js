@@ -65,7 +65,7 @@ export default function SaleNewEditForm({ currentSale }) {
       memberName: Yup.string().required('Member name is required'),
       gender: Yup.string().required('Gender is required'),
       salesPerson: Yup.object().nullable().required('Sales person is required'),
-      trainerName: Yup.object().nullable().required('Trainer name is required'),
+      trainerName: Yup.object().nullable(),
       trainingAt: Yup.string().required('Training location is required'),
       memberType: Yup.string().required('Member type is required'),
       sourceOfLead: Yup.string(),
@@ -178,7 +178,7 @@ export default function SaleNewEditForm({ currentSale }) {
       departmentId: formData.department?.id || null,
       branchId: formData.branch.id,
       salesTrainerId: formData.salesPerson.id,
-      trainerId: formData.trainerName.id,
+      trainerId: formData.trainerName ? formData.trainerName.id : null,
       trainingAt: formData.trainingAt,
       memberType: formData.memberType,
       sourceOfLead: formData.sourceOfLead,
@@ -577,6 +577,9 @@ export default function SaleNewEditForm({ currentSale }) {
                 <RHFSelect name="memberType" label="Member Type">
                   <MenuItem value="new">New</MenuItem>
                   <MenuItem value="rnl">RNL</MenuItem>
+                  <MenuItem value="upgrade">Upgrade</MenuItem>
+                  <MenuItem value="top_up">Top up</MenuItem>
+                  <MenuItem value="emi">EMI collection</MenuItem>
                 </RHFSelect>
               </Grid>
               {memberType === 'new' ? (
