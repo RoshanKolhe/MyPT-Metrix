@@ -684,32 +684,27 @@ export class UserController {
   ): Promise<User[]> {
     const {branchId, departmentId} = body;
 
-    // Fetch all users with the given branch
     const users = await this.userRepository.find({
-      where: {
-        branchId,
-      },
-      include: [
-        {
-          relation: 'departments',
-          scope: {
-            where: {id: departmentId},
-          },
-        },
-      ],
+      where: {branchId},
+      include: [{relation: 'departments'}],
     });
 
-    // Now filter users whose permissions include 'hod' or 'subhod'
-    const filtered = users.filter(
-      user =>
-        (user.permissions || []).includes('hod') ||
-        (user.permissions || []).includes('sub_hod'),
-    );
+    const filtered = users.filter(user => {
+      const perms = user.permissions || [];
 
-    // Ensure they are actually linked to the given department
-    return filtered.filter(
-      user => user.departments && user.departments.length > 0,
-    );
+      if (perms.includes('cgm')) return true;
+
+      if (
+        (perms.includes('hod') || perms.includes('sub_hod')) &&
+        user.departments?.some(dep => dep.id === departmentId)
+      ) {
+        return true;
+      }
+
+      return false;
+    });
+
+    return filtered;
   }
 
   @authenticate('jwt')

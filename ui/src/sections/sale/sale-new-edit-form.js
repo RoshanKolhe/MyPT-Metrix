@@ -475,6 +475,7 @@ export default function SaleNewEditForm({ currentSale }) {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <RHFSelect name="trainingAt" label="Training At">
+                  <MenuItem value="academy">Academy</MenuItem>
                   <MenuItem value="ladies">Ladies Gym</MenuItem>
                   <MenuItem value="mixed">Mixed Section</MenuItem>
                   <MenuItem value="home">Home Training</MenuItem>
@@ -524,6 +525,7 @@ export default function SaleNewEditForm({ currentSale }) {
                   name="membershipType"
                   label="Membership Type"
                   options={[
+                    { label: 'Academy', value: 'academy' },
                     { label: 'Gym Membership', value: 'gym' },
                     { label: 'PT Membership', value: 'pt' },
                     { label: 'Home Membership', value: 'home' },
