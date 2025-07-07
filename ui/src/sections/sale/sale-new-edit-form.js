@@ -171,46 +171,52 @@ export default function SaleNewEditForm({ currentSale }) {
   const prevDeptRef = useRef(null);
 
   const onSubmit = handleSubmit(async (formData) => {
-    // handle create or update
-    const inputData = {
-      memberName: formData.memberName,
-      gender: formData.gender,
-      departmentId: formData.department?.id || null,
-      branchId: formData.branch.id,
-      salesTrainerId: formData.salesPerson.id,
-      trainingAt: formData.trainingAt,
-      memberType: formData.memberType,
-      sourceOfLead: formData.sourceOfLead,
-      contactNumber: formData.contactNumber,
-      email: formData.email,
-      paymentMode: formData.paymentMode,
-      paymentReceiptNumber: formData.paymentReceiptNumber,
-      membershipDetails: {
-        membershipType: formData.membershipType,
-        purchaseDate: formData.purchaseDate,
-        actualPrice: formData.actualPrice,
-        discountedPrice: formData.discountedPrice,
-        validityDays: formData.validityDays,
-        freeDays: formData.freeDays ? formData.freeDays : 0,
-        freeSessions: formData.numberOfFreeSessions ? formData.numberOfFreeSessions : 0,
-        startDate: formData.startDate,
-        expiryDate: formData.expiryDate,
-        freezingDays: formData.freezingDays ? formData.freezingDays : 0,
-      },
-    };
+    try {
+      const inputData = {
+        memberName: formData.memberName,
+        gender: formData.gender,
+        departmentId: formData.department?.id || null,
+        branchId: formData.branch.id,
+        salesTrainerId: formData.salesPerson.id,
+        trainingAt: formData.trainingAt,
+        memberType: formData.memberType,
+        sourceOfLead: formData.sourceOfLead,
+        contactNumber: formData.contactNumber,
+        email: formData.email,
+        paymentMode: formData.paymentMode,
+        paymentReceiptNumber: formData.paymentReceiptNumber,
+        membershipDetails: {
+          membershipType: formData.membershipType,
+          purchaseDate: formData.purchaseDate,
+          actualPrice: formData.actualPrice,
+          discountedPrice: formData.discountedPrice,
+          validityDays: formData.validityDays,
+          freeDays: formData.freeDays ? formData.freeDays : 0,
+          freeSessions: formData.numberOfFreeSessions ? formData.numberOfFreeSessions : 0,
+          startDate: formData.startDate,
+          expiryDate: formData.expiryDate,
+          freezingDays: formData.freezingDays ? formData.freezingDays : 0,
+        },
+      };
 
-    if (formData.trainerName && formData.trainerName.id) {
-      inputData.trainerId = formData.trainerName.id;
-    }
+      if (formData.trainerName && formData.trainerName.id) {
+        inputData.trainerId = formData.trainerName.id;
+      }
 
-    if (!currentSale) {
-      await axiosInstance.post('/sales', inputData);
-    } else {
-      await axiosInstance.patch(`/sales/${currentSale.id}`, inputData);
+      if (!currentSale) {
+        await axiosInstance.post('/sales', inputData);
+      } else {
+        await axiosInstance.patch(`/sales/${currentSale.id}`, inputData);
+      }
+      reset();
+      enqueueSnackbar(currentSale ? 'Update success!' : 'Create success!');
+      router.push(paths.dashboard.sale.list);
+    } catch (error) {
+      console.error(error);
+      enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
+        variant: 'error',
+      });
     }
-    reset();
-    enqueueSnackbar(currentSale ? 'Update success!' : 'Create success!');
-    router.push(paths.dashboard.sale.list);
   });
 
   useEffect(() => {
@@ -751,7 +757,6 @@ export default function SaleNewEditForm({ currentSale }) {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <RHFSelect name="paymentMode" label="Mode of Payment">
-                  
                   <MenuItem value="viya_app">ViyaApp Payment</MenuItem>
                   <MenuItem value="mypt">MyPT App Payment</MenuItem>
                   <MenuItem value="cash">Cash</MenuItem>

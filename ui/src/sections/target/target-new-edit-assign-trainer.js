@@ -82,7 +82,9 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
       router.push(paths.dashboard.target.list);
     } catch (error) {
       console.error(error);
-      enqueueSnackbar(error?.message || 'Something went wrong', { variant: 'error' });
+      enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
+        variant: 'error',
+      });
     }
   };
 

@@ -117,7 +117,9 @@ export default function ConductionNewEditForm({ currentConduction }) {
       router.push(paths.dashboard.conduction.list);
     } catch (error) {
       console.error('Error submitting conduction:', error);
-      enqueueSnackbar('Failed to submit conductions', { variant: 'error' });
+      enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
+        variant: 'error',
+      });
     }
   });
 
