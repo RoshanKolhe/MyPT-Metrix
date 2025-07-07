@@ -36,15 +36,13 @@ export class MembershipDetails extends Entity {
 
   @property({
     type: 'number',
-    required: true,
   })
-  freeDays: number;
+  freeDays?: number;
 
   @property({
     type: 'number',
-    required: true,
   })
-  freeSessions: number;
+  freeSessions?: number;
 
   @property({
     type: 'string',
