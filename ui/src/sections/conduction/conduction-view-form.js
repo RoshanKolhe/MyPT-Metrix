@@ -19,7 +19,6 @@ import { useSnackbar } from 'notistack';
 import { useGetBranchsWithFilter } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
 import axiosInstance from 'src/utils/axios';
-import { paths } from 'src/routes/paths';
 
 // ----------------------------------------------------------------------
 
