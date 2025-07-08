@@ -121,6 +121,7 @@ export default function SaleNewEditForm({ currentSale }) {
           Yup.object().shape({
             paymentMode: Yup.string().required('Payment Mode is required'),
             paymentReceiptNumber: Yup.string().required('Payment Receipt Number is required'),
+            amount: Yup.number().required('Amount is required'),
           })
         )
         .min(1, 'At least one material is required'),
@@ -160,11 +161,13 @@ export default function SaleNewEditForm({ currentSale }) {
         ? currentSale.paymentTypes.map((paymentType) => ({
             paymentMode: paymentType?.paymentMode || '',
             paymentReceiptNumber: paymentType?.paymentReceiptNumber || '',
+            amount: paymentType?.amount || 0,
           }))
         : [
             {
               paymentMode: '',
               paymentReceiptNumber: '',
+              amount: 0,
             },
           ],
     }),
@@ -208,6 +211,17 @@ export default function SaleNewEditForm({ currentSale }) {
 
   const onSubmit = handleSubmit(async (formData) => {
     try {
+      const totalPaymentAmount = formData.paymentTypes.reduce(
+        (sum, item) => sum + Number(item.amount || 0),
+        0
+      );
+
+      if (totalPaymentAmount !== Number(formData.discountedPrice)) {
+        enqueueSnackbar('Total payment amount must exactly match the discounted price', {
+          variant: 'error',
+        });
+        return; // 🔒 prevent submission
+      }
       const inputData = {
         memberName: formData.memberName,
         gender: formData.gender,
@@ -281,6 +295,8 @@ export default function SaleNewEditForm({ currentSale }) {
                 name={`paymentTypes[${index}].paymentReceiptNumber`}
                 label="Payment Receipt Number"
               />
+
+              <RHFTextField name={`paymentTypes[${index}].amount`} label="Amount" />
             </Stack>
 
             <Button
@@ -308,6 +324,7 @@ export default function SaleNewEditForm({ currentSale }) {
             append({
               paymentMode: '',
               paymentReceiptNumber: '',
+              amount: 0,
             })
           }
           sx={{ flexShrink: 0 }}
