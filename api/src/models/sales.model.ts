@@ -51,15 +51,20 @@ export class Sales extends Entity {
   })
   contactNumber?: string;
 
-  @property({
-    type: 'string',
-  })
-  paymentMode?: string;
+  // @property({
+  //   type: 'string',
+  // })
+  // paymentMode?: string;
 
-  @property({
-    type: 'string',
+  // @property({
+  //   type: 'string',
+  // })
+  // paymentReceiptNumber?: string;
+
+  @property.array(Object, {
+    name: 'paymentTypes',
   })
-  paymentReceiptNumber?: string;
+  paymentTypes: Object[];
 
   @property({
     type: 'date',

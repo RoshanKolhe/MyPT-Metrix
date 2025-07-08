@@ -36,10 +36,7 @@ export default function SaleTableRow({
     gender,
     trainingAt,
     memberType,
-    contractNumber,
-    sourceOfLead,
-    paymentMode,
-    paymentReceiptNumber,
+    contactNumber,
     createdAt,
     branch,
     salesTrainer,
@@ -89,12 +86,10 @@ export default function SaleTableRow({
 
         {/* Other Info */}
         <TableCell>{branch?.name}</TableCell>
-        <TableCell>{contractNumber}</TableCell>
+        <TableCell>{contactNumber}</TableCell>
         <TableCell>{purchaseDate}</TableCell>
         <TableCell>{membershipLabels}</TableCell>
-        <TableCell>{membershipDetails?.price}</TableCell>
-        <TableCell>{paymentMode}</TableCell>
-        <TableCell>{paymentReceiptNumber}</TableCell>
+        <TableCell>{membershipDetails?.actualPrice}</TableCell>
         <TableCell>{membershipDetails?.validityDays}</TableCell>
         <TableCell>{expiryDate}</TableCell>
         <TableCell>{membershipDetails?.freezingDays}</TableCell>

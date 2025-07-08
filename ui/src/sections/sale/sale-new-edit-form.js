@@ -2,7 +2,7 @@
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
 import LoadingButton from '@mui/lab/LoadingButton';
@@ -13,7 +13,7 @@ import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
 // components
 import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/components/hook-form';
-import { Chip, FormControl, FormHelperText, MenuItem, useTheme } from '@mui/material';
+import { Button, Chip, FormControl, FormHelperText, MenuItem, useTheme } from '@mui/material';
 import { useRouter } from 'src/routes/hook';
 import { useSnackbar } from 'notistack';
 import { useGetBranchsWithFilter } from 'src/api/branch';
@@ -22,6 +22,20 @@ import axiosInstance from 'src/utils/axios';
 import { paths } from 'src/routes/paths';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
+import Iconify from 'src/components/iconify';
+
+const PAYMENT_OPTIONS = [
+  { value: 'viya_app', label: 'ViyaApp Payment' },
+  { value: 'mypt', label: 'MyPT App Payment' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'pos', label: 'POS' },
+  { value: 'bank', label: 'Bank Transfer' },
+  { value: 'link', label: 'Payment Link' },
+  { value: 'tabby', label: 'Tabby' },
+  { value: 'tamara', label: 'Tamara' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'atm', label: 'Bank/ATM Deposit' },
+];
 
 // ----------------------------------------------------------------------
 
@@ -102,8 +116,14 @@ export default function SaleNewEditForm({ currentSale }) {
         .typeError('Freezing days be a number')
         .min(0, 'Freezing days cannot be negative')
         .nullable(),
-      paymentMode: Yup.string().required('Payment mode is required'),
-      paymentReceiptNumber: Yup.string().required('Receipt number is required'),
+      paymentTypes: Yup.array()
+        .of(
+          Yup.object().shape({
+            paymentMode: Yup.string().required('Payment Mode is required'),
+            paymentReceiptNumber: Yup.string().required('Payment Receipt Number is required'),
+          })
+        )
+        .min(1, 'At least one material is required'),
     })
   );
 
@@ -136,8 +156,17 @@ export default function SaleNewEditForm({ currentSale }) {
         ? new Date(currentSale?.membershipDetails?.expiryDate)
         : null,
       freezingDays: currentSale?.membershipDetails?.freezingDays || '',
-      paymentMode: currentSale?.paymentMode || '',
-      paymentReceiptNumber: currentSale?.paymentReceiptNumber || '',
+      paymentTypes: currentSale?.paymentTypes?.length
+        ? currentSale.paymentTypes.map((paymentType) => ({
+            paymentMode: paymentType?.paymentMode || '',
+            paymentReceiptNumber: paymentType?.paymentReceiptNumber || '',
+          }))
+        : [
+            {
+              paymentMode: '',
+              paymentReceiptNumber: '',
+            },
+          ],
     }),
     [currentSale]
   );
@@ -153,8 +182,15 @@ export default function SaleNewEditForm({ currentSale }) {
     control,
     watch,
     setValue,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
   } = methods;
+
+  console.log(errors);
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'paymentTypes',
+  });
 
   const branch = watch('branch');
   const department = watch('department');
@@ -183,8 +219,7 @@ export default function SaleNewEditForm({ currentSale }) {
         sourceOfLead: formData.sourceOfLead,
         contactNumber: formData.contactNumber,
         email: formData.email,
-        paymentMode: formData.paymentMode,
-        paymentReceiptNumber: formData.paymentReceiptNumber,
+        paymentTypes: formData.paymentTypes,
         membershipDetails: {
           membershipType: formData.membershipType,
           purchaseDate: formData.purchaseDate,
@@ -202,6 +237,7 @@ export default function SaleNewEditForm({ currentSale }) {
       if (formData.trainerName && formData.trainerName.id) {
         inputData.trainerId = formData.trainerName.id;
       }
+      console.log(inputData);
 
       if (!currentSale) {
         await axiosInstance.post('/sales', inputData);
@@ -219,6 +255,68 @@ export default function SaleNewEditForm({ currentSale }) {
     }
   });
 
+  const renderMaterialDetailsForm = (
+    <Stack spacing={3} mt={3}>
+      {fields.map((item, index) => {
+        const selectedModes = fields
+          .map((f, i) => (i !== index ? f.paymentMode : null))
+          .filter(Boolean);
+
+        const availableOptions = PAYMENT_OPTIONS.filter(
+          (opt) => !selectedModes.includes(opt.value)
+        );
+
+        return (
+          <Stack key={item.id} alignItems="flex-end" spacing={1.5}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ width: 1 }}>
+              <RHFSelect name={`paymentTypes[${index}].paymentMode`} label="Mode of Payment">
+                {availableOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </RHFSelect>
+
+              <RHFTextField
+                name={`paymentTypes[${index}].paymentReceiptNumber`}
+                label="Payment Receipt Number"
+              />
+            </Stack>
+
+            <Button
+              size="small"
+              color="error"
+              startIcon={<Iconify icon="solar:trash-bin-trash-bold" />}
+              onClick={() => remove(index)}
+            >
+              Remove
+            </Button>
+          </Stack>
+        );
+      })}
+
+      <Stack
+        spacing={3}
+        direction={{ xs: 'column', md: 'row' }}
+        alignItems={{ xs: 'flex-end', md: 'center' }}
+      >
+        <Button
+          size="small"
+          color="primary"
+          startIcon={<Iconify icon="mingcute:add-line" />}
+          onClick={() =>
+            append({
+              paymentMode: '',
+              paymentReceiptNumber: '',
+            })
+          }
+          sx={{ flexShrink: 0 }}
+        >
+          Add Item
+        </Button>
+      </Stack>
+    </Stack>
+  );
   useEffect(() => {
     setSalesSchema((prev) =>
       prev.shape({
@@ -755,22 +853,11 @@ export default function SaleNewEditForm({ currentSale }) {
               <Grid item xs={12} sm={6}>
                 <RHFTextField name="freezingDays" label="Freezing Days" type="number" />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <RHFSelect name="paymentMode" label="Mode of Payment">
-                  <MenuItem value="viya_app">ViyaApp Payment</MenuItem>
-                  <MenuItem value="mypt">MyPT App Payment</MenuItem>
-                  <MenuItem value="cash">Cash</MenuItem>
-                  <MenuItem value="pos">POS</MenuItem>
-                  <MenuItem value="bank">Bank Transfer</MenuItem>
-                  <MenuItem value="link">Payment Link</MenuItem>
-                  <MenuItem value="tabby">Tabby</MenuItem>
-                  <MenuItem value="tamara">Tamara</MenuItem>
-                  <MenuItem value="cheque">Cheque</MenuItem>
-                  <MenuItem value="atm">Bank/ATM Deposit</MenuItem>
-                </RHFSelect>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <RHFTextField name="paymentReceiptNumber" label="Payment Receipt Number" />
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  Payment Details
+                </Typography>
+                {renderMaterialDetailsForm}
               </Grid>
             </Grid>
           </Card>
