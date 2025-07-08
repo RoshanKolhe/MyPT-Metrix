@@ -241,6 +241,16 @@ export function useNavData() {
               { title: t('create'), path: paths.dashboard.sale.new },
             ],
           },
+          // CONDUCTION
+          {
+            title: t('conduction'),
+            path: paths.dashboard.conduction.root,
+            icon: ICONS.conduction,
+            children: [
+              { title: t('list'), path: paths.dashboard.conduction.list },
+              { title: t('create'), path: paths.dashboard.conduction.new },
+            ],
+          },
         ],
       },
     ];
@@ -298,6 +308,16 @@ export function useNavData() {
             children: [
               { title: t('list'), path: paths.dashboard.sale.list },
               { title: t('create'), path: paths.dashboard.sale.new },
+            ],
+          },
+          // CONDUCTION
+          {
+            title: t('conduction'),
+            path: paths.dashboard.conduction.root,
+            icon: ICONS.conduction,
+            children: [
+              { title: t('list'), path: paths.dashboard.conduction.list },
+              { title: t('create'), path: paths.dashboard.conduction.new },
             ],
           },
         ],
