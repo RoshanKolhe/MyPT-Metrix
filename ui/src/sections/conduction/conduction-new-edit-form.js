@@ -93,6 +93,11 @@ export default function ConductionNewEditForm({ currentConduction }) {
 
   const onSubmit = handleSubmit(async (formData) => {
     try {
+      if (trainers.length === 0) {
+      enqueueSnackbar('No trainers found for selected branch and department', { variant: 'error' });
+      return;
+    }
+
       const {
         branch: branchDetails,
         department: departmentDetails,
@@ -289,14 +294,15 @@ export default function ConductionNewEditForm({ currentConduction }) {
       );
     }
   }, [kpis, trainers]);
-
-  useEffect(() => {
-    if (department?.name === 'Retention') {
-      setShowTrainerTarget(true);
-    } else {
-      setShowTrainerTarget(false);
-    }
-  }, [department]);
+  
+useEffect(() => {
+  if (department?.name) {
+    setShowTrainerTarget(true);
+  } else {
+    setShowTrainerTarget(false);
+  }
+}, [department?.name]);
+  
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
