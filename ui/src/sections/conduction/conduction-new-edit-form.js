@@ -13,7 +13,7 @@ import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
 // components
 import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/components/hook-form';
-import { Chip, MenuItem, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
+import { Chip, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { useRouter } from 'src/routes/hook';
 import { useSnackbar } from 'notistack';
 import { useGetBranchsWithFilter } from 'src/api/branch';
@@ -94,9 +94,11 @@ export default function ConductionNewEditForm({ currentConduction }) {
   const onSubmit = handleSubmit(async (formData) => {
     try {
       if (trainers.length === 0) {
-      enqueueSnackbar('No trainers found for selected branch and department', { variant: 'error' });
-      return;
-    }
+        enqueueSnackbar('No trainers found for selected branch and department', {
+          variant: 'error',
+        });
+        return;
+      }
 
       const {
         branch: branchDetails,
@@ -294,15 +296,14 @@ export default function ConductionNewEditForm({ currentConduction }) {
       );
     }
   }, [kpis, trainers]);
-  
-useEffect(() => {
-  if (department?.name) {
-    setShowTrainerTarget(true);
-  } else {
-    setShowTrainerTarget(false);
-  }
-}, [department?.name]);
-  
+
+  useEffect(() => {
+    if (department?.name) {
+      setShowTrainerTarget(true);
+    } else {
+      setShowTrainerTarget(false);
+    }
+  }, [department?.name]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -401,8 +402,8 @@ useEffect(() => {
                   <Typography variant="h6" gutterBottom>
                     Assign KPI Values per Trainer
                   </Typography>
-                  <Card sx={{ p: 2, backgroundColor: 'action.hover' }}>
-                    <Table size="small">
+                  <TableContainer sx={{ overflowX: 'auto' }}>
+                    <Table size="small" sx={{ minWidth: kpis.length * 150 }}>
                       <TableHead>
                         <TableRow>
                           <TableCell sx={{ fontWeight: 'bold' }}>Trainer</TableCell>
@@ -434,7 +435,7 @@ useEffect(() => {
                         ))}
                       </TableBody>
                     </Table>
-                  </Card>
+                  </TableContainer>
                 </Grid>
               )}
               <Grid item xs={12} md={12}>
