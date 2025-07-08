@@ -13,7 +13,16 @@ import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
 // components
 import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/components/hook-form';
-import { Chip, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import {
+  Chip,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from '@mui/material';
 import { useRouter } from 'src/routes/hook';
 import { useSnackbar } from 'notistack';
 import { useGetBranchsWithFilter } from 'src/api/branch';
@@ -23,7 +32,7 @@ import { paths } from 'src/routes/paths';
 
 // ----------------------------------------------------------------------
 
-export default function ConductionNewEditForm({ currentConduction }) {
+export default function ConductionNewEditForm({ currentConduction, currentDepartmentTarget }) {
   const router = useRouter();
 
   const { enqueueSnackbar } = useSnackbar();
@@ -50,6 +59,10 @@ export default function ConductionNewEditForm({ currentConduction }) {
   const [departments, setDepartments] = useState([]);
 
   const [trainers, setTrainers] = useState([]);
+
+  const [trainerTargets, setTrainerTargets] = useState({});
+
+  const [trainerTargetIds, setTrainerTargetIds] = useState({});
 
   const [kpis, setKpis] = useState([]);
 
@@ -99,7 +112,7 @@ export default function ConductionNewEditForm({ currentConduction }) {
         });
         return;
       }
-
+      const key = `${kpis.id}_${kpis.departmentTargetId}`;
       const {
         branch: branchDetails,
         department: departmentDetails,
@@ -107,15 +120,6 @@ export default function ConductionNewEditForm({ currentConduction }) {
         conductionDate,
         kpiValues: kpiInputValues,
       } = formData;
-
-      // const conductionPayloads = Object.entries(kpiInputValues || {}).map(([kpiId, value]) => ({
-      //   conductionDate,
-      //   conductions: Number(value),
-      //   trainerId: trainerDetails.id,
-      //   kpiId: Number(kpiId),
-      //   branchId: branchDetails.id,
-      //   departmentId: departmentDetails.id,
-      // }));
       const conductionPayloads = [];
 
       Object.entries(kpiInputValues || {}).forEach(([trainerId, trainerKpiValues]) => {
@@ -258,22 +262,6 @@ export default function ConductionNewEditForm({ currentConduction }) {
     fetchServiceKpis();
   }, [department, setValue, trainers]);
 
-  // useEffect(() => {
-  //   if (kpis.length > 0) {
-  //     const kpiFieldShape = {};
-  //     kpis.forEach((kpi) => {
-  //       kpiFieldShape[kpi.id] = Yup.string().required(`${kpi.name} is required`);
-  //     });
-
-  //     setConductionsSchema((prev) =>
-  //       prev.concat(
-  //         Yup.object().shape({
-  //           kpiValues: Yup.object().shape(kpiFieldShape),
-  //         })
-  //       )
-  //     );
-  //   }
-  // }, [kpis]);
   useEffect(() => {
     if (kpis.length > 0 && trainers.length > 0) {
       const trainerKpiShape = {};
@@ -304,6 +292,30 @@ export default function ConductionNewEditForm({ currentConduction }) {
       setShowTrainerTarget(false);
     }
   }, [department?.name]);
+
+  useEffect(() => {
+    const initialTargets = {};
+    const idMap = {};
+
+    currentDepartmentTarget?.departmentTargets?.forEach((deptTarget) => {
+      const departmentTargetId = deptTarget.id;
+      const kpiId = deptTarget.kpi.id;
+
+      deptTarget.trainerTargets?.forEach((tt) => {
+        const { trainerId } = tt;
+        const key = `${kpiId}_${departmentTargetId}`;
+
+        if (!initialTargets[trainerId]) initialTargets[trainerId] = {};
+        if (!idMap[trainerId]) idMap[trainerId] = {};
+
+        initialTargets[trainerId][key] = tt.targetValue;
+        idMap[trainerId][key] = tt.id;
+      });
+    });
+
+    setTrainerTargets(initialTargets);
+    setTrainerTargetIds(idMap);
+  }, [currentDepartmentTarget]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -421,16 +433,41 @@ export default function ConductionNewEditForm({ currentConduction }) {
                               {trainer.firstName} {trainer.lastName}
                             </TableCell>
 
-                            {kpis.map((kpi) => (
-                              <TableCell key={kpi.id}>
-                                <RHFTextField
-                                  name={`kpiValues.${trainer.id}.${kpi.id}`}
-                                  label="" // No label to keep the layout clean
-                                  // placeholder={kpi.name}
-                                  size="small"
-                                />
-                              </TableCell>
-                            ))}
+                            {kpis.map((kpi) => {
+                              const key = `${kpi.id}_${kpi.departmentTargetId}`;
+                              return (
+                                <TableCell key={kpi.id}>
+                                  <RHFTextField
+                                    name={`kpiValues.${trainer.id}.${kpi.id}`}
+                                    label=""
+                                    size="small"
+                                    value={
+                                      typeof trainerTargets[trainer.id]?.[key] === 'number'
+                                        ? trainerTargets[trainer.id][key]
+                                        : 0
+                                    }
+                                    onKeyDown={(e) => {
+                                      const invalidKeys = ['e', 'E', '+', '-', '.'];
+                                      if (invalidKeys.includes(e.key)) {
+                                        e.preventDefault();
+                                      }
+                                    }}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      const numericValue = Number(value);
+
+                                      setTrainerTargets((prev) => ({
+                                        ...prev,
+                                        [trainer.id]: {
+                                          ...prev[trainer.id],
+                                          [key]: Number.isNaN(numericValue) ? 0 : numericValue,
+                                        },
+                                      }));
+                                    }}
+                                  />
+                                </TableCell>
+                              );
+                            })}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -455,4 +492,5 @@ export default function ConductionNewEditForm({ currentConduction }) {
 
 ConductionNewEditForm.propTypes = {
   currentConduction: PropTypes.object,
+  currentDepartmentTarget: PropTypes.object,
 };
