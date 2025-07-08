@@ -1,6 +1,6 @@
 import sgMail from '@sendgrid/mail';
 import {injectable} from '@loopback/core';
-import {TWILIO_SITE_SETTINGS} from '../utils/config';
+import {getTwilioSettings} from '../utils/config';
 
 export interface SendGridMail {
   to: string | string[];
@@ -19,13 +19,15 @@ export interface SendGridMail {
 @injectable()
 export class SendGridEmailService {
   constructor() {
-    sgMail.setApiKey(TWILIO_SITE_SETTINGS.sendgrid.apiKey);
+    const {sendgrid} = getTwilioSettings();
+    sgMail.setApiKey(sendgrid.apiKey);
   }
 
   async sendMail(mailObj: SendGridMail): Promise<object> {
+    const {sendgrid} = getTwilioSettings();
     const msg = {
       ...mailObj,
-      from: mailObj.from || TWILIO_SITE_SETTINGS.sendgrid.fromEmail,
+      from: mailObj.from || sendgrid.fromEmail,
     };
 
     return sgMail.send(msg);

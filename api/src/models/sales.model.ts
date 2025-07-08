@@ -44,7 +44,12 @@ export class Sales extends Entity {
   @property({
     type: 'string',
   })
-  contractNumber?: string;
+  email: string;
+
+  @property({
+    type: 'string',
+  })
+  contactNumber?: string;
 
   @property({
     type: 'string',

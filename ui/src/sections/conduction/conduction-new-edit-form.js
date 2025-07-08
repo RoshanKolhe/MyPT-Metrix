@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
@@ -133,7 +133,9 @@ export default function ConductionNewEditForm({ currentConduction }) {
       router.push(paths.dashboard.conduction.list);
     } catch (error) {
       console.error('Error submitting conduction:', error);
-      enqueueSnackbar('Failed to submit conductions', { variant: 'error' });
+      enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
+        variant: 'error',
+      });
     }
   });
 

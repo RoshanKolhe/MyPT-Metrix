@@ -13,19 +13,23 @@ import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
 // components
 import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/components/hook-form';
-import { Chip, MenuItem } from '@mui/material';
+import { Chip, FormControl, FormHelperText, MenuItem, useTheme } from '@mui/material';
 import { useRouter } from 'src/routes/hook';
 import { useSnackbar } from 'notistack';
 import { useGetBranchsWithFilter } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
 import axiosInstance from 'src/utils/axios';
 import { paths } from 'src/routes/paths';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/material.css';
 
 // ----------------------------------------------------------------------
 
 export default function SaleNewEditForm({ currentSale }) {
-  const router = useRouter();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
+  const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
 
   const { user } = useAuthContext();
@@ -55,25 +59,49 @@ export default function SaleNewEditForm({ currentSale }) {
 
   const [salesSchema, setSalesSchema] = useState(
     Yup.object().shape({
+      email: Yup.string()
+        .required('Email is required')
+        .email('Email must be a valid email address'),
       memberName: Yup.string().required('Member name is required'),
       gender: Yup.string().required('Gender is required'),
       salesPerson: Yup.object().nullable().required('Sales person is required'),
-      trainerName: Yup.object().nullable().required('Trainer name is required'),
+      trainerName: Yup.object().nullable(),
       trainingAt: Yup.string().required('Training location is required'),
       memberType: Yup.string().required('Member type is required'),
       sourceOfLead: Yup.string(),
-      contractNumber: Yup.string().required('Contract number is required'),
+      contactNumber: Yup.string().required('Contact number is required'),
       membershipType: Yup.array().min(1, 'Select at least one membership type'),
       purchaseDate: Yup.date().required('Purchase date is required'),
-      price: Yup.number().typeError('Price must be a number').positive().required(),
+      actualPrice: Yup.number()
+        .typeError('Actual Price must be a number')
+        .positive('Actual Price must be a positive number')
+        .required(),
+      discountedPrice: Yup.number()
+        .typeError('Discounted Price must be a number')
+        .positive('Discounted Price must be a positive number')
+        .required('Discounted Price is required')
+        .max(Yup.ref('actualPrice'), 'Discounted Price cannot be greater than Actual Price'),
       validityDays: Yup.number().typeError('Validity days are required').min(1).required(),
-      freeDays: Yup.number().typeError('Free days are required').min(0).required(),
-      numberOfFreeSessions: Yup.number().typeError('Free sessions are required').min(0).required(),
+      freeDays: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? null : value))
+        .typeError('Free days must be a number')
+        .min(0, 'Free days cannot be negative')
+        .nullable(),
+
+      numberOfFreeSessions: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? null : value))
+        .typeError('Free sessions must be a number')
+        .min(0, 'Free sessions cannot be negative')
+        .nullable(),
       startDate: Yup.date().required('Start date is required'),
       expiryDate: Yup.date()
         .required('Expiry date is required')
         .min(Yup.ref('startDate'), 'End date must be after start date'),
-      freezingDays: Yup.number().typeError('Freezing days are required').min(0).required(),
+      freezingDays: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? null : value))
+        .typeError('Freezing days be a number')
+        .min(0, 'Freezing days cannot be negative')
+        .nullable(),
       paymentMode: Yup.string().required('Payment mode is required'),
       paymentReceiptNumber: Yup.string().required('Receipt number is required'),
     })
@@ -90,12 +118,14 @@ export default function SaleNewEditForm({ currentSale }) {
       trainingAt: currentSale?.trainingAt || '',
       memberType: currentSale?.memberType || '',
       sourceOfLead: currentSale?.sourceOfLead || '',
-      contractNumber: currentSale?.contractNumber || '',
+      contactNumber: currentSale?.contactNumber || '',
+      email: currentSale?.email || '',
       membershipType: currentSale?.membershipDetails?.membershipType || [],
       purchaseDate: currentSale?.membershipDetails?.purchaseDate
         ? new Date(currentSale?.membershipDetails?.purchaseDate)
         : null,
-      price: currentSale?.membershipDetails?.price || '',
+      actualPrice: currentSale?.membershipDetails?.actualPrice || '',
+      discountedPrice: currentSale?.membershipDetails?.discountedPrice || '',
       validityDays: currentSale?.membershipDetails?.validityDays || '',
       freeDays: currentSale?.membershipDetails?.freeDays || '',
       numberOfFreeSessions: currentSale?.membershipDetails?.freeSessions || '',
@@ -123,52 +153,70 @@ export default function SaleNewEditForm({ currentSale }) {
     control,
     watch,
     setValue,
-    formState: { isSubmitting, errors },
+    formState: { isSubmitting },
   } = methods;
 
   const branch = watch('branch');
   const department = watch('department');
   const memberType = watch('memberType');
+  const actualPrice = watch('actualPrice');
+  const discountedPrice = watch('discountedPrice');
+
+  const discountPercentage =
+    actualPrice && discountedPrice
+      ? Math.round(((actualPrice - discountedPrice) / actualPrice) * 100)
+      : null;
 
   const prevBranchRef = useRef(null);
   const prevDeptRef = useRef(null);
 
   const onSubmit = handleSubmit(async (formData) => {
-    // handle create or update
-    const inputData = {
-      memberName: formData.memberName,
-      gender: formData.gender,
-      departmentId: formData.department?.id || null,
-      branchId: formData.branch.id,
-      salesTrainerId: formData.salesPerson.id,
-      trainerId: formData.trainerName.id,
-      trainingAt: formData.trainingAt,
-      memberType: formData.memberType,
-      sourceOfLead: formData.sourceOfLead,
-      contractNumber: formData.contractNumber,
-      paymentMode: formData.paymentMode,
-      paymentReceiptNumber: formData.paymentReceiptNumber,
-      membershipDetails: {
-        membershipType: formData.membershipType,
-        purchaseDate: formData.purchaseDate,
-        price: formData.price,
-        validityDays: formData.validityDays,
-        freeDays: formData.freeDays,
-        freeSessions: formData.numberOfFreeSessions,
-        startDate: formData.startDate,
-        expiryDate: formData.expiryDate,
-        freezingDays: formData.freezingDays,
-      },
-    };
+    try {
+      const inputData = {
+        memberName: formData.memberName,
+        gender: formData.gender,
+        departmentId: formData.department?.id || null,
+        branchId: formData.branch.id,
+        salesTrainerId: formData.salesPerson.id,
+        trainingAt: formData.trainingAt,
+        memberType: formData.memberType,
+        sourceOfLead: formData.sourceOfLead,
+        contactNumber: formData.contactNumber,
+        email: formData.email,
+        paymentMode: formData.paymentMode,
+        paymentReceiptNumber: formData.paymentReceiptNumber,
+        membershipDetails: {
+          membershipType: formData.membershipType,
+          purchaseDate: formData.purchaseDate,
+          actualPrice: formData.actualPrice,
+          discountedPrice: formData.discountedPrice,
+          validityDays: formData.validityDays,
+          freeDays: formData.freeDays ? formData.freeDays : 0,
+          freeSessions: formData.numberOfFreeSessions ? formData.numberOfFreeSessions : 0,
+          startDate: formData.startDate,
+          expiryDate: formData.expiryDate,
+          freezingDays: formData.freezingDays ? formData.freezingDays : 0,
+        },
+      };
 
-    if (!currentSale) {
-      await axiosInstance.post('/sales', inputData);
-    } else {
-      await axiosInstance.patch(`/sales/${currentSale.id}`, inputData);
+      if (formData.trainerName && formData.trainerName.id) {
+        inputData.trainerId = formData.trainerName.id;
+      }
+
+      if (!currentSale) {
+        await axiosInstance.post('/sales', inputData);
+      } else {
+        await axiosInstance.patch(`/sales/${currentSale.id}`, inputData);
+      }
+      reset();
+      enqueueSnackbar(currentSale ? 'Update success!' : 'Create success!');
+      router.push(paths.dashboard.sale.list);
+    } catch (error) {
+      console.error(error);
+      enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
+        variant: 'error',
+      });
     }
-    reset();
-    enqueueSnackbar(currentSale ? 'Update success!' : 'Create success!');
-    router.push(paths.dashboard.sale.list);
   });
 
   useEffect(() => {
@@ -317,6 +365,11 @@ export default function SaleNewEditForm({ currentSale }) {
     }
   }, [trainers]);
 
+  useEffect(() => {
+    document.body.classList.remove('light-mode', 'dark-mode');
+    document.body.classList.add(isDark ? 'dark-mode' : 'light-mode');
+  }, [isDark]);
+
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
       <Grid container spacing={3}>
@@ -389,6 +442,62 @@ export default function SaleNewEditForm({ currentSale }) {
             <Grid container spacing={2} mt={2}>
               <Grid item xs={12} sm={6}>
                 <RHFTextField name="memberName" label="Member Name" />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="contactNumber"
+                  control={control}
+                  defaultValue=""
+                  rules={{ required: 'Contact number is required' }}
+                  render={({ field, fieldState: { error } }) => (
+                    <FormControl fullWidth error={!!error}>
+                      <PhoneInput
+                        {...field}
+                        value={field.value}
+                        country="ae"
+                        enableSearch
+                        specialLabel={
+                          <span
+                            style={{
+                              backgroundColor: 'transparent',
+                              color: error
+                                ? '#f44336'
+                                : isDark
+                                ? '#fff'
+                                : theme.palette.text.secondary,
+                              fontSize: 12,
+                              fontWeight: 600,
+                            }}
+                          >
+                            Phone Number
+                          </span>
+                        }
+                        inputStyle={{
+                          width: '100%',
+                          height: '56px',
+                          fontSize: '16px',
+                          backgroundColor: 'transparent',
+                          borderColor: error ? '#f44336' : '#c4c4c4',
+                          borderRadius: '8px',
+                          color: isDark ? '#fff' : undefined,
+                          paddingLeft: '48px',
+                          paddingRight: '40px',
+                        }}
+                        containerStyle={{ width: '100%' }}
+                        onChange={(value) => field.onChange(value)}
+                        inputProps={{
+                          name: field.name,
+                          required: true,
+                        }}
+                      />
+
+                      {error && <FormHelperText>{error.message}</FormHelperText>}
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFTextField name="email" label="Email Address" />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <RHFSelect name="gender" label="Gender">
@@ -466,6 +575,7 @@ export default function SaleNewEditForm({ currentSale }) {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <RHFSelect name="trainingAt" label="Training At">
+                  <MenuItem value="academy">Academy</MenuItem>
                   <MenuItem value="ladies">Ladies Gym</MenuItem>
                   <MenuItem value="mixed">Mixed Section</MenuItem>
                   <MenuItem value="home">Home Training</MenuItem>
@@ -476,6 +586,9 @@ export default function SaleNewEditForm({ currentSale }) {
                 <RHFSelect name="memberType" label="Member Type">
                   <MenuItem value="new">New</MenuItem>
                   <MenuItem value="rnl">RNL</MenuItem>
+                  <MenuItem value="upgrade">Upgrade</MenuItem>
+                  <MenuItem value="top_up">Top up</MenuItem>
+                  <MenuItem value="emi">EMI collection</MenuItem>
                 </RHFSelect>
               </Grid>
               {memberType === 'new' ? (
@@ -497,9 +610,6 @@ export default function SaleNewEditForm({ currentSale }) {
                   </RHFSelect>
                 </Grid>
               ) : null}
-              <Grid item xs={12} sm={6}>
-                <RHFTextField name="contractNumber" label="Contract Number" />
-              </Grid>
             </Grid>
           </Card>
         </Grid>
@@ -515,6 +625,7 @@ export default function SaleNewEditForm({ currentSale }) {
                   name="membershipType"
                   label="Membership Type"
                   options={[
+                    { label: 'Academy', value: 'academy' },
                     { label: 'Gym Membership', value: 'gym' },
                     { label: 'PT Membership', value: 'pt' },
                     { label: 'Home Membership', value: 'home' },
@@ -574,8 +685,20 @@ export default function SaleNewEditForm({ currentSale }) {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <RHFTextField name="price" label="Price" type="number" />
+                <RHFTextField name="actualPrice" label="Actual Price" type="number" />
               </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFTextField
+                  name="discountedPrice"
+                  label={
+                    discountPercentage !== null
+                      ? `Discounted Price (-${discountPercentage}%)`
+                      : 'Discounted Price'
+                  }
+                  type="number"
+                />
+              </Grid>
+
               <Grid item xs={12} sm={6}>
                 <RHFTextField name="validityDays" label="Validity Days" type="number" />
               </Grid>
@@ -634,6 +757,7 @@ export default function SaleNewEditForm({ currentSale }) {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <RHFSelect name="paymentMode" label="Mode of Payment">
+                  <MenuItem value="viya_app">ViyaApp Payment</MenuItem>
                   <MenuItem value="mypt">MyPT App Payment</MenuItem>
                   <MenuItem value="cash">Cash</MenuItem>
                   <MenuItem value="pos">POS</MenuItem>

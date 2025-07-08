@@ -26,7 +26,13 @@ export class MembershipDetails extends Entity {
     type: 'number',
     required: true,
   })
-  price: number;
+  actualPrice: number;
+
+  @property({
+    type: 'number',
+    required: true,
+  })
+  discountedPrice: number;
 
   @property({
     type: 'number',
@@ -36,15 +42,17 @@ export class MembershipDetails extends Entity {
 
   @property({
     type: 'number',
-    required: true,
+    required: false,
+    nullable: true,
   })
-  freeDays: number;
+  freeDays?: number | null;
 
   @property({
     type: 'number',
-    required: true,
+    required: false,
+    nullable: true,
   })
-  freeSessions: number;
+  freeSessions?: number | null;
 
   @property({
     type: 'string',
@@ -60,10 +68,10 @@ export class MembershipDetails extends Entity {
 
   @property({
     type: 'number',
-    required: true,
+    nullable: true,
+    required: false,
   })
-  freezingDays: number;
-
+  freezingDays?: number | null;
 
   @property({
     type: 'date',

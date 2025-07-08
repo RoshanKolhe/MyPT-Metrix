@@ -2,7 +2,7 @@ export default function generateEmailAndPasswordTemplate(mailOptions: any) {
   const template = `<!DOCTYPE html>
     <html>
     <head>
-        <title>Welcome to Hylite</title>
+        <title>Welcome to MyPT</title>
     </head>
      <style>
         body {
@@ -21,7 +21,7 @@ export default function generateEmailAndPasswordTemplate(mailOptions: any) {
         }
         .header {
             text-align: center;
-            background: #007bff;
+            background: #00A76F;
             color: #ffffff;
             padding: 15px;
             border-radius: 8px 8px 0 0;
@@ -33,8 +33,8 @@ export default function generateEmailAndPasswordTemplate(mailOptions: any) {
         }
         .button {
             display: inline-block;
-            background: #007bff;
-            color: #ffffff;
+            background: #00A76F;
+            color: #ffffff !important;
             padding: 10px 15px;
             text-decoration: none;
             border-radius: 5px;
@@ -54,7 +54,7 @@ export default function generateEmailAndPasswordTemplate(mailOptions: any) {
 
 <div class="container">
     <div class="header">
-        <h2>Welcome to Hylite!</h2>
+        <h2>Welcome to MyPT!</h2>
     </div>
 
     <div class="content">
@@ -83,18 +83,18 @@ export default function generateEmailAndPasswordTemplate(mailOptions: any) {
         <p>If you have any issues, feel free to contact our support team.</p>
 
         <p>Best Regards,<br>
-        <strong>Hylite</strong></p>
+        <strong>MyPT</strong></p>
     </div>
 
     <div class="footer">
-        &copy; 2025 Hylite. All rights reserved.
+        &copy; 2025 MyPT. All rights reserved.
     </div>
 </div>
 
 </body>
     </html>`;
   const EmailAndPasswordTemplate = {
-    subject: 'Welcome to Hylite - Your Account Details Inside!',
+    subject: 'Welcome to MyPT - Your Account Details Inside!',
     html: template,
   };
   return EmailAndPasswordTemplate;

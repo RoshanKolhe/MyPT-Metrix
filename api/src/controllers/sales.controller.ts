@@ -1,8 +1,10 @@
 import {
   Count,
   CountSchema,
+  DefaultTransactionalRepository,
   Filter,
   FilterExcludingWhere,
+  IsolationLevel,
   repository,
   Where,
 } from '@loopback/repository';
@@ -23,9 +25,12 @@ import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {PermissionKeys} from '../authorization/permission-keys';
 import {inject} from '@loopback/core';
 import {UserProfile} from '@loopback/security';
+import {MyptMetrixDataSource} from '../datasources';
 
 export class SalesController {
   constructor(
+    @inject('datasources.myptMetrix')
+    public dataSource: MyptMetrixDataSource,
     @repository(SalesRepository)
     public salesRepository: SalesRepository,
     @repository(UserRepository)
@@ -63,19 +68,30 @@ export class SalesController {
     })
     salesData: Omit<Sales, 'id'> & {membershipDetails?: MembershipDetails},
   ): Promise<Sales> {
-    const {membershipDetails, ...salesFields} = salesData;
+    const repo = new DefaultTransactionalRepository(Sales, this.dataSource);
+    const tx = await repo.beginTransaction(IsolationLevel.READ_COMMITTED);
 
-    const createdSale = await this.salesRepository.create(salesFields);
+    try {
+      const {membershipDetails, ...salesFields} = salesData;
 
-    if (membershipDetails) {
-      await this.salesRepository
-        .membershipDetails(createdSale.id)
-        .create(membershipDetails);
+      const createdSale = await this.salesRepository.create(salesFields, {
+        transaction: tx,
+      });
+
+      if (membershipDetails) {
+        await this.salesRepository
+          .membershipDetails(createdSale.id)
+          .create(membershipDetails, {transaction: tx});
+      }
+
+      await tx.commit();
+      return this.salesRepository.findById(createdSale.id, {
+        include: ['membershipDetails'],
+      });
+    } catch (err) {
+      await tx.rollback();
+      throw err;
     }
-
-    return this.salesRepository.findById(createdSale.id, {
-      include: ['membershipDetails'],
-    });
   }
 
   @authenticate({

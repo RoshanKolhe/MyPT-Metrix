@@ -75,12 +75,16 @@ export default function SaleTableRow({
 
         {/* Trainer */}
         <TableCell>
-          <ListItemText
-            primary={`${trainer?.firstName} ${trainer?.lastName || ''}`}
-            secondary={trainer?.email}
-            primaryTypographyProps={{ typography: 'body2' }}
-            secondaryTypographyProps={{ component: 'span', color: 'text.disabled' }}
-          />
+          {trainer ? (
+            <ListItemText
+              primary={`${trainer?.firstName} ${trainer?.lastName || ''}`}
+              secondary={trainer?.email}
+              primaryTypographyProps={{ typography: 'body2' }}
+              secondaryTypographyProps={{ component: 'span', color: 'text.disabled' }}
+            />
+          ) : (
+            'NA'
+          )}
         </TableCell>
 
         {/* Other Info */}

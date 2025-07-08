@@ -26,6 +26,7 @@ import {
   DepartmentTargetRepository,
   TargetRepository,
   TrainerTargetRepository,
+  UserRepository,
 } from '../repositories';
 import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {inject} from '@loopback/core';
@@ -44,6 +45,8 @@ export class TargetController {
     public departmentTargetRepository: DepartmentTargetRepository,
     @repository(TrainerTargetRepository)
     public trainerTargetRepository: TrainerTargetRepository,
+    @repository(UserRepository)
+    public userRepository: UserRepository,
   ) {}
 
   @authenticate('jwt')
@@ -191,6 +194,7 @@ export class TargetController {
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
     @param.filter(Target) filter?: Filter<Target>,
   ): Promise<Target[]> {
+    const user = await this.userRepository.findById(currentUser.id);
     const isCGM = currentUser.permissions?.includes('cgm');
     const isHOD = currentUser.permissions?.includes('hod');
 
@@ -198,7 +202,7 @@ export class TargetController {
     if (isCGM) {
       whereFilter.cgmApproverUserId = currentUser.id;
     } else if (isHOD) {
-      whereFilter.branchId = currentUser.branchId;
+      whereFilter.branchId = user.branchId;
     }
 
     return this.targetRepository.find({

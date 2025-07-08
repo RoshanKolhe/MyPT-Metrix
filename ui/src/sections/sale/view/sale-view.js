@@ -35,9 +35,7 @@ export default function SaleView() {
             name: 'Sale',
             href: paths.dashboard.sale.root,
           },
-          {
-            name: `${currentSale?.firstName} ${currentSale?.lastName ? currentSale?.lastName : ''}`,
-          },
+          { name: 'New sale' },
         ]}
         sx={{
           mb: { xs: 3, md: 5 },

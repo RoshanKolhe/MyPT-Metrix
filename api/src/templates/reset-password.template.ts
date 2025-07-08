@@ -22,7 +22,7 @@ export default function generateResetPasswordTemplate(mailOptions: any) {
             overflow: hidden;
         }
         .header {
-            background-color: #007bff;
+            background-color: #00A76F;
             color: #ffffff;
             text-align: center;
             padding: 20px;
@@ -38,8 +38,8 @@ export default function generateResetPasswordTemplate(mailOptions: any) {
         }
         .button {
             display: inline-block;
-            background-color: #007bff;
-            color: #fff;
+            background-color: #00A76F;
+            color: #fff !important;
             text-decoration: none;
             padding: 10px 20px;
             font-size: 16px;
@@ -47,7 +47,7 @@ export default function generateResetPasswordTemplate(mailOptions: any) {
             transition: background-color 0.3s ease;
         }
         .button:hover {
-            background-color: #0056b3;
+            background-color: #00A76F;
         }
         .footer {
             text-align: center;
@@ -74,7 +74,7 @@ export default function generateResetPasswordTemplate(mailOptions: any) {
         </div>
         <div class="footer">
             <p>If you have any questions, feel free to contact us.</p>
-            <p>&copy; 2025 Your Company Name. All rights reserved.</p>
+            <p>&copy; 2025 MyPT. All rights reserved.</p>
         </div>
     </div>
 </body>

@@ -39,6 +39,7 @@ export class TrainerController {
       required: [
         PermissionKeys.SUPER_ADMIN,
         PermissionKeys.HOD,
+        PermissionKeys.CGM,
         PermissionKeys.SUB_HOD,
       ],
     },
