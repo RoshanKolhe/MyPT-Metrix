@@ -13,7 +13,7 @@ import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
 // components
 import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/components/hook-form';
-import { Chip, MenuItem } from '@mui/material';
+import { Chip, MenuItem, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
 import { useRouter } from 'src/routes/hook';
 import { useSnackbar } from 'notistack';
 import { useGetBranchsWithFilter } from 'src/api/branch';
@@ -53,9 +53,10 @@ export default function ConductionNewEditForm({ currentConduction }) {
 
   const [kpis, setKpis] = useState([]);
 
+  const [showTrainerTarget, setShowTrainerTarget] = useState(false);
+
   const [conductionsSchema, setConductionsSchema] = useState(
     Yup.object().shape({
-      trainer: Yup.object().nullable().required('Trainer is required'),
       conductionDate: Yup.date().required('Conduction date is required'),
     })
   );
@@ -100,14 +101,29 @@ export default function ConductionNewEditForm({ currentConduction }) {
         kpiValues: kpiInputValues,
       } = formData;
 
-      const conductionPayloads = Object.entries(kpiInputValues || {}).map(([kpiId, value]) => ({
-        conductionDate,
-        conductions: Number(value),
-        trainerId: trainerDetails.id,
-        kpiId: Number(kpiId),
-        branchId: branchDetails.id,
-        departmentId: departmentDetails.id,
-      }));
+      // const conductionPayloads = Object.entries(kpiInputValues || {}).map(([kpiId, value]) => ({
+      //   conductionDate,
+      //   conductions: Number(value),
+      //   trainerId: trainerDetails.id,
+      //   kpiId: Number(kpiId),
+      //   branchId: branchDetails.id,
+      //   departmentId: departmentDetails.id,
+      // }));
+      const conductionPayloads = [];
+
+      Object.entries(kpiInputValues || {}).forEach(([trainerId, trainerKpiValues]) => {
+        Object.entries(trainerKpiValues).forEach(([kpiId, value]) => {
+          conductionPayloads.push({
+            conductionDate,
+            conductions: Number(value),
+            trainerId: Number(trainerId),
+            kpiId: Number(kpiId),
+            branchId: branchDetails.id,
+            departmentId: departmentDetails.id,
+          });
+        });
+      });
+
       console.log('Conduction Payloads:', conductionPayloads);
 
       await axiosInstance.post('/conductions/bulk', conductionPayloads);
@@ -211,9 +227,17 @@ export default function ConductionNewEditForm({ currentConduction }) {
         setKpis(activeServiceKpis);
 
         // Initialize KPI values with empty inputs
+        // const initialKpiValues = {};
+        // activeServiceKpis.forEach((kpi) => {
+        //   initialKpiValues[kpi.id] = '';
+        // });
+        // setValue('kpiValues', initialKpiValues);
         const initialKpiValues = {};
-        activeServiceKpis.forEach((kpi) => {
-          initialKpiValues[kpi.id] = '';
+        trainers.forEach((trainer) => {
+          initialKpiValues[trainer.id] = {};
+          activeServiceKpis.forEach((kpi) => {
+            initialKpiValues[trainer.id][kpi.id] = '';
+          });
         });
         setValue('kpiValues', initialKpiValues);
       } catch (error) {
@@ -223,24 +247,54 @@ export default function ConductionNewEditForm({ currentConduction }) {
     };
 
     fetchServiceKpis();
-  }, [department, setValue]);
+  }, [department, setValue, trainers]);
 
+  // useEffect(() => {
+  //   if (kpis.length > 0) {
+  //     const kpiFieldShape = {};
+  //     kpis.forEach((kpi) => {
+  //       kpiFieldShape[kpi.id] = Yup.string().required(`${kpi.name} is required`);
+  //     });
+
+  //     setConductionsSchema((prev) =>
+  //       prev.concat(
+  //         Yup.object().shape({
+  //           kpiValues: Yup.object().shape(kpiFieldShape),
+  //         })
+  //       )
+  //     );
+  //   }
+  // }, [kpis]);
   useEffect(() => {
-    if (kpis.length > 0) {
-      const kpiFieldShape = {};
-      kpis.forEach((kpi) => {
-        kpiFieldShape[kpi.id] = Yup.string().required(`${kpi.name} is required`);
+    if (kpis.length > 0 && trainers.length > 0) {
+      const trainerKpiShape = {};
+
+      trainers.forEach((trainer) => {
+        const kpiShape = {};
+        kpis.forEach((kpi) => {
+          kpiShape[kpi.id] = Yup.string().required(`${kpi.name} is required`);
+        });
+
+        trainerKpiShape[trainer.id] = Yup.object().shape(kpiShape);
       });
 
       setConductionsSchema((prev) =>
         prev.concat(
           Yup.object().shape({
-            kpiValues: Yup.object().shape(kpiFieldShape),
+            kpiValues: Yup.object().shape(trainerKpiShape),
           })
         )
       );
     }
-  }, [kpis]);
+  }, [kpis, trainers]);
+
+  useEffect(() => {
+    if (department?.name === 'Retention') {
+      setShowTrainerTarget(true);
+    } else {
+      setShowTrainerTarget(false);
+    }
+  }, [department]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -334,53 +388,45 @@ export default function ConductionNewEditForm({ currentConduction }) {
                   )}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <RHFAutocomplete
-                  name="trainer"
-                  label="Trainer"
-                  options={trainers}
-                  getOptionLabel={(option) => `${option?.firstName} ${option?.lastName}` || ''}
-                  isOptionEqualToValue={(a, b) => a?.id === b?.id}
-                  renderOption={(props, option) => (
-                    <li {...props}>
-                      <div>
-                        <Typography variant="subtitle2" fontWeight="bold">
-                          {`${option?.firstName} ${option?.lastName}`}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {option.email}
-                        </Typography>
-                      </div>
-                    </li>
-                  )}
-                  renderTags={(selected, getTagProps) =>
-                    selected.map((option, index) => (
-                      <Chip
-                        {...getTagProps({ index })}
-                        key={option.id}
-                        label={option.name}
-                        size="small"
-                        color="info"
-                        variant="soft"
-                      />
-                    ))
-                  }
-                />
-              </Grid>
-              {kpis.length > 0 && (
-                <Grid item xs={12}>
+              {showTrainerTarget && (
+                <Grid item xs={12} mt={4}>
                   <Typography variant="h6" gutterBottom>
-                    KPI Inputs
+                    Assign KPI Values per Trainer
                   </Typography>
-                  <Grid container spacing={2} mt={2}>
-                    {kpis.map((kpi) => (
-                      <Fragment key={kpi.id}>
-                        <Grid item xs={12} sm={6}>
-                          <RHFTextField name={`kpiValues.${kpi.id}`} label={kpi.name} fullWidth />
-                        </Grid>
-                      </Fragment>
-                    ))}
-                  </Grid>
+                  <Card sx={{ p: 2, backgroundColor: 'action.hover' }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 'bold' }}>Trainer</TableCell>
+                          {kpis.map((kpi) => (
+                            <TableCell key={kpi.id} sx={{ fontWeight: 'bold' }}>
+                              {kpi.name}{' '}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {trainers.map((trainer) => (
+                          <TableRow key={trainer.id}>
+                            <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                              {trainer.firstName} {trainer.lastName}
+                            </TableCell>
+
+                            {kpis.map((kpi) => (
+                              <TableCell key={kpi.id}>
+                                <RHFTextField
+                                  name={`kpiValues.${trainer.id}.${kpi.id}`}
+                                  label="" // No label to keep the layout clean
+                                  // placeholder={kpi.name}
+                                  size="small"
+                                />
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Card>
                 </Grid>
               )}
               <Grid item xs={12} md={12}>
