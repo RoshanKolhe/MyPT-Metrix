@@ -103,6 +103,7 @@ export default function ConductionNewEditForm({ currentConduction, currentDepart
   console.log(errors);
   const branch = watch('branch');
   const department = watch('department');
+  const kpiValues = watch('kpiValues');
 
   const onSubmit = handleSubmit(async (formData) => {
     try {
@@ -239,17 +240,11 @@ export default function ConductionNewEditForm({ currentConduction, currentDepart
         const activeServiceKpis = res.data;
         setKpis(activeServiceKpis);
 
-        // Initialize KPI values with empty inputs
-        // const initialKpiValues = {};
-        // activeServiceKpis.forEach((kpi) => {
-        //   initialKpiValues[kpi.id] = '';
-        // });
-        // setValue('kpiValues', initialKpiValues);
         const initialKpiValues = {};
         trainers.forEach((trainer) => {
           initialKpiValues[trainer.id] = {};
           activeServiceKpis.forEach((kpi) => {
-            initialKpiValues[trainer.id][kpi.id] = '';
+            initialKpiValues[trainer.id][kpi.id] = 0;
           });
         });
         setValue('kpiValues', initialKpiValues);
@@ -263,27 +258,46 @@ export default function ConductionNewEditForm({ currentConduction, currentDepart
   }, [department, setValue, trainers]);
 
   useEffect(() => {
-    if (kpis.length > 0 && trainers.length > 0) {
+    const buildSchema = () => {
       const trainerKpiShape = {};
 
-      trainers.forEach((trainer) => {
-        const kpiShape = {};
-        kpis.forEach((kpi) => {
-          kpiShape[kpi.id] = Yup.string().required(`${kpi.name} is required`);
+      if (kpis.length > 0 && trainers.length > 0) {
+        trainers.forEach((trainer) => {
+          const kpiShape = {};
+          kpis.forEach((kpi) => {
+            kpiShape[kpi.id] = Yup.number()
+              .typeError(`${kpi.name} must be a number`)
+              .required(`${kpi.name} is required`)
+              .min(0, `${kpi.name} cannot be negative`)
+              .integer(`${kpi.name} must be a whole number`);
+          });
+          trainerKpiShape[trainer.id] = Yup.object().shape(kpiShape);
         });
+      }
 
-        trainerKpiShape[trainer.id] = Yup.object().shape(kpiShape);
+      let baseSchema = Yup.object().shape({
+        conductionDate: Yup.date().required('Conduction date is required'),
+        kpiValues: Yup.object().shape(trainerKpiShape),
       });
 
-      setConductionsSchema((prev) =>
-        prev.concat(
-          Yup.object().shape({
-            kpiValues: Yup.object().shape(trainerKpiShape),
-          })
-        )
-      );
-    }
-  }, [kpis, trainers]);
+      // Role-based branching and department requirements
+      if (isSuperOrAdmin) {
+        baseSchema = baseSchema.shape({
+          branch: Yup.object().required('Branch is required'),
+          department: Yup.object().required('Department is required'),
+        });
+      } else if (isCGM) {
+        baseSchema = baseSchema.shape({
+          branch: Yup.mixed().notRequired(),
+          department: Yup.object().required('Department is required'),
+        });
+      }
+
+      setConductionsSchema(baseSchema);
+    };
+
+    buildSchema();
+  }, [kpis, trainers, isSuperOrAdmin, isCGM]);
 
   useEffect(() => {
     if (department?.name) {
@@ -316,6 +330,23 @@ export default function ConductionNewEditForm({ currentConduction, currentDepart
     setTrainerTargets(initialTargets);
     setTrainerTargetIds(idMap);
   }, [currentDepartmentTarget]);
+
+  useEffect(() => {
+    if (!kpiValues) return;
+
+    const updatedTargets = {};
+
+    Object.keys(kpiValues).forEach((trainerId) => {
+      updatedTargets[trainerId] = {};
+
+      Object.keys(kpiValues[trainerId] || {}).forEach((kpiId) => {
+        const val = kpiValues[trainerId][kpiId];
+        updatedTargets[trainerId][kpiId] = val === '' || val === undefined ? '' : Number(val);
+      });
+    });
+
+    setTrainerTargets(updatedTargets);
+  }, [kpiValues]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
@@ -441,28 +472,12 @@ export default function ConductionNewEditForm({ currentConduction, currentDepart
                                     name={`kpiValues.${trainer.id}.${kpi.id}`}
                                     label=""
                                     size="small"
-                                    value={
-                                      typeof trainerTargets[trainer.id]?.[key] === 'number'
-                                        ? trainerTargets[trainer.id][key]
-                                        : 0
-                                    }
+                                    type="number"
                                     onKeyDown={(e) => {
                                       const invalidKeys = ['e', 'E', '+', '-', '.'];
                                       if (invalidKeys.includes(e.key)) {
                                         e.preventDefault();
                                       }
-                                    }}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      const numericValue = Number(value);
-
-                                      setTrainerTargets((prev) => ({
-                                        ...prev,
-                                        [trainer.id]: {
-                                          ...prev[trainer.id],
-                                          [key]: Number.isNaN(numericValue) ? 0 : numericValue,
-                                        },
-                                      }));
                                     }}
                                   />
                                 </TableCell>

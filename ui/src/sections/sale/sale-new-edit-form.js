@@ -220,8 +220,9 @@ export default function SaleNewEditForm({ currentSale }) {
         enqueueSnackbar('Total payment amount must exactly match the discounted price', {
           variant: 'error',
         });
-        return; // 🔒 prevent submission
+        return;
       }
+
       const inputData = {
         memberName: formData.memberName,
         gender: formData.gender,
@@ -334,6 +335,7 @@ export default function SaleNewEditForm({ currentSale }) {
       </Stack>
     </Stack>
   );
+  
   useEffect(() => {
     setSalesSchema((prev) =>
       prev.shape({
