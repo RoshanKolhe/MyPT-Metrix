@@ -90,41 +90,8 @@ export default function UserNewEditForm({ currentUser }) {
 
   const [departmentOptions, setDepartmentOptions] = useState([]);
 
-  const [validationSchema, setValidationSchema] = useState(
-    Yup.object().shape({
-      firstName: Yup.string().required('First Name is required'),
-      lastName: Yup.string().required('Last Name is required'),
-      email: Yup.string()
-        .required('Email is required')
-        .email('Email must be a valid email address'),
-      country: Yup.string().required('Country is required'),
-      password: !currentUser
-        ? Yup.string()
-            .min(6, 'Password must be at least 6 characters')
-            .required('Password is required')
-        : Yup.string(),
+  const [validationSchema, setValidationSchema] = useState(() => Yup.object().shape({}));
 
-      confirmPassword: Yup.string().when('password', {
-        is: (val) => val && val.length > 0,
-        then: (schema) =>
-          schema
-            .required('Confirm password is required')
-            .oneOf([Yup.ref('password')], 'Passwords must match'),
-        otherwise: (schema) => schema.notRequired(),
-      }),
-      phoneNumber: Yup.string()
-        .required('Phone number is required')
-        .matches(/^[0-9]{8,15}$/, 'Phone number must be between 8 and 15 digits'),
-      dob: Yup.string(),
-      address: Yup.string(),
-      state: Yup.string(),
-      city: Yup.string(),
-      role: Yup.string().required('Role is required'),
-      zipCode: Yup.string(),
-      avatarUrl: Yup.mixed().nullable(),
-      isActive: Yup.boolean(),
-    })
-  );
   const defaultValues = useMemo(
     () => ({
       firstName: currentUser?.firstName || '',
@@ -150,6 +117,7 @@ export default function UserNewEditForm({ currentUser }) {
   const methods = useForm({
     resolver: yupResolver(validationSchema),
     defaultValues,
+    mode: 'onChange',
   });
 
   const {
@@ -283,7 +251,7 @@ export default function UserNewEditForm({ currentUser }) {
     if (userRole === 'hod') {
       return;
     }
-    
+
     console.log('here12');
     setDepartmentOptions(fetchedDepartments);
 
@@ -349,6 +317,42 @@ export default function UserNewEditForm({ currentUser }) {
     document.body.classList.remove('light-mode', 'dark-mode');
     document.body.classList.add(isDark ? 'dark-mode' : 'light-mode');
   }, [isDark]);
+
+  useEffect(() => {
+    const baseSchema = {
+      firstName: Yup.string().required('First Name is required'),
+      lastName: Yup.string().required('Last Name is required'),
+      email: Yup.string().required().email(),
+      phoneNumber: Yup.string()
+        .required('Phone number is required')
+        .matches(/^[0-9]{8,15}$/, 'Phone number must be between 8 and 15 digits'),
+      country: Yup.string().required('Country is required'),
+      role: Yup.string().required('Role is required'),
+      dob: Yup.string(),
+      address: Yup.string(),
+      city: Yup.string(),
+      state: Yup.string(),
+      zipCode: Yup.string(),
+      avatarUrl: Yup.mixed().nullable(),
+      isActive: Yup.boolean(),
+    };
+
+    // 👇 Add password rules only if creating a new user
+    if (!currentUser) {
+      baseSchema.password = Yup.string()
+        .min(6, 'Password must be at least 6 characters')
+        .required('Password is required');
+
+      baseSchema.confirmPassword = Yup.string()
+        .required('Confirm password is required')
+        .oneOf([Yup.ref('password')], 'Passwords must match');
+    } else {
+      baseSchema.password = Yup.string().notRequired();
+      baseSchema.confirmPassword = Yup.string().notRequired();
+    }
+
+    setValidationSchema(Yup.object().shape(baseSchema));
+  }, [currentUser]);
 
   return (
     <FormProvider methods={methods} onSubmit={onSubmit}>
