@@ -36,6 +36,8 @@ import {
   TablePaginationCustom,
 } from 'src/components/table';
 //
+// eslint-disable-next-line import/no-extraneous-dependencies
+import * as XLSX from 'xlsx';
 import { useGetSales } from 'src/api/sale';
 import { _roles } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
@@ -126,6 +128,37 @@ export default function SaleListView() {
     },
     [table]
   );
+
+  const handleExport = useCallback(() => {
+    const fileName = 'Sales Report.xlsx';
+
+    const formatted = dataFiltered.map((item) => ({
+      MemberName: item.memberName || '',
+      Gender: item.gender || '',
+      TrainingAt: item.trainingAt || '',
+      MemberType: item.memberType || '',
+      SalesTrainer: item.salesTrainer
+        ? `${item.salesTrainer.firstName} ${item.salesTrainer.lastName || ''}`
+        : '',
+      SalesTrainerEmail: item.salesTrainer?.email || '',
+      Trainer: item.trainer ? `${item.trainer.firstName} ${item.trainer.lastName || ''}` : '',
+      TrainerEmail: item.trainer?.email || '',
+      Branch: item.branch?.name || '',
+      ContactNumber: item.contactNumber || '',
+      PurchaseDate: item.membershipDetails?.purchaseDate || '',
+      MembershipType: item.membershipDetails?.membershipType?.map((m) => m.label).join(', ') || '',
+      ActualPrice: item.membershipDetails?.actualPrice || '',
+      DiscountedPrice: item.membershipDetails?.discountedPrice || '',
+      ValidityDays: item.membershipDetails?.validityDays || '',
+      ExpiryDate: item.membershipDetails?.expiryDate || '',
+      FreezingDays: item.membershipDetails?.freezingDays || '',
+      CreatedAt: item.createdAt || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(formatted);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sales');
+    XLSX.writeFile(wb, fileName);
+  }, [dataFiltered]);
 
   const handleDeleteRow = useCallback(
     async (id) => {
@@ -263,6 +296,7 @@ export default function SaleListView() {
             onFilters={handleFilters}
             //
             roleOptions={_roles}
+            onExport={handleExport}
           />
 
           {canReset && (

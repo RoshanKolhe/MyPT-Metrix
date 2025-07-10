@@ -102,6 +102,7 @@
     "stylis-plugin-rtl": "^2.0.2",
     "swr": "^2.1.5",
     "worker-loader": "^3.0.8",
+    "xlsx": "^0.18.5",
     "yet-another-react-lightbox": "^3.11.1",
     "yup": "^1.2.0"
   },

@@ -19,6 +19,7 @@ export default function SaleTableToolbar({
   onFilters,
   //
   roleOptions,
+  onExport,
 }) {
   const popover = usePopover();
 
@@ -105,6 +106,7 @@ export default function SaleTableToolbar({
         <MenuItem
           onClick={() => {
             popover.onClose();
+            onExport();
           }}
         >
           <Iconify icon="solar:export-bold" />
@@ -119,4 +121,5 @@ SaleTableToolbar.propTypes = {
   filters: PropTypes.object,
   onFilters: PropTypes.func,
   roleOptions: PropTypes.array,
+  onExport: PropTypes.func,
 };

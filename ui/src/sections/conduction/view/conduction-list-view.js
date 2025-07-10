@@ -40,6 +40,8 @@ import { useGetConductions } from 'src/api/conduction';
 import { _roles } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'notistack';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import * as XLSX from 'xlsx';
 import ConductionTableRow from '../conduction-table-row';
 import ConductionTableToolbar from '../conduction-table-toolbar';
 import ConductionTableFiltersResult from '../conduction-table-filters-result';
@@ -119,6 +121,26 @@ export default function ConductionListView() {
     },
     [table]
   );
+
+  const handleExport = useCallback(() => {
+    const fileName = 'Conduction Report.xlsx';
+
+    const formatted = dataFiltered.map((item) => ({
+      ID: item.id,
+      Date: item.conductionDate,
+      Trainer: `${item.trainer?.firstName} ${item.trainer?.lastName || ''}`,
+      Branch: item.branch?.name || '',
+      Department: item.department?.name || '',
+      KPI: item.kpi?.name || '',
+      Value: item.conductions,
+      CreatedAt: item.createdAt,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(formatted);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Conductions');
+    XLSX.writeFile(wb, fileName);
+  }, [dataFiltered]);
 
   const handleDeleteRow = useCallback(
     async (id) => {
@@ -258,6 +280,7 @@ export default function ConductionListView() {
             onFilters={handleFilters}
             //
             roleOptions={_roles}
+            onExport={handleExport}
           />
 
           {canReset && (

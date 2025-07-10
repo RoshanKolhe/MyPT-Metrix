@@ -24,6 +24,7 @@ export default function ConductionTableToolbar({
   onFilters,
   //
   roleOptions,
+  onExport,
 }) {
   const popover = usePopover();
 
@@ -119,6 +120,7 @@ export default function ConductionTableToolbar({
         <MenuItem
           onClick={() => {
             popover.onClose();
+            onExport();
           }}
         >
           <Iconify icon="solar:export-bold" />
@@ -132,5 +134,6 @@ export default function ConductionTableToolbar({
 ConductionTableToolbar.propTypes = {
   filters: PropTypes.object,
   onFilters: PropTypes.func,
+  onExport: PropTypes.func,
   roleOptions: PropTypes.array,
 };
