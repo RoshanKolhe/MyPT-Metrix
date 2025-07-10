@@ -127,6 +127,8 @@ export class SalesController {
       user.permissions?.includes(PermissionKeys.SUPER_ADMIN) ||
       user.permissions?.includes(PermissionKeys.ADMIN);
     const isCGM = user.permissions?.includes(PermissionKeys.CGM);
+    const isHOD = user.permissions?.includes('hod');
+
     const updatedFilter: Filter<Sales> = {
       ...filter,
       include: [
@@ -144,7 +146,7 @@ export class SalesController {
     };
 
     // Apply branch filter only for CGM (not for super_admin or admin)
-    if (isCGM && user.branchId) {
+    if ((isCGM || isHOD) && user.branchId) {
       updatedFilter.where = {
         ...(updatedFilter.where ?? {}),
         branchId: user.branchId,
