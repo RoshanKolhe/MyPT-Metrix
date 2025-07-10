@@ -15,6 +15,7 @@ import Select from '@mui/material/Select';
 import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { Box, Grid } from '@mui/material';
 
 // ----------------------------------------------------------------------
 
@@ -45,50 +46,61 @@ export default function ConductionTableToolbar({
 
   return (
     <>
-      <Stack
+      <Grid
+        container
         spacing={2}
-        alignItems={{ xs: 'flex-end', md: 'center' }}
-        direction={{
-          xs: 'column',
-          md: 'row',
-        }}
         sx={{
           p: 2.5,
           pr: { xs: 2.5, md: 1 },
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={2} flexGrow={1} sx={{ width: 1 }}>
+        <Grid item xs={12} md={2}>
           <DatePicker
             label="Start Date"
             value={filters.startDate}
             onChange={(newValue) => onFilters('startDate', newValue)}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+              },
+            }}
           />
+        </Grid>
 
+        <Grid item xs={12} md={2}>
           <DatePicker
             label="End Date"
             value={filters.endDate}
             onChange={(newValue) => onFilters('endDate', newValue)}
-          />
-          <TextField
-            fullWidth
-            value={filters.name}
-            onChange={handleFilterName}
-            placeholder="Search..."
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
-                </InputAdornment>
-              ),
+            slotProps={{
+              textField: {
+                fullWidth: true,
+              },
             }}
           />
+        </Grid>
 
-          <IconButton onClick={popover.onOpen}>
-            <Iconify icon="eva:more-vertical-fill" />
-          </IconButton>
-        </Stack>
-      </Stack>
-
+        <Grid item xs={12} md={8} spacing={2}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <TextField
+              fullWidth
+              value={filters.name}
+              onChange={handleFilterName}
+              placeholder="Search..."
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <IconButton onClick={popover.onOpen} sx={{ ml: 1 }}>
+              <Iconify icon="eva:more-vertical-fill" />
+            </IconButton>
+          </Box>
+        </Grid>
+      </Grid>
       <CustomPopover
         open={popover.open}
         onClose={popover.onClose}
