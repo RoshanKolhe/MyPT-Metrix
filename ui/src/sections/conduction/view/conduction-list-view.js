@@ -38,6 +38,8 @@ import {
 //
 import { useGetConductions } from 'src/api/conduction';
 import { _roles } from 'src/utils/constants';
+import axiosInstance from 'src/utils/axios';
+import { useSnackbar } from 'notistack';
 import ConductionTableRow from '../conduction-table-row';
 import ConductionTableToolbar from '../conduction-table-toolbar';
 import ConductionTableFiltersResult from '../conduction-table-filters-result';
@@ -74,6 +76,8 @@ export default function ConductionListView() {
   const router = useRouter();
 
   const confirm = useBoolean();
+
+  const { enqueueSnackbar } = useSnackbar();
 
   const [quickEditRow, setQuickEditRow] = useState();
 
@@ -115,13 +119,23 @@ export default function ConductionListView() {
   );
 
   const handleDeleteRow = useCallback(
-    (id) => {
-      const deleteRow = tableData.filter((row) => row.id !== id);
-      setTableData(deleteRow);
-
-      table.onUpdatePageDeleteRow(dataInPage.length);
+    async (id) => {
+      try {
+        // Make API call to delete the customer
+        const response = await axiosInstance.delete(`/conductions/${id}`);
+        if (response.status === 204) {
+          enqueueSnackbar('Conduction Deleted Successfully');
+          confirm.onFalse();
+          refreshConductions();
+        }
+      } catch (error) {
+        console.error('Error deleting Conduction:', error.response?.data || error.message);
+        enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
+          variant: 'error',
+        });
+      }
     },
-    [dataInPage.length, table, tableData]
+    [confirm, enqueueSnackbar, refreshConductions]
   );
 
   const handleDeleteRows = useCallback(() => {

@@ -16,16 +16,35 @@ import {
   del,
   requestBody,
   response,
+  HttpErrors,
 } from '@loopback/rest';
 import {Conduction} from '../models';
-import {ConductionRepository} from '../repositories';
+import {ConductionRepository, UserRepository} from '../repositories';
+import {authenticate, AuthenticationBindings} from '@loopback/authentication';
+import {PermissionKeys} from '../authorization/permission-keys';
+import {inject} from '@loopback/core';
+import {UserProfile} from '@loopback/security';
 
 export class ConductionController {
   constructor(
     @repository(ConductionRepository)
     public conductionRepository: ConductionRepository,
+    @repository(UserRepository)
+    public userRepository: UserRepository,
   ) {}
 
+  @authenticate({
+    strategy: 'jwt',
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+        PermissionKeys.HOD,
+        PermissionKeys.SUB_HOD,
+      ],
+    },
+  })
   @post('/conductions')
   @response(200, {
     description: 'Conduction model instance',
@@ -47,6 +66,18 @@ export class ConductionController {
     return this.conductionRepository.create(conduction);
   }
 
+  @authenticate({
+    strategy: 'jwt',
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+        PermissionKeys.HOD,
+        PermissionKeys.SUB_HOD,
+      ],
+    },
+  })
   @get('/conductions')
   @response(200, {
     description: 'Array of Conduction model instances',
@@ -60,14 +91,47 @@ export class ConductionController {
     },
   })
   async find(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
     @param.filter(Conduction) filter?: Filter<Conduction>,
   ): Promise<Conduction[]> {
-    return this.conductionRepository.find({
+    const user = await this.userRepository.findById(currentUser.id);
+
+    const isCGM = user.permissions?.includes(PermissionKeys.CGM);
+    const isHOD = user.permissions?.includes(PermissionKeys.HOD);
+    const isSubHOD = user.permissions?.includes(PermissionKeys.SUB_HOD);
+
+    const updatedFilter: Filter<Conduction> = {
       ...filter,
       include: ['trainer', 'kpi', 'branch', 'department'],
-    });
+      where: {
+        ...(filter?.where ?? {}),
+        isDeleted: false, // Apply for all roles
+      },
+    };
+
+    // Apply branch filter for CGM, HOD, and SUB_HOD
+    if ((isCGM || isHOD || isSubHOD) && user.branchId) {
+      updatedFilter.where = {
+        ...updatedFilter.where,
+        branchId: user.branchId,
+      };
+    }
+
+    return this.conductionRepository.find(updatedFilter);
   }
 
+  @authenticate({
+    strategy: 'jwt',
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+        PermissionKeys.HOD,
+        PermissionKeys.SUB_HOD,
+      ],
+    },
+  })
   @get('/conductions/{id}')
   @response(200, {
     description: 'Conduction model instance',
@@ -88,6 +152,18 @@ export class ConductionController {
     });
   }
 
+  @authenticate({
+    strategy: 'jwt',
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+        PermissionKeys.HOD,
+        PermissionKeys.SUB_HOD,
+      ],
+    },
+  })
   @patch('/conductions/{id}')
   @response(204, {
     description: 'Conduction PATCH success',
@@ -106,14 +182,51 @@ export class ConductionController {
     await this.conductionRepository.updateById(id, conduction);
   }
 
+  @authenticate({
+    strategy: 'jwt',
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+        PermissionKeys.HOD,
+        PermissionKeys.SUB_HOD,
+      ],
+    },
+  })
   @del('/conductions/{id}')
   @response(204, {
     description: 'Conduction DELETE success',
   })
-  async deleteById(@param.path.number('id') id: number): Promise<void> {
-    await this.conductionRepository.deleteById(id);
+  async deleteById(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.number('id') id: number,
+  ): Promise<void> {
+    const conduction = await this.conductionRepository.findById(id);
+    console.log('conduction', conduction);
+    if (!conduction) {
+      throw new HttpErrors.BadRequest('Conduction Not Found');
+    }
+
+    await this.conductionRepository.updateById(id, {
+      isDeleted: true,
+      deletedBy: currentUser.id,
+      deletedAt: new Date(),
+    });
   }
 
+  @authenticate({
+    strategy: 'jwt',
+    options: {
+      required: [
+        PermissionKeys.SUPER_ADMIN,
+        PermissionKeys.ADMIN,
+        PermissionKeys.CGM,
+        PermissionKeys.HOD,
+        PermissionKeys.SUB_HOD,
+      ],
+    },
+  })
   @post('/conductions/bulk')
   @response(200, {
     description: 'Create multiple conduction entries',

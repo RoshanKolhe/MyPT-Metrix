@@ -3,6 +3,7 @@ import {MembershipDetails} from './membership-details.model';
 import {Trainer} from './trainer.model';
 import {Branch} from './branch.model';
 import {Department} from './department.model';
+import {User} from './user.model';
 
 @model()
 export class Sales extends Entity {
@@ -51,16 +52,6 @@ export class Sales extends Entity {
   })
   contactNumber?: string;
 
-  // @property({
-  //   type: 'string',
-  // })
-  // paymentMode?: string;
-
-  // @property({
-  //   type: 'string',
-  // })
-  // paymentReceiptNumber?: string;
-
   @property.array(Object, {
     name: 'paymentTypes',
   })
@@ -101,6 +92,9 @@ export class Sales extends Entity {
 
   @belongsTo(() => Department)
   departmentId: number;
+
+  @belongsTo(() => User, {name: 'deletedByUser'})
+  deletedBy: number;
 
   constructor(data?: Partial<Sales>) {
     super(data);

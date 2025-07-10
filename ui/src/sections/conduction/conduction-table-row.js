@@ -17,6 +17,7 @@ import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
 import { ConfirmDialog } from 'src/components/custom-dialog';
 import { fDate } from 'src/utils/format-time';
+import { useAuthContext } from 'src/auth/hooks';
 //
 
 // ----------------------------------------------------------------------
@@ -31,6 +32,9 @@ export default function ConductionTableRow({
   quickEdit,
   handleQuickEditRow,
 }) {
+  const { user } = useAuthContext();
+  const isSuperOrAdmin =
+    user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
   const { branch, conductionDate, createdAt, department, kpi, conductions, trainer } = row;
 
   const confirm = useBoolean();
@@ -56,16 +60,32 @@ export default function ConductionTableRow({
 
         {/* Actions */}
         <TableCell align="right" sx={{ px: 1, whiteSpace: 'nowrap' }}>
-          <Tooltip title="Quick Edit" placement="top" arrow>
-            <IconButton
-              color={quickEdit.value ? 'inherit' : 'default'}
-              onClick={() => {
-                handleQuickEditRow(row);
-              }}
-            >
-              <Iconify icon="solar:pen-bold" />
-            </IconButton>
-          </Tooltip>
+          {isSuperOrAdmin ? (
+            <Tooltip title="Quick Edit" placement="top" arrow>
+              <IconButton
+                color={quickEdit.value ? 'inherit' : 'default'}
+                onClick={() => {
+                  handleQuickEditRow(row);
+                }}
+              >
+                <Iconify icon="solar:pen-bold" />
+              </IconButton>
+            </Tooltip>
+          ) : null}
+
+          {isSuperOrAdmin ? (
+            <Tooltip title="Delete" placement="top" arrow>
+              <IconButton
+                onClick={() => {
+                  confirm.onTrue();
+                  popover.onClose();
+                }}
+                sx={{ color: 'error.main' }}
+              >
+                <Iconify icon="solar:trash-bin-trash-bold" />
+              </IconButton>
+            </Tooltip>
+          ) : null}
 
           {/* <Tooltip title="View Conduction" placement="top" arrow>
             <IconButton onClick={onViewRow}>

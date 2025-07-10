@@ -3,6 +3,7 @@ import {Trainer} from './trainer.model';
 import {Kpi} from './kpi.model';
 import {Branch} from './branch.model';
 import {Department} from './department.model';
+import {User} from './user.model';
 
 @model()
 export class Conduction extends Entity {
@@ -57,6 +58,9 @@ export class Conduction extends Entity {
 
   @belongsTo(() => Department)
   departmentId: number;
+
+  @belongsTo(() => User, {name: 'deletedByUser'})
+  deletedBy: number;
 
   constructor(data?: Partial<Conduction>) {
     super(data);

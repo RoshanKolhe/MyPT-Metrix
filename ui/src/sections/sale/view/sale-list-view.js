@@ -37,7 +37,9 @@ import {
 } from 'src/components/table';
 //
 import { useGetSales } from 'src/api/sale';
-import { _roles, USER_STATUS_OPTIONS } from 'src/utils/constants';
+import { _roles } from 'src/utils/constants';
+import axiosInstance from 'src/utils/axios';
+import { useSnackbar } from 'notistack';
 import SaleTableRow from '../sale-table-row';
 import SaleTableToolbar from '../sale-table-toolbar';
 import SaleTableFiltersResult from '../sale-table-filters-result';
@@ -83,6 +85,8 @@ export default function SaleListView() {
 
   const confirm = useBoolean();
 
+  const { enqueueSnackbar } = useSnackbar();
+
   const [quickEditRow, setQuickEditRow] = useState();
 
   const quickEdit = useBoolean();
@@ -122,13 +126,23 @@ export default function SaleListView() {
   );
 
   const handleDeleteRow = useCallback(
-    (id) => {
-      const deleteRow = tableData.filter((row) => row.id !== id);
-      setTableData(deleteRow);
-
-      table.onUpdatePageDeleteRow(dataInPage.length);
+    async (id) => {
+      try {
+        // Make API call to delete the customer
+        const response = await axiosInstance.delete(`/sales/${id}`);
+        if (response.status === 204) {
+          enqueueSnackbar('Sale Deleted Successfully');
+          confirm.onFalse();
+          refreshSales();
+        }
+      } catch (error) {
+        console.error('Error deleting Sale:', error.response?.data || error.message);
+        enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
+          variant: 'error',
+        });
+      }
     },
-    [dataInPage.length, table, tableData]
+    [confirm, enqueueSnackbar, refreshSales]
   );
 
   const handleDeleteRows = useCallback(() => {

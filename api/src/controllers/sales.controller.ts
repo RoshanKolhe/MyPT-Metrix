@@ -18,6 +18,7 @@ import {
   del,
   requestBody,
   response,
+  HttpErrors,
 } from '@loopback/rest';
 import {MembershipDetails, Sales} from '../models';
 import {SalesRepository, UserRepository} from '../repositories';
@@ -119,15 +120,12 @@ export class SalesController {
     },
   })
   async find(
-    @inject(AuthenticationBindings.CURRENT_USER) currnetUser: UserProfile,
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
     @param.filter(Sales) filter?: Filter<Sales>,
   ): Promise<Sales[]> {
-    const user = await this.userRepository.findById(currnetUser.id);
-    const isAdmin =
-      user.permissions?.includes(PermissionKeys.SUPER_ADMIN) ||
-      user.permissions?.includes(PermissionKeys.ADMIN);
+    const user = await this.userRepository.findById(currentUser.id);
     const isCGM = user.permissions?.includes(PermissionKeys.CGM);
-    const isHOD = user.permissions?.includes('hod');
+    const isHOD = user.permissions?.includes(PermissionKeys.HOD);
 
     const updatedFilter: Filter<Sales> = {
       ...filter,
@@ -143,12 +141,16 @@ export class SalesController {
         {relation: 'trainer'},
         {relation: 'membershipDetails'},
       ],
+      where: {
+        ...(filter?.where ?? {}),
+        isDeleted: false, // Always apply this
+      },
     };
 
-    // Apply branch filter only for CGM (not for super_admin or admin)
+    // Add branch filter only for CGM or HOD
     if ((isCGM || isHOD) && user.branchId) {
       updatedFilter.where = {
-        ...(updatedFilter.where ?? {}),
+        ...updatedFilter.where,
         branchId: user.branchId,
       };
     }
@@ -268,7 +270,19 @@ export class SalesController {
   @response(204, {
     description: 'Sales DELETE success',
   })
-  async deleteById(@param.path.number('id') id: number): Promise<void> {
-    await this.salesRepository.deleteById(id);
+  async deleteById(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.path.number('id') id: number,
+  ): Promise<void> {
+    const sale = await this.salesRepository.findById(id);
+    if (!sale) {
+      throw new HttpErrors.BadRequest('Sale Not Found');
+    }
+
+    await this.salesRepository.updateById(id, {
+      isDeleted: true,
+      deletedBy: currentUser.id,
+      deletedAt: new Date(),
+    });
   }
 }

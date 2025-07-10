@@ -12,13 +12,13 @@ import {
   MembershipDetails,
   Trainer,
   Branch,
-  Department,
-} from '../models';
+  Department, User} from '../models';
 import {TimeStampRepositoryMixin} from '../mixins/timestamp-repository-mixin';
 import {MembershipDetailsRepository} from './membership-details.repository';
 import {TrainerRepository} from './trainer.repository';
 import {BranchRepository} from './branch.repository';
 import {DepartmentRepository} from './department.repository';
+import {UserRepository} from './user.repository';
 
 export class SalesRepository extends TimeStampRepositoryMixin<
   Sales,
@@ -49,6 +49,8 @@ export class SalesRepository extends TimeStampRepositoryMixin<
     typeof Sales.prototype.id
   >;
 
+  public readonly deletedByUser: BelongsToAccessor<User, typeof Sales.prototype.id>;
+
   constructor(
     @inject('datasources.myptMetrix') dataSource: MyptMetrixDataSource,
     @repository.getter('MembershipDetailsRepository')
@@ -58,9 +60,11 @@ export class SalesRepository extends TimeStampRepositoryMixin<
     @repository.getter('BranchRepository')
     protected branchRepositoryGetter: Getter<BranchRepository>,
     @repository.getter('DepartmentRepository')
-    protected departmentRepositoryGetter: Getter<DepartmentRepository>,
+    protected departmentRepositoryGetter: Getter<DepartmentRepository>, @repository.getter('UserRepository') protected userRepositoryGetter: Getter<UserRepository>,
   ) {
     super(Sales, dataSource);
+    this.deletedByUser = this.createBelongsToAccessorFor('deletedByUser', userRepositoryGetter,);
+    this.registerInclusionResolver('deletedByUser', this.deletedByUser.inclusionResolver);
     this.department = this.createBelongsToAccessorFor(
       'department',
       departmentRepositoryGetter,
