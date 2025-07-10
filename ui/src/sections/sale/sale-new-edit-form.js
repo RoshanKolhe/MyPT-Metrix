@@ -47,6 +47,7 @@ export default function SaleNewEditForm({ currentSale }) {
   const { enqueueSnackbar } = useSnackbar();
 
   const { user } = useAuthContext();
+  console.log(user);
   const isSuperOrAdmin =
     user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
   const isCGM = user?.permissions?.includes('cgm');
@@ -66,6 +67,8 @@ export default function SaleNewEditForm({ currentSale }) {
   const { filteredbranches: branches } = useGetBranchsWithFilter(encodedFilter);
 
   const [departments, setDepartments] = useState([]);
+
+  const [kpis, setKpis] = useState([]);
 
   const [trainers, setTrainers] = useState([]);
   const [salesTrainers, setSalesTrainers] = useState([]);
@@ -132,6 +135,7 @@ export default function SaleNewEditForm({ currentSale }) {
     () => ({
       department: currentSale?.department || null,
       branch: currentSale?.branch || null,
+      kpis: currentSale?.kpi || null,
       memberName: currentSale?.memberName || '',
       gender: currentSale?.gender || '',
       salesPerson: currentSale?.salesTrainer || null,
@@ -200,6 +204,9 @@ export default function SaleNewEditForm({ currentSale }) {
   const memberType = watch('memberType');
   const actualPrice = watch('actualPrice');
   const discountedPrice = watch('discountedPrice');
+  const kpiData = watch('kpis');
+
+  console.log(department);
 
   const discountPercentage =
     actualPrice && discountedPrice
@@ -210,6 +217,7 @@ export default function SaleNewEditForm({ currentSale }) {
   const prevDeptRef = useRef(null);
 
   const onSubmit = handleSubmit(async (formData) => {
+    console.log(formData);
     try {
       const totalPaymentAmount = formData.paymentTypes.reduce(
         (sum, item) => sum + Number(item.amount || 0),
@@ -227,6 +235,7 @@ export default function SaleNewEditForm({ currentSale }) {
         memberName: formData.memberName,
         gender: formData.gender,
         departmentId: formData.department?.id || null,
+        kpiId: formData.kpis?.id || null,
         branchId: formData.branch.id,
         salesTrainerId: formData.salesPerson.id,
         trainingAt: formData.trainingAt,
@@ -335,7 +344,7 @@ export default function SaleNewEditForm({ currentSale }) {
       </Stack>
     </Stack>
   );
-  
+
   useEffect(() => {
     setSalesSchema((prev) =>
       prev.shape({
@@ -361,9 +370,12 @@ export default function SaleNewEditForm({ currentSale }) {
 
     if (isBranchChanged || isBranchCleared) {
       setValue('department', null);
-      setDepartments([]);
+      setValue('kpis', null);
       setValue('salesPerson', null);
       setValue('trainerName', null);
+
+      setDepartments([]);
+      setKpis([]);
       setSalesTrainers([]);
       setServiceTrainers([]);
     }
@@ -389,10 +401,21 @@ export default function SaleNewEditForm({ currentSale }) {
     const isDeptCleared = prevDept && !department;
 
     if (isDeptChanged || isDeptCleared) {
+      console.log('here');
       setValue('salesPerson', null);
       setValue('trainerName', null);
+      setValue('kpis', null);
+
       setSalesTrainers([]);
       setServiceTrainers([]);
+      setKpis([]);
+    }
+
+    // Set KPIs from department
+    if (department?.kpis) {
+      setKpis(department.kpis);
+    } else {
+      setKpis([]); // Clear KPIs if no department
     }
 
     prevDeptRef.current = department;
@@ -414,6 +437,7 @@ export default function SaleNewEditForm({ currentSale }) {
           Yup.object().shape({
             branch: Yup.object().required('Branch is required'),
             department: Yup.object().required('Department is required'),
+            kpis: Yup.object().required('Kpi is required'),
           })
         )
       );
@@ -423,6 +447,7 @@ export default function SaleNewEditForm({ currentSale }) {
           Yup.object().shape({
             branch: Yup.mixed().notRequired(),
             department: Yup.object().required('Department is required'),
+            kpis: Yup.object().required('Kpi is required'),
           })
         )
       );
@@ -432,6 +457,7 @@ export default function SaleNewEditForm({ currentSale }) {
           Yup.object().shape({
             branch: Yup.mixed().notRequired(),
             department: Yup.mixed().notRequired(),
+            kpis: Yup.object().notRequired(),
           })
         )
       );
@@ -550,6 +576,37 @@ export default function SaleNewEditForm({ currentSale }) {
                       />
                     ))
                   }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFAutocomplete
+                  name="kpis"
+                  label="KPI"
+                  options={kpis || []}
+                  getOptionLabel={(option) => `${option?.name}` || ''}
+                  isOptionEqualToValue={(option, value) => option?.id === value?.id}
+                  filterOptions={(options, state) =>
+                    options.filter((option) =>
+                      option.name.toLowerCase().includes(state.inputValue.toLowerCase())
+                    )
+                  }
+                  renderOption={(props, option) => {
+                    const newProps = {
+                      ...props,
+                      key: option.id || option.name, // Ensure uniqueness
+                    };
+
+                    return (
+                      <li {...newProps}>
+                        <div>
+                          <Typography variant="subtitle2">{option?.name}</Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            {option?.type}
+                          </Typography>
+                        </div>
+                      </li>
+                    );
+                  }}
                 />
               </Grid>
             </Grid>
@@ -706,6 +763,7 @@ export default function SaleNewEditForm({ currentSale }) {
                   <MenuItem value="upgrade">Upgrade</MenuItem>
                   <MenuItem value="top_up">Top up</MenuItem>
                   <MenuItem value="emi">EMI collection</MenuItem>
+                  <MenuItem value="viya_fit">Viya Fit</MenuItem>
                 </RHFSelect>
               </Grid>
               {memberType === 'new' ? (

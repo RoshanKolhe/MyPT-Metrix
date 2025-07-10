@@ -4,6 +4,7 @@ import {Trainer} from './trainer.model';
 import {Branch} from './branch.model';
 import {Department} from './department.model';
 import {User} from './user.model';
+import {Kpi} from './kpi.model';
 
 @model()
 export class Sales extends Entity {
@@ -95,6 +96,9 @@ export class Sales extends Entity {
 
   @belongsTo(() => User, {name: 'deletedByUser'})
   deletedBy: number;
+
+  @belongsTo(() => Kpi)
+  kpiId: number;
 
   constructor(data?: Partial<Sales>) {
     super(data);

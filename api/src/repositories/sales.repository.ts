@@ -12,13 +12,14 @@ import {
   MembershipDetails,
   Trainer,
   Branch,
-  Department, User} from '../models';
+  Department, User, Kpi} from '../models';
 import {TimeStampRepositoryMixin} from '../mixins/timestamp-repository-mixin';
 import {MembershipDetailsRepository} from './membership-details.repository';
 import {TrainerRepository} from './trainer.repository';
 import {BranchRepository} from './branch.repository';
 import {DepartmentRepository} from './department.repository';
 import {UserRepository} from './user.repository';
+import {KpiRepository} from './kpi.repository';
 
 export class SalesRepository extends TimeStampRepositoryMixin<
   Sales,
@@ -51,6 +52,8 @@ export class SalesRepository extends TimeStampRepositoryMixin<
 
   public readonly deletedByUser: BelongsToAccessor<User, typeof Sales.prototype.id>;
 
+  public readonly kpi: BelongsToAccessor<Kpi, typeof Sales.prototype.id>;
+
   constructor(
     @inject('datasources.myptMetrix') dataSource: MyptMetrixDataSource,
     @repository.getter('MembershipDetailsRepository')
@@ -60,9 +63,11 @@ export class SalesRepository extends TimeStampRepositoryMixin<
     @repository.getter('BranchRepository')
     protected branchRepositoryGetter: Getter<BranchRepository>,
     @repository.getter('DepartmentRepository')
-    protected departmentRepositoryGetter: Getter<DepartmentRepository>, @repository.getter('UserRepository') protected userRepositoryGetter: Getter<UserRepository>,
+    protected departmentRepositoryGetter: Getter<DepartmentRepository>, @repository.getter('UserRepository') protected userRepositoryGetter: Getter<UserRepository>, @repository.getter('KpiRepository') protected kpiRepositoryGetter: Getter<KpiRepository>,
   ) {
     super(Sales, dataSource);
+    this.kpi = this.createBelongsToAccessorFor('kpi', kpiRepositoryGetter,);
+    this.registerInclusionResolver('kpi', this.kpi.inclusionResolver);
     this.deletedByUser = this.createBelongsToAccessorFor('deletedByUser', userRepositoryGetter,);
     this.registerInclusionResolver('deletedByUser', this.deletedByUser.inclusionResolver);
     this.department = this.createBelongsToAccessorFor(

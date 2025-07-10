@@ -133,13 +133,18 @@ export class SalesController {
         {
           relation: 'branch',
           scope: {
-            include: ['departments'],
+            include: [
+              {
+                relation: 'departments',
+              },
+            ],
           },
         },
         {relation: 'department'},
         {relation: 'salesTrainer'},
         {relation: 'trainer'},
         {relation: 'membershipDetails'},
+        {relation: 'kpi'},
       ],
       where: {
         ...(filter?.where ?? {}),
@@ -190,13 +195,26 @@ export class SalesController {
         {
           relation: 'branch',
           scope: {
-            include: ['departments'],
+            include: [
+              {
+                relation: 'departments',
+                scope: {
+                  include: [{relation: 'kpis'}],
+                },
+              },
+            ],
           },
         },
-        {relation: 'department'},
+        {
+          relation: 'department',
+          scope: {
+            include: [{relation: 'kpis'}],
+          },
+        },
         {relation: 'salesTrainer'},
         {relation: 'trainer'},
         {relation: 'membershipDetails'},
+        {relation: 'kpi'},
       ],
     });
   }
