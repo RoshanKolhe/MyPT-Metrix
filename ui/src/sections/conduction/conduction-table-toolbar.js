@@ -14,6 +14,7 @@ import Select from '@mui/material/Select';
 // components
 import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
 // ----------------------------------------------------------------------
 
@@ -57,6 +58,17 @@ export default function ConductionTableToolbar({
         }}
       >
         <Stack direction="row" alignItems="center" spacing={2} flexGrow={1} sx={{ width: 1 }}>
+          <DatePicker
+            label="Start Date"
+            value={filters.startDate}
+            onChange={(newValue) => onFilters('startDate', newValue)}
+          />
+
+          <DatePicker
+            label="End Date"
+            value={filters.endDate}
+            onChange={(newValue) => onFilters('endDate', newValue)}
+          />
           <TextField
             fullWidth
             value={filters.name}

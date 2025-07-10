@@ -3,17 +3,13 @@ import { useCallback } from 'react';
 // @mui
 import Stack from '@mui/material/Stack';
 import MenuItem from '@mui/material/MenuItem';
-import Checkbox from '@mui/material/Checkbox';
 import TextField from '@mui/material/TextField';
-import InputLabel from '@mui/material/InputLabel';
 import IconButton from '@mui/material/IconButton';
-import FormControl from '@mui/material/FormControl';
-import OutlinedInput from '@mui/material/OutlinedInput';
 import InputAdornment from '@mui/material/InputAdornment';
-import Select from '@mui/material/Select';
 // components
 import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
 // ----------------------------------------------------------------------
 
@@ -28,16 +24,6 @@ export default function SaleTableToolbar({
   const handleFilterName = useCallback(
     (event) => {
       onFilters('name', event.target.value);
-    },
-    [onFilters]
-  );
-
-  const handleFilterRole = useCallback(
-    (event) => {
-      onFilters(
-        'role',
-        typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value
-      );
     },
     [onFilters]
   );
@@ -57,6 +43,17 @@ export default function SaleTableToolbar({
         }}
       >
         <Stack direction="row" alignItems="center" spacing={2} flexGrow={1} sx={{ width: 1 }}>
+          <DatePicker
+            label="Start Date"
+            value={filters.startDate}
+            onChange={(newValue) => onFilters('startDate', newValue)}
+          />
+
+          <DatePicker
+            label="End Date"
+            value={filters.endDate}
+            onChange={(newValue) => onFilters('endDate', newValue)}
+          />
           <TextField
             fullWidth
             value={filters.name}

@@ -29,6 +29,14 @@ export default function SaleTableFiltersResult({
     onFilters('role', newValue);
   };
 
+  const handleRemoveStartDate = () => {
+    onFilters('startDate', null);
+  };
+
+  const handleRemoveEndDate = () => {
+    onFilters('endDate', null);
+  };
+
   return (
     <Stack spacing={1.5} {...other}>
       <Box sx={{ typography: 'body2' }}>
@@ -54,6 +62,26 @@ export default function SaleTableFiltersResult({
             {filters.role.map((item) => (
               <Chip key={item} label={item} size="small" onDelete={() => handleRemoveRole(item)} />
             ))}
+          </Block>
+        )}
+
+        {filters.startDate && (
+          <Block label="Start Date:">
+            <Chip
+              size="small"
+              label={new Date(filters.startDate).toLocaleDateString()}
+              onDelete={handleRemoveStartDate}
+            />
+          </Block>
+        )}
+
+        {filters.endDate && (
+          <Block label="End Date:">
+            <Chip
+              size="small"
+              label={new Date(filters.endDate).toLocaleDateString()}
+              onDelete={handleRemoveEndDate}
+            />
           </Block>
         )}
 

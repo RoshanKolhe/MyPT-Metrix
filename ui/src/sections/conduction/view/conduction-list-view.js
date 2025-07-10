@@ -64,6 +64,8 @@ const defaultFilters = {
   name: '',
   role: [],
   status: 'all',
+  startDate: null,
+  endDate: null,
 };
 
 // ----------------------------------------------------------------------
@@ -447,6 +449,15 @@ function applyFilter({ inputData, comparator, filters }) {
           return mappedRole && role.includes(mappedRole);
         })
     );
+  }
+
+  if (filters.startDate && filters.endDate) {
+    inputData = inputData.filter((conduction) => {
+      const conductionDate = new Date(conduction.conductionDate);
+      return (
+        conductionDate >= new Date(filters.startDate) && conductionDate <= new Date(filters.endDate)
+      );
+    });
   }
 
   return inputData;
