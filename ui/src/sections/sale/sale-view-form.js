@@ -2,7 +2,7 @@
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
 import LoadingButton from '@mui/lab/LoadingButton';
@@ -13,22 +13,41 @@ import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
 // components
 import FormProvider, { RHFTextField, RHFAutocomplete, RHFSelect } from 'src/components/hook-form';
-import { Chip, MenuItem } from '@mui/material';
+import { Button, Chip, FormControl, FormHelperText, MenuItem, useTheme } from '@mui/material';
 import { useRouter } from 'src/routes/hook';
 import { useSnackbar } from 'notistack';
 import { useGetBranchsWithFilter } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
 import axiosInstance from 'src/utils/axios';
 import { paths } from 'src/routes/paths';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/material.css';
+import Iconify from 'src/components/iconify';
+
+const PAYMENT_OPTIONS = [
+  { value: 'viya_app', label: 'ViyaApp Payment' },
+  { value: 'mypt', label: 'MyPT App Payment' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'pos', label: 'POS' },
+  { value: 'bank', label: 'Bank Transfer' },
+  { value: 'link', label: 'Payment Link' },
+  { value: 'tabby', label: 'Tabby' },
+  { value: 'tamara', label: 'Tamara' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'atm', label: 'Bank/ATM Deposit' },
+];
 
 // ----------------------------------------------------------------------
 
 export default function SaleViewForm({ currentSale }) {
-  const router = useRouter();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
+  const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
 
   const { user } = useAuthContext();
+  console.log(user);
   const isSuperOrAdmin =
     user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
   const isCGM = user?.permissions?.includes('cgm');
@@ -49,23 +68,36 @@ export default function SaleViewForm({ currentSale }) {
 
   const [departments, setDepartments] = useState([]);
 
+  const [kpis, setKpis] = useState([]);
+
   const [trainers, setTrainers] = useState([]);
   const [salesTrainers, setSalesTrainers] = useState([]);
   const [serviceTrainers, setServiceTrainers] = useState([]);
 
   const [salesSchema, setSalesSchema] = useState(
     Yup.object().shape({
+      email: Yup.string()
+        .required('Email is required')
+        .email('Email must be a valid email address'),
       memberName: Yup.string().required('Member name is required'),
       gender: Yup.string().required('Gender is required'),
       salesPerson: Yup.object().nullable().required('Sales person is required'),
-      trainerName: Yup.object().nullable().required('Trainer name is required'),
+      trainerName: Yup.object().nullable(),
       trainingAt: Yup.string().required('Training location is required'),
       memberType: Yup.string().required('Member type is required'),
       sourceOfLead: Yup.string(),
-      contractNumber: Yup.string().required('Contract number is required'),
+      contactNumber: Yup.string().required('Contact number is required'),
       membershipType: Yup.array().min(1, 'Select at least one membership type'),
       purchaseDate: Yup.date().required('Purchase date is required'),
-      price: Yup.number().typeError('Price must be a number').positive().required(),
+      actualPrice: Yup.number()
+        .typeError('Actual Price must be a number')
+        .positive('Actual Price must be a positive number')
+        .required(),
+      discountedPrice: Yup.number()
+        .typeError('Discounted Price must be a number')
+        .positive('Discounted Price must be a positive number')
+        .required('Discounted Price is required')
+        .max(Yup.ref('actualPrice'), 'Discounted Price cannot be greater than Actual Price'),
       validityDays: Yup.number().typeError('Validity days are required').min(1).required(),
       freeDays: Yup.number()
         .transform((value, originalValue) => (originalValue === '' ? null : value))
@@ -82,9 +114,20 @@ export default function SaleViewForm({ currentSale }) {
       expiryDate: Yup.date()
         .required('Expiry date is required')
         .min(Yup.ref('startDate'), 'End date must be after start date'),
-      freezingDays: Yup.number().typeError('Freezing days are required').min(0).required(),
-      paymentMode: Yup.string().required('Payment mode is required'),
-      paymentReceiptNumber: Yup.string().required('Receipt number is required'),
+      freezingDays: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? null : value))
+        .typeError('Freezing days be a number')
+        .min(0, 'Freezing days cannot be negative')
+        .nullable(),
+      paymentTypes: Yup.array()
+        .of(
+          Yup.object().shape({
+            paymentMode: Yup.string().required('Payment Mode is required'),
+            paymentReceiptNumber: Yup.string().required('Payment Receipt Number is required'),
+            amount: Yup.number().required('Amount is required'),
+          })
+        )
+        .min(1, 'At least one material is required'),
     })
   );
 
@@ -92,6 +135,7 @@ export default function SaleViewForm({ currentSale }) {
     () => ({
       department: currentSale?.department || null,
       branch: currentSale?.branch || null,
+      kpis: currentSale?.kpi || null,
       memberName: currentSale?.memberName || '',
       gender: currentSale?.gender || '',
       salesPerson: currentSale?.salesTrainer || null,
@@ -99,12 +143,14 @@ export default function SaleViewForm({ currentSale }) {
       trainingAt: currentSale?.trainingAt || '',
       memberType: currentSale?.memberType || '',
       sourceOfLead: currentSale?.sourceOfLead || '',
-      contractNumber: currentSale?.contractNumber || '',
+      contactNumber: currentSale?.contactNumber || '',
+      email: currentSale?.email || '',
       membershipType: currentSale?.membershipDetails?.membershipType || [],
       purchaseDate: currentSale?.membershipDetails?.purchaseDate
         ? new Date(currentSale?.membershipDetails?.purchaseDate)
         : null,
-      price: currentSale?.membershipDetails?.price || '',
+      actualPrice: currentSale?.membershipDetails?.actualPrice || '',
+      discountedPrice: currentSale?.membershipDetails?.discountedPrice || '',
       validityDays: currentSale?.membershipDetails?.validityDays || '',
       freeDays: currentSale?.membershipDetails?.freeDays || '',
       numberOfFreeSessions: currentSale?.membershipDetails?.freeSessions || '',
@@ -115,8 +161,19 @@ export default function SaleViewForm({ currentSale }) {
         ? new Date(currentSale?.membershipDetails?.expiryDate)
         : null,
       freezingDays: currentSale?.membershipDetails?.freezingDays || '',
-      paymentMode: currentSale?.paymentMode || '',
-      paymentReceiptNumber: currentSale?.paymentReceiptNumber || '',
+      paymentTypes: currentSale?.paymentTypes?.length
+        ? currentSale.paymentTypes.map((paymentType) => ({
+            paymentMode: paymentType?.paymentMode || '',
+            paymentReceiptNumber: paymentType?.paymentReceiptNumber || '',
+            amount: paymentType?.amount || 0,
+          }))
+        : [
+            {
+              paymentMode: '',
+              paymentReceiptNumber: '',
+              amount: 0,
+            },
+          ],
     }),
     [currentSale]
   );
@@ -135,12 +192,69 @@ export default function SaleViewForm({ currentSale }) {
     formState: { isSubmitting, errors },
   } = methods;
 
+  console.log(errors);
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'paymentTypes',
+  });
+
   const branch = watch('branch');
   const department = watch('department');
   const memberType = watch('memberType');
+  const actualPrice = watch('actualPrice');
+  const discountedPrice = watch('discountedPrice');
+  const kpiData = watch('kpis');
+
+  console.log(department);
+
+  const discountPercentage =
+    actualPrice && discountedPrice
+      ? Math.round(((actualPrice - discountedPrice) / actualPrice) * 100)
+      : null;
 
   const prevBranchRef = useRef(null);
   const prevDeptRef = useRef(null);
+
+  const renderMaterialDetailsForm = (
+    <Stack spacing={3} mt={3}>
+      {fields.map((item, index) => {
+        const selectedModes = fields
+          .map((f, i) => (i !== index ? f.paymentMode : null))
+          .filter(Boolean);
+
+        const availableOptions = PAYMENT_OPTIONS.filter(
+          (opt) => !selectedModes.includes(opt.value)
+        );
+
+        return (
+          <Stack key={item.id} alignItems="flex-end" spacing={1.5}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ width: 1 }}>
+              <RHFSelect
+                name={`paymentTypes[${index}].paymentMode`}
+                label="Mode of Payment"
+                disabled
+              >
+                {availableOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </RHFSelect>
+
+              <RHFTextField
+                name={`paymentTypes[${index}].paymentReceiptNumber`}
+                label="Payment Receipt Number"
+                disabled
+              />
+
+              <RHFTextField name={`paymentTypes[${index}].amount`} label="Amount" disabled />
+            </Stack>
+          </Stack>
+        );
+      })}
+    </Stack>
+  );
 
   useEffect(() => {
     setSalesSchema((prev) =>
@@ -167,9 +281,12 @@ export default function SaleViewForm({ currentSale }) {
 
     if (isBranchChanged || isBranchCleared) {
       setValue('department', null);
-      setDepartments([]);
+      setValue('kpis', null);
       setValue('salesPerson', null);
       setValue('trainerName', null);
+
+      setDepartments([]);
+      setKpis([]);
       setSalesTrainers([]);
       setServiceTrainers([]);
     }
@@ -195,10 +312,21 @@ export default function SaleViewForm({ currentSale }) {
     const isDeptCleared = prevDept && !department;
 
     if (isDeptChanged || isDeptCleared) {
+      console.log('here');
       setValue('salesPerson', null);
       setValue('trainerName', null);
+      setValue('kpis', null);
+
       setSalesTrainers([]);
       setServiceTrainers([]);
+      setKpis([]);
+    }
+
+    // Set KPIs from department
+    if (department?.kpis) {
+      setKpis(department.kpis);
+    } else {
+      setKpis([]); // Clear KPIs if no department
     }
 
     prevDeptRef.current = department;
@@ -220,6 +348,7 @@ export default function SaleViewForm({ currentSale }) {
           Yup.object().shape({
             branch: Yup.object().required('Branch is required'),
             department: Yup.object().required('Department is required'),
+            kpis: Yup.object().required('Kpi is required'),
           })
         )
       );
@@ -229,6 +358,7 @@ export default function SaleViewForm({ currentSale }) {
           Yup.object().shape({
             branch: Yup.mixed().notRequired(),
             department: Yup.object().required('Department is required'),
+            kpis: Yup.object().required('Kpi is required'),
           })
         )
       );
@@ -238,6 +368,7 @@ export default function SaleViewForm({ currentSale }) {
           Yup.object().shape({
             branch: Yup.mixed().notRequired(),
             department: Yup.mixed().notRequired(),
+            kpis: Yup.object().notRequired(),
           })
         )
       );
@@ -287,6 +418,11 @@ export default function SaleViewForm({ currentSale }) {
       setServiceTrainers([]);
     }
   }, [trainers]);
+
+  useEffect(() => {
+    document.body.classList.remove('light-mode', 'dark-mode');
+    document.body.classList.add(isDark ? 'dark-mode' : 'light-mode');
+  }, [isDark]);
 
   return (
     <FormProvider methods={methods}>
@@ -354,6 +490,38 @@ export default function SaleViewForm({ currentSale }) {
                   disabled
                 />
               </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFAutocomplete
+                  name="kpis"
+                  label="KPI"
+                  options={kpis || []}
+                  getOptionLabel={(option) => `${option?.name}` || ''}
+                  isOptionEqualToValue={(option, value) => option?.id === value?.id}
+                  filterOptions={(options, state) =>
+                    options.filter((option) =>
+                      option.name.toLowerCase().includes(state.inputValue.toLowerCase())
+                    )
+                  }
+                  renderOption={(props, option) => {
+                    const newProps = {
+                      ...props,
+                      key: option.id || option.name, // Ensure uniqueness
+                    };
+
+                    return (
+                      <li {...newProps}>
+                        <div>
+                          <Typography variant="subtitle2">{option?.name}</Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            {option?.type}
+                          </Typography>
+                        </div>
+                      </li>
+                    );
+                  }}
+                  disabled
+                />
+              </Grid>
             </Grid>
             <Typography variant="h6" gutterBottom mt={2}>
               Member Details
@@ -361,6 +529,63 @@ export default function SaleViewForm({ currentSale }) {
             <Grid container spacing={2} mt={2}>
               <Grid item xs={12} sm={6}>
                 <RHFTextField name="memberName" label="Member Name" disabled />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="contactNumber"
+                  control={control}
+                  defaultValue=""
+                  rules={{ required: 'Contact number is required' }}
+                  render={({ field, fieldState: { error } }) => (
+                    <FormControl fullWidth error={!!error}>
+                      <PhoneInput
+                        {...field}
+                        value={field.value}
+                        country="ae"
+                        enableSearch
+                        specialLabel={
+                          <span
+                            style={{
+                              backgroundColor: 'transparent',
+                              color: error
+                                ? '#f44336'
+                                : isDark
+                                ? '#fff'
+                                : theme.palette.text.secondary,
+                              fontSize: 12,
+                              fontWeight: 600,
+                            }}
+                          >
+                            Phone Number
+                          </span>
+                        }
+                        inputStyle={{
+                          width: '100%',
+                          height: '56px',
+                          fontSize: '16px',
+                          backgroundColor: 'transparent',
+                          borderColor: error ? '#f44336' : '#c4c4c4',
+                          borderRadius: '8px',
+                          color: isDark ? '#fff' : undefined,
+                          paddingLeft: '48px',
+                          paddingRight: '40px',
+                        }}
+                        containerStyle={{ width: '100%' }}
+                        onChange={(value) => field.onChange(value)}
+                        inputProps={{
+                          name: field.name,
+                          required: true,
+                        }}
+                        disabled
+                      />
+
+                      {error && <FormHelperText>{error.message}</FormHelperText>}
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFTextField name="email" label="Email Address" disabled />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <RHFSelect name="gender" label="Gender" disabled>
@@ -451,6 +676,10 @@ export default function SaleViewForm({ currentSale }) {
                 <RHFSelect name="memberType" label="Member Type" disabled>
                   <MenuItem value="new">New</MenuItem>
                   <MenuItem value="rnl">RNL</MenuItem>
+                  <MenuItem value="upgrade">Upgrade</MenuItem>
+                  <MenuItem value="top_up">Top up</MenuItem>
+                  <MenuItem value="emi">EMI collection</MenuItem>
+                  <MenuItem value="viya_fit">Viya Fit</MenuItem>
                 </RHFSelect>
               </Grid>
               {memberType === 'new' ? (
@@ -472,9 +701,6 @@ export default function SaleViewForm({ currentSale }) {
                   </RHFSelect>
                 </Grid>
               ) : null}
-              <Grid item xs={12} sm={6}>
-                <RHFTextField name="contractNumber" label="Contract Number" disabled />
-              </Grid>
             </Grid>
           </Card>
         </Grid>
@@ -552,16 +778,34 @@ export default function SaleViewForm({ currentSale }) {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <RHFTextField name="price" label="Price" type="number" disabled/>
+                <RHFTextField name="actualPrice" label="Actual Price" type="number" disabled />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <RHFTextField name="validityDays" label="Validity Days" type="number" disabled/>
+                <RHFTextField
+                  name="discountedPrice"
+                  label={
+                    discountPercentage !== null
+                      ? `Discounted Price (-${discountPercentage}%)`
+                      : 'Discounted Price'
+                  }
+                  type="number"
+                  disabled
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <RHFTextField name="validityDays" label="Validity Days" type="number" disabled />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <RHFTextField name="freeDays" label="Free Days" type="number" disabled/>
+                <RHFTextField name="freeDays" label="Free Days" type="number" disabled />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <RHFTextField name="numberOfFreeSessions" label="Free Sessions" type="number" disabled/>
+                <RHFTextField
+                  name="numberOfFreeSessions"
+                  label="Free Sessions"
+                  type="number"
+                  disabled
+                />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Controller
@@ -610,23 +854,13 @@ export default function SaleViewForm({ currentSale }) {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <RHFTextField name="freezingDays" label="Freezing Days" type="number" disabled/>
+                <RHFTextField name="freezingDays" label="Freezing Days" type="number" disabled />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <RHFSelect name="paymentMode" label="Mode of Payment" disabled>
-                  <MenuItem value="mypt">MyPT App Payment</MenuItem>
-                  <MenuItem value="cash">Cash</MenuItem>
-                  <MenuItem value="pos">POS</MenuItem>
-                  <MenuItem value="bank">Bank Transfer</MenuItem>
-                  <MenuItem value="link">Payment Link</MenuItem>
-                  <MenuItem value="tabby">Tabby</MenuItem>
-                  <MenuItem value="tamara">Tamara</MenuItem>
-                  <MenuItem value="cheque">Cheque</MenuItem>
-                  <MenuItem value="atm">Bank/ATM Deposit</MenuItem>
-                </RHFSelect>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <RHFTextField name="paymentReceiptNumber" label="Payment Receipt Number" disabled/>
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  Payment Details
+                </Typography>
+                {renderMaterialDetailsForm}
               </Grid>
             </Grid>
           </Card>
