@@ -240,6 +240,7 @@ export class TargetController {
     });
   }
 
+  @authenticate('jwt')
   @get('/targets/{id}')
   @response(200, {
     description: 'Target model instance',
@@ -527,6 +528,7 @@ export class TargetController {
     });
   }
 
+  @authenticate('jwt')
   @post('/trainer-targets/assign')
   @response(200, {
     description: 'Trainer KPI targets processed successfully',
