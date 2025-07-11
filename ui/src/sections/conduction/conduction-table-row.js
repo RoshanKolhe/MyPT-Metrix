@@ -60,18 +60,16 @@ export default function ConductionTableRow({
 
         {/* Actions */}
         <TableCell align="right" sx={{ px: 1, whiteSpace: 'nowrap' }}>
-          {isSuperOrAdmin ? (
-            <Tooltip title="Quick Edit" placement="top" arrow>
-              <IconButton
-                color={quickEdit.value ? 'inherit' : 'default'}
-                onClick={() => {
-                  handleQuickEditRow(row);
-                }}
-              >
-                <Iconify icon="solar:pen-bold" />
-              </IconButton>
-            </Tooltip>
-          ) : null}
+          <Tooltip title="Quick Edit" placement="top" arrow>
+            <IconButton
+              color={quickEdit.value ? 'inherit' : 'default'}
+              onClick={() => {
+                handleQuickEditRow(row);
+              }}
+            >
+              <Iconify icon="solar:pen-bold" />
+            </IconButton>
+          </Tooltip>
 
           {isSuperOrAdmin ? (
             <Tooltip title="Delete" placement="top" arrow>

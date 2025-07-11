@@ -101,16 +101,11 @@ export default function SaleTableRow({
 
         {/* Actions */}
         <TableCell align="right" sx={{ px: 1, whiteSpace: 'nowrap' }}>
-          {isSuperOrAdmin ? (
-            <Tooltip title="Quick Edit" placement="top" arrow>
-              <IconButton
-                color={quickEdit.value ? 'inherit' : 'default'}
-                onClick={() => onEditRow()}
-              >
-                <Iconify icon="solar:pen-bold" />
-              </IconButton>
-            </Tooltip>
-          ) : null}
+          <Tooltip title="Quick Edit" placement="top" arrow>
+            <IconButton color={quickEdit.value ? 'inherit' : 'default'} onClick={() => onEditRow()}>
+              <Iconify icon="solar:pen-bold" />
+            </IconButton>
+          </Tooltip>
 
           <Tooltip title="View Sale" placement="top" arrow>
             <IconButton onClick={onViewRow}>
