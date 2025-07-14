@@ -382,7 +382,7 @@ export default function SaleNewEditForm({ currentSale }) {
 
     // ✅ Only update departments from branch if user is NOT a department user
     if (!isDepartmentUser) {
-      setDepartments(branch?.departments || []);
+      setDepartments((branch?.departments || []).filter((dep) => dep.isActive));
     }
 
     prevBranchRef.current = branch;
@@ -390,7 +390,7 @@ export default function SaleNewEditForm({ currentSale }) {
 
   useEffect(() => {
     if (!currentSale && isDepartmentUser && user?.departments?.length > 0) {
-      setDepartments(user.departments);
+      setDepartments((user.departments || []).filter((dep) => dep.isActive));
     }
   }, [user?.departments, isDepartmentUser, currentSale]);
 
@@ -413,7 +413,7 @@ export default function SaleNewEditForm({ currentSale }) {
     console.log(department?.kpis);
     // Set KPIs from department
     if (department?.kpis) {
-      setKpis(department.kpis);
+      setKpis((department.kpis || []).filter((kpi) => kpi.isActive));
     } else {
       setKpis([]); // Clear KPIs if no department
     }
@@ -441,7 +441,7 @@ export default function SaleNewEditForm({ currentSale }) {
           })
         )
       );
-    } else if (isCGM) {
+    } else if (isCGM || isDepartmentUser) {
       setSalesSchema((prev) =>
         prev.concat(
           Yup.object().shape({
@@ -462,7 +462,7 @@ export default function SaleNewEditForm({ currentSale }) {
         )
       );
     }
-  }, [isCGM, isSuperOrAdmin, user?.permissions]);
+  }, [isCGM, isDepartmentUser, isSuperOrAdmin, user.permissions]);
 
   useEffect(() => {
     const fetchTrainers = async () => {
