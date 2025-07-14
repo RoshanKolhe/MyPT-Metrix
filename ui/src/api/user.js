@@ -71,3 +71,27 @@ export function useGetUsersWithFilter(filter) {
     refreshFilterUsers, // Include the refresh function separately
   };
 }
+
+export function useGetDashboradSummary(filter) {
+  let URL;
+  if (filter) {
+    URL = endpoints.user.getFilteredDashboradSummary(filter);
+  } else {
+    URL = endpoints.user.getDashboradSummary;
+  }
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboardCounts = () => {
+    // Use the `mutate` function to trigger a revalidation
+    mutate();
+  };
+
+  return {
+    dashboardCounts: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboardCounts,
+  };
+}

@@ -54,6 +54,8 @@ export const endpoints = {
     list: '/users/list',
     filterList: (filter) => `/users/list?${filter}`,
     details: (id) => `/users/${id}`,
+    getFilteredDashboradSummary: (filter) => `/dashboard/summary?${filter}`,
+    getDashboradSummary: `/dashboard/summary`,
   },
   staff: {
     list: '/trainers',

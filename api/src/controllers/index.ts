@@ -8,3 +8,4 @@ export * from './kpi.controller';
 export * from './sales.controller';
 export * from './conduction.controller';
 export * from './sales-kpi.controller';
+export * from './dashboard.controller';

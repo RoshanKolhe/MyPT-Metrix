@@ -55,13 +55,6 @@ export class KpiController {
 
   @authenticate({
     strategy: 'jwt',
-    options: {
-      required: [
-        PermissionKeys.SUPER_ADMIN,
-        PermissionKeys.ADMIN,
-        PermissionKeys.CGM,
-      ],
-    },
   })
   @get('/kpis')
   @response(200, {

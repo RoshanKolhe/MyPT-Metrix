@@ -7,18 +7,26 @@ import Grid from '@mui/material/Unstable_Grid2';
 import { useMockedUser } from 'src/hooks/use-mocked-user';
 // _mock
 import {
-  _ecommerceNewProducts,
   _ecommerceSalesOverview,
   _ecommerceBestSalesman,
   _ecommerceLatestProducts,
 } from 'src/_mock';
 // components
 import { useSettingsContext } from 'src/components/settings';
-// assets
-import { MotivationIllustration } from 'src/assets/illustrations';
 //
-import EcommerceWelcome from '../ecommerce-welcome';
-import EcommerceNewProducts from '../ecommerce-new-products';
+import { useGetDashboradSummary } from 'src/api/user';
+import { fShortenNumber } from 'src/utils/format-number';
+import {
+  Box,
+  Checkbox,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  OutlinedInput,
+  Select,
+} from '@mui/material';
+import { useState } from 'react';
+import { useGetKpis } from 'src/api/kpi';
 import EcommerceYearlySales from '../ecommerce-yearly-sales';
 import EcommerceBestSalesman from '../ecommerce-best-salesman';
 import EcommerceSaleByGender from '../ecommerce-sale-by-gender';
@@ -32,61 +40,85 @@ import EcommerceCurrentBalance from '../ecommerce-current-balance';
 export default function OverviewEcommerceView() {
   const { user } = useMockedUser();
 
+  const [selectedKpis, setSelectedKpis] = useState([]);
+
+  const kpiQueryString = selectedKpis.length ? `kpiIds=${selectedKpis.join(',')}` : '';
+
+  const { dashboardCounts } = useGetDashboradSummary(kpiQueryString);
+  const { kpis } = useGetKpis();
+
   const theme = useTheme();
 
   const settings = useSettingsContext();
 
+  const handleKpiChange = (event) => {
+    const {
+      target: { value },
+    } = event;
+    setSelectedKpis(typeof value === 'string' ? value.split(',') : value);
+  };
+
   return (
     <Container maxWidth={settings.themeStretch ? false : 'xl'}>
-      <Grid container spacing={3}>
-        <Grid xs={12} md={8}>
-          <EcommerceWelcome
-            title={`Congratulations! \n ${user?.displayName}`}
-            description="Best seller of the month You have done 57.6% more sales today."
-            img={<MotivationIllustration />}
-            action={
-              <Button variant="contained" color="primary">
-                Go Now
-              </Button>
+      <Box sx={{ mb: 3 }}>
+        <FormControl size="small" sx={{ flexShrink: 0, width: { xs: 1, md: 300 } }}>
+          <InputLabel>KPIs</InputLabel>
+          <Select
+            multiple
+            size="small"
+            value={selectedKpis}
+            onChange={handleKpiChange}
+            input={<OutlinedInput label="KPIs" />}
+            renderValue={(selected) =>
+              selected
+                .map((id) => kpis.find((option) => option.id === id)?.name)
+                .filter(Boolean)
+                .join(', ')
             }
-          />
-        </Grid>
+            MenuProps={{ PaperProps: { sx: { maxHeight: 240 } } }}
+          >
+            {kpis.map((option) => (
+              <MenuItem key={option.id} value={option.id}>
+                <Checkbox size="small" checked={selectedKpis.includes(option.id)} />
+                {option.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
-        <Grid xs={12} md={4}>
-          <EcommerceNewProducts list={_ecommerceNewProducts} />
-        </Grid>
-
+      <Grid container spacing={3}>
         <Grid xs={12} md={4}>
           <EcommerceWidgetSummary
-            title="Product Sold"
-            percent={2.6}
-            total={765}
+            title="Total Revenue"
+            percent={dashboardCounts?.revenue?.percent}
+            total={fShortenNumber(dashboardCounts?.revenue?.value || 0)}
             chart={{
-              series: [22, 8, 35, 50, 82, 84, 77, 12, 87, 43],
+              series: dashboardCounts?.revenue?.series || [],
             }}
           />
         </Grid>
 
         <Grid xs={12} md={4}>
           <EcommerceWidgetSummary
-            title="Total Balance"
-            percent={-0.1}
-            total={18765}
+            title="Total Tickets"
+            percent={dashboardCounts?.tickets?.percent}
+            total={fShortenNumber(dashboardCounts?.tickets?.value || 0)}
             chart={{
               colors: [theme.palette.info.light, theme.palette.info.main],
-              series: [56, 47, 40, 62, 73, 30, 23, 54, 67, 68],
+              series: dashboardCounts?.tickets?.series || [],
             }}
           />
         </Grid>
 
         <Grid xs={12} md={4}>
           <EcommerceWidgetSummary
-            title="Sales Profit"
-            percent={0.6}
-            total={4876}
+            title="Avg Ticket Value"
+            percent={dashboardCounts?.averageTicket?.percent}
+            total={fShortenNumber(dashboardCounts?.averageTicket?.value || 0)}
             chart={{
               colors: [theme.palette.warning.light, theme.palette.warning.main],
-              series: [40, 70, 75, 70, 50, 28, 7, 64, 38, 27],
+              series: dashboardCounts?.averageTicket?.series || [],
             }}
           />
         </Grid>

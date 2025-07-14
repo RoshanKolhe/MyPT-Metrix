@@ -7,6 +7,7 @@ import {
   IsolationLevel,
   Where,
   WhereBuilder,
+  relation,
   repository,
 } from '@loopback/repository';
 import {
@@ -182,10 +183,19 @@ export class UserController {
         {
           relation: 'branch',
           scope: {
-            include: ['departments'],
+            include: [
+              {
+                relation: 'departments',
+              },
+            ],
           },
         },
-        {relation: 'departments'},
+        {
+          relation: 'departments',
+          scope: {
+            include: [{relation: 'kpis'}],
+          },
+        },
       ],
     });
     return Promise.resolve({
@@ -208,10 +218,19 @@ export class UserController {
         {
           relation: 'branch',
           scope: {
-            include: ['departments'],
+            include: [
+              {
+                relation: 'departments',
+              },
+            ],
           },
         },
-        {relation: 'departments'},
+        {
+          relation: 'departments',
+          scope: {
+            include: [{relation: 'kpis'}],
+          },
+        },
       ],
     });
     const userData = _.omit(user, 'password');

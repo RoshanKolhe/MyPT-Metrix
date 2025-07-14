@@ -410,7 +410,7 @@ export default function SaleNewEditForm({ currentSale }) {
       setServiceTrainers([]);
       setKpis([]);
     }
-
+    console.log(department?.kpis);
     // Set KPIs from department
     if (department?.kpis) {
       setKpis(department.kpis);
