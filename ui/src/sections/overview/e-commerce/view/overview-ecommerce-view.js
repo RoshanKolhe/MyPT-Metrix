@@ -25,8 +25,8 @@ import {
   OutlinedInput,
   Select,
 } from '@mui/material';
-import { useState } from 'react';
-import { useGetKpis } from 'src/api/kpi';
+import { useEffect, useState } from 'react';
+import { useGetKpisWithFilter } from 'src/api/kpi';
 import EcommerceYearlySales from '../ecommerce-yearly-sales';
 import EcommerceBestSalesman from '../ecommerce-best-salesman';
 import EcommerceSaleByGender from '../ecommerce-sale-by-gender';
@@ -38,14 +38,24 @@ import EcommerceCurrentBalance from '../ecommerce-current-balance';
 // ----------------------------------------------------------------------
 
 export default function OverviewEcommerceView() {
-  const { user } = useMockedUser();
-
   const [selectedKpis, setSelectedKpis] = useState([]);
+
+  const [kpiOptions, setKpiOptions] = useState([]);
 
   const kpiQueryString = selectedKpis.length ? `kpiIds=${selectedKpis.join(',')}` : '';
 
   const { dashboardCounts } = useGetDashboradSummary(kpiQueryString);
-  const { kpis } = useGetKpis();
+
+  const rawFilter = {
+    where: {
+      isActive: true,
+      type: 'sales',
+    },
+  };
+
+  const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
+
+  const { filteredKpis: kpis } = useGetKpisWithFilter(encodedFilter);
 
   const theme = useTheme();
 
@@ -57,6 +67,10 @@ export default function OverviewEcommerceView() {
     } = event;
     setSelectedKpis(typeof value === 'string' ? value.split(',') : value);
   };
+
+  useEffect(() => {
+    if (kpis && kpis.length) setKpiOptions(kpis);
+  }, [kpis]);
 
   return (
     <Container maxWidth={settings.themeStretch ? false : 'xl'}>
@@ -77,12 +91,14 @@ export default function OverviewEcommerceView() {
             }
             MenuProps={{ PaperProps: { sx: { maxHeight: 240 } } }}
           >
-            {kpis.map((option) => (
-              <MenuItem key={option.id} value={option.id}>
-                <Checkbox size="small" checked={selectedKpis.includes(option.id)} />
-                {option.name}
-              </MenuItem>
-            ))}
+            {kpiOptions &&
+              kpiOptions.length &&
+              kpiOptions.map((option) => (
+                <MenuItem key={option.id} value={option.id}>
+                  <Checkbox size="small" checked={selectedKpis.includes(option.id)} />
+                  {option.name}
+                </MenuItem>
+              ))}
           </Select>
         </FormControl>
       </Box>
