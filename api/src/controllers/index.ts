@@ -9,3 +9,5 @@ export * from './sales.controller';
 export * from './conduction.controller';
 export * from './sales-kpi.controller';
 export * from './dashboard.controller';
+export * from './notification.controller';
+export * from './notification-user.controller';

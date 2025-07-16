@@ -4,6 +4,7 @@ import {repository} from '@loopback/repository';
 import {SalesRepository, UserRepository} from '../repositories';
 import {get, param, post, requestBody} from '@loopback/rest';
 import {Sales} from '../models';
+import {authenticate} from '@loopback/authentication';
 
 // import {inject} from '@loopback/core';
 
@@ -15,6 +16,9 @@ export class DashboardController {
     public userRepository: UserRepository,
   ) {}
 
+  @authenticate({
+    strategy: 'jwt',
+  })
   @get('/dashboard/summary')
   async getSummary(
     @param.query.string('kpiIds') kpiIdsStr?: string,
@@ -36,14 +40,19 @@ export class DashboardController {
     lastWeekEnd.setDate(today.getDate() - 7);
 
     const filter: any = {
-      where: {},
+      where: {
+        isActive: true,
+        type: 'sales',
+      },
     };
+
     if (kpiIds.length > 0) {
       filter.where.kpiId = {inq: kpiIds};
     }
 
     const allSales = await this.salesRepository.find({
       ...filter,
+
       include: ['membershipDetails'],
     });
     const totalRevenue = allSales.reduce(

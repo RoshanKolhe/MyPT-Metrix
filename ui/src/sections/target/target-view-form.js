@@ -297,7 +297,7 @@ export default function TargetViewForm({ currentTarget }) {
                           handleApproveTarget();
                         }}
                       >
-                        Approve Target
+                        Accept Target
                       </LoadingButton>
                     </Grid>
                   )}

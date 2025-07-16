@@ -12,3 +12,4 @@ export * from './department-kpi.model';
 export * from './sales.model';
 export * from './membership-details.model';
 export * from './conduction.model';
+export * from './notification.model';

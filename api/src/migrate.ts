@@ -23,6 +23,7 @@ export async function migrate(args: string[]) {
       'Sales',
       'MembershipDetails',
       'Conduction',
+      'Notification',
     ],
   });
 

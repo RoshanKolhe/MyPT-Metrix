@@ -53,6 +53,7 @@ export const endpoints = {
   user: {
     list: '/users/list',
     filterList: (filter) => `/users/list?${filter}`,
+    filterNotificationList: (filter) => `/notifications?${filter}`,
     details: (id) => `/users/${id}`,
     getFilteredDashboradSummary: (filter) => `/dashboard/summary?${filter}`,
     getDashboradSummary: `/dashboard/summary`,

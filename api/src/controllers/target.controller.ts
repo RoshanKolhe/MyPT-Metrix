@@ -24,6 +24,7 @@ import {DepartmentTarget, Target} from '../models';
 import {
   DepartmentRepository,
   DepartmentTargetRepository,
+  NotificationRepository,
   TargetRepository,
   TrainerTargetRepository,
   UserRepository,
@@ -47,6 +48,8 @@ export class TargetController {
     public trainerTargetRepository: TrainerTargetRepository,
     @repository(UserRepository)
     public userRepository: UserRepository,
+    @repository(NotificationRepository)
+    public notificationRepository: NotificationRepository,
   ) {}
 
   @authenticate('jwt')
@@ -162,6 +165,21 @@ export class TargetController {
         {
           transaction: tx,
         },
+      );
+
+      await this.notificationRepository.create(
+        {
+          userId: cgmApproverUserId,
+          title: 'New Branch Target Assigned',
+          type: 'target_approval',
+          status: 0,
+          extraDetails: {
+            targetId: branchTarget.id,
+            branchId: branchId,
+            assignedBy: currentUser.id,
+          },
+        },
+        {transaction: tx},
       );
 
       await tx.commit();
@@ -388,6 +406,20 @@ export class TargetController {
         });
       }
 
+      await this.notificationRepository.create(
+        {
+          userId: safeTargetData.cgmApproverUserId,
+          title: 'New Branch Target Assigned',
+          type: 'target_approval',
+          status: 0,
+          extraDetails: {
+            targetId: id,
+            assignedBy: currentUser.id,
+          },
+        },
+        {transaction: tx},
+      );
+
       await tx.commit();
 
       const updatedTarget = await this.targetRepository.findById(id, {
@@ -468,6 +500,33 @@ export class TargetController {
     }
 
     await this.targetRepository.updateById(targetId, updatePayload);
+
+    if (input.status === 1) {
+      await this.notificationRepository.create({
+        title: `Target ID ${targetId} has been accepted by ${currentUser.name}`,
+        type: 'target',
+        status: 0,
+        userId: 0,
+        extraDetails: {
+          targetId,
+          updatedBy: currentUser.id,
+        },
+      });
+    }
+
+    if (input.status === 2) {
+      await this.notificationRepository.create({
+        title: `Change requested on Target ID ${targetId} by ${currentUser.name}`,
+        type: 'target',
+        status: 0,
+        userId: 0,
+        extraDetails: {
+          targetId,
+          updatedBy: currentUser.id,
+          changeRequestReason: input.changeRequestReason,
+        },
+      });
+    }
 
     return {
       message:

@@ -357,9 +357,13 @@ export default function TargetNewEditForm({ currentTarget }) {
               )}
 
               <Grid item xs={12}>
-                <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
-                  {!currentTarget ? 'Send for Approval' : 'Update Target'}
-                </LoadingButton>
+                <Grid item xs={12}>
+                  {currentTarget?.status !== 1 && (
+                    <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
+                      {!currentTarget ? 'Send for Approval' : 'Update Target'}
+                    </LoadingButton>
+                  )}
+                </Grid>
               </Grid>
             </Grid>
           </Card>

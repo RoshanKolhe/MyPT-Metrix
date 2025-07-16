@@ -28,6 +28,33 @@ export function useGetUsers() {
 
 // ----------------------------------------------------------------------
 
+export function useGetNotifications(filter) {
+  let URL;
+  if (filter) {
+    URL = endpoints.user.filterNotificationList(filter);
+  } else {
+    URL = endpoints.user.notifications;
+  }
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshNotifications = () => {
+    // Use the `mutate` function to trigger a revalidation
+    mutate();
+  };
+
+  return {
+    notifications: data || [],
+    notificationsLoading: isLoading,
+    notificationsError: error,
+    notificationsValidating: isValidating,
+    notificationsEmpty: !isLoading && !data?.length,
+    refreshNotifications, // Include the refresh function separately
+  };
+}
+
+// ----------------------------------------------------------------------
+
 export function useGetUser(userId) {
   const URL = userId ? [endpoints.user.details(userId)] : null;
   const { data, isLoading, error, isValidating } = useSWR(URL, fetcher);
