@@ -122,3 +122,27 @@ export function useGetDashboradSummary(filter) {
     refreshDashboardCounts,
   };
 }
+
+export function useGetDashboradChartData(filter) {
+  let URL;
+  if (filter) {
+    URL = endpoints.user.getFilteredChartData(filter);
+  } else {
+    URL = endpoints.user.getChartData;
+  }
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradChartData = () => {
+    // Use the `mutate` function to trigger a revalidation
+    mutate();
+  };
+
+  return {
+    dashboradChartData: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradChartData,
+  };
+}

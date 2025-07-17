@@ -56,6 +56,8 @@ export const endpoints = {
     filterNotificationList: (filter) => `/notifications?${filter}`,
     details: (id) => `/users/${id}`,
     getFilteredDashboradSummary: (filter) => `/dashboard/summary?${filter}`,
+    getFilteredChartData: (filter) => `/clients/chart-data?${filter}`,
+    getChartData: (filter) => `/clients/chart-data?${filter}`,
     getDashboradSummary: `/dashboard/summary`,
   },
   staff: {

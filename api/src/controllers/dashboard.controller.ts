@@ -2,7 +2,7 @@
 
 import {repository} from '@loopback/repository';
 import {SalesRepository, UserRepository} from '../repositories';
-import {get, param, post, requestBody} from '@loopback/rest';
+import {get, param, post, requestBody, response} from '@loopback/rest';
 import {Sales} from '../models';
 import {authenticate} from '@loopback/authentication';
 
@@ -162,5 +162,65 @@ export class DashboardController {
         })(),
       },
     };
+  }
+
+  // @authenticate('jwt')
+  @get('/clients/chart-data')
+  @response(200, {
+    description: 'Chart data grouped by KPI',
+  })
+  async getClientChartData(
+    @param.query.string('startDate') startDate: string,
+    @param.query.string('endDate') endDate: string,
+    @param.query.string('kpiIds') kpiIdsStr?: string,
+  ): Promise<object> {
+    const kpiIds = kpiIdsStr
+      ? kpiIdsStr
+          .split(',')
+          .map(id => Number(id.trim()))
+          .filter(id => !isNaN(id))
+      : [];
+    const sales: any = await this.salesRepository.find({
+      where: {
+        and: [
+          {createdAt: {gte: new Date(startDate)}},
+          {createdAt: {lte: new Date(endDate)}},
+          {isDeleted: false},
+          ...(kpiIds?.length ? [{kpiId: {inq: kpiIds}}] : []),
+        ],
+      },
+      include: [{relation: 'kpi', scope: {fields: ['id', 'name']}}],
+    });
+
+    // Initialize date range
+    const categories: string[] = [];
+    const dateMap: {[date: string]: {[kpiName: string]: number}} = {};
+    const kpiSet = new Set<string>();
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      categories.push(dateStr);
+      dateMap[dateStr] = {};
+    }
+
+    for (const s of sales) {
+      const dateStr = s.createdAt?.toISOString().split('T')[0];
+      const kpiName = s.kpi?.name || 'Unknown KPI';
+      if (!dateStr || !dateMap[dateStr]) continue;
+
+      kpiSet.add(kpiName);
+      if (!dateMap[dateStr][kpiName]) dateMap[dateStr][kpiName] = 0;
+      dateMap[dateStr][kpiName]++;
+    }
+
+    const series = Array.from(kpiSet).map(kpiName => ({
+      name: kpiName,
+      data: categories.map(date => dateMap[date][kpiName] || 0),
+    }));
+
+    return {categories, series};
   }
 }
