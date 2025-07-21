@@ -127,7 +127,7 @@ export default function OverviewEcommerceView() {
 
             <Grid xs={12} md={4}>
               <EcommerceWidgetSummary
-                title="Total Tickets"
+                title="Total Units"
                 percent={dashboardCounts?.tickets?.percent}
                 total={fShortenNumber(dashboardCounts?.tickets?.value || 0)}
                 chart={{
@@ -139,7 +139,7 @@ export default function OverviewEcommerceView() {
 
             <Grid xs={12} md={4}>
               <EcommerceWidgetSummary
-                title="Avg Ticket Value"
+                title="Avg Unit Value"
                 percent={dashboardCounts?.averageTicket?.percent}
                 total={fShortenNumber(dashboardCounts?.averageTicket?.value || 0)}
                 chart={{
