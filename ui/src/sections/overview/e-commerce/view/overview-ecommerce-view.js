@@ -34,6 +34,7 @@ import EcommerceSaleByGender from '../ecommerce-sale-by-gender';
 import EcommerceSalesOverview from '../ecommerce-sales-overview';
 import EcommerceWidgetSummary from '../ecommerce-widget-summary';
 import EcommerceLatestProducts from '../ecommerce-latest-products';
+import EcommerceYearlyConductions from '../ecommerce-yearly-conductions';
 
 // ----------------------------------------------------------------------
 
@@ -45,6 +46,7 @@ export default function OverviewEcommerceView() {
 
   const [kpiOptions, setKpiOptions] = useState([]);
   const [salesKpiOptions, setSalesKpiOptions] = useState([]);
+  const [serviceKpiOptions, setServiceKpiOptions] = useState([]);
 
   const kpiQueryString = selectedKpis.length ? `kpiIds=${selectedKpis.join(',')}` : '';
 
@@ -77,6 +79,7 @@ export default function OverviewEcommerceView() {
       const service = kpis.filter((kpi) => kpi.type === 'service');
 
       setSalesKpiOptions(sales);
+      setServiceKpiOptions(service);
       setKpiOptions(kpis);
     }
   }, [kpis]);
@@ -152,9 +155,18 @@ export default function OverviewEcommerceView() {
             <Grid xs={12} md={12} lg={12}>
               <EcommerceYearlySales
                 title="Daily KPI Sales"
-                subheader="racks daily PT & Membership client additions over time"
+                subheader="Tracks daily PT & Membership client additions over time"
                 chart={[]}
                 kpiOptions={kpiOptions}
+              />
+            </Grid>
+
+            <Grid xs={12} md={12} lg={12}>
+              <EcommerceYearlyConductions
+                title="Daily Conductions"
+                subheader="Tracks daily conductions over time"
+                chart={[]}
+                kpiOptions={serviceKpiOptions}
               />
             </Grid>
 

@@ -58,6 +58,8 @@ export const endpoints = {
     getFilteredDashboradSummary: (filter) => `/dashboard/summary?${filter}`,
     getFilteredChartData: (filter) => `/clients/chart-data?${filter}`,
     getChartData: (filter) => `/clients/chart-data?${filter}`,
+    getFilteredConductionsData: (filter) => `/conductions/chart-data?${filter}`,
+    getConductionsData: (filter) => `/conductions/chart-data?${filter}`,
     getDashboradSummary: `/dashboard/summary`,
   },
   staff: {
