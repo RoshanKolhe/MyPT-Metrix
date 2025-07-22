@@ -403,7 +403,6 @@ export class DashboardController {
       ],
     });
 
-    console.log(targets);
 
     // Flatten all TrainerTargets
     const trainerTargets = targets.flatMap(t =>
@@ -503,7 +502,6 @@ export class DashboardController {
       where: {and: whereConditions},
       include: [{relation: 'kpi'}],
     });
-    console.log(conductions);
     // Initialize date range
     const categories: string[] = [];
     const dateMap: {[date: string]: {[kpiName: string]: number}} = {};
