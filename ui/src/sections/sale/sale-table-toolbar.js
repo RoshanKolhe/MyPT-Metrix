@@ -11,6 +11,8 @@ import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Box, Grid } from '@mui/material';
+import { useBoolean } from 'src/hooks/use-boolean';
+import SaleDownloadDummyExcelModel from './sale-download-dummy-excel-model';
 
 // ----------------------------------------------------------------------
 
@@ -22,6 +24,11 @@ export default function SaleTableToolbar({
   onExport,
 }) {
   const popover = usePopover();
+  const downloadTemplate = useBoolean();
+
+  const handleOpenDialog = useCallback(() => {
+    downloadTemplate.onTrue();
+  }, [downloadTemplate]);
 
   const handleFilterName = useCallback(
     (event) => {
@@ -92,8 +99,16 @@ export default function SaleTableToolbar({
         open={popover.open}
         onClose={popover.onClose}
         arrow="right-top"
-        sx={{ width: 140 }}
+        sx={{ width: 240 }}
       >
+        <MenuItem
+          onClick={() => {
+            handleOpenDialog();
+          }}
+        >
+          <Iconify icon="solar:import-bold" />
+          Download Template
+        </MenuItem>
         <MenuItem
           onClick={() => {
             popover.onClose();
@@ -113,6 +128,13 @@ export default function SaleTableToolbar({
           Export
         </MenuItem>
       </CustomPopover>
+
+      <SaleDownloadDummyExcelModel
+        open={downloadTemplate.value}
+        onClose={() => {
+          downloadTemplate.onFalse();
+        }}
+      />
     </>
   );
 }

@@ -45,6 +45,8 @@ export default function SaleTableRow({
     branch,
     salesTrainer,
     trainer,
+    department,
+    kpi,
     membershipDetails,
   } = row;
 
@@ -90,6 +92,8 @@ export default function SaleTableRow({
 
         {/* Other Info */}
         <TableCell>{branch?.name}</TableCell>
+        <TableCell>{department?.name}</TableCell>
+        <TableCell>{kpi?.name || 'NA'}</TableCell>
         <TableCell>{contactNumber}</TableCell>
         <TableCell>{purchaseDate}</TableCell>
         <TableCell>{membershipLabels}</TableCell>

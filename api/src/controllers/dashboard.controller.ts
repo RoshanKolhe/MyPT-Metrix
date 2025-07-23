@@ -71,9 +71,10 @@ export class DashboardController {
 
     const allSales = await this.salesRepository.find({
       ...filter,
-
       include: ['membershipDetails'],
     });
+
+    // Calculate total revenue from all sales
     const totalRevenue = allSales.reduce(
       (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
       0,
@@ -81,6 +82,7 @@ export class DashboardController {
     const totalTickets = allSales.length;
     const avgTicket = totalTickets > 0 ? totalRevenue / totalTickets : 0;
 
+    // Get 7-day series for revenue
     const get7DaySeries = (sales: Sales[], start: Date): number[] => {
       const series = Array(7).fill(0);
       sales.forEach(s => {
@@ -96,6 +98,7 @@ export class DashboardController {
       return series;
     };
 
+    // Get 7-day series for tickets count
     const get7DayTicketsSeries = (sales: Sales[], start: Date): number[] => {
       const series = Array(7).fill(0);
       sales.forEach(s => {
@@ -127,6 +130,7 @@ export class DashboardController {
       include: ['membershipDetails'],
     });
 
+    // Revenue for this week and last week
     const thisWeekRevenue = thisWeekSales.reduce(
       (s, v) => s + (v.membershipDetails?.discountedPrice || 0),
       0,
@@ -144,29 +148,38 @@ export class DashboardController {
     const lastWeekAvgTicket =
       lastWeekTickets > 0 ? lastWeekRevenue / lastWeekTickets : 0;
 
+    // Calculate percent change
     const percentChange = (current: number, prev: number): number => {
       if (prev === 0 && current === 0) return 0;
       if (prev === 0) return 100;
       return ((current - prev) / prev) * 100;
     };
 
+    // Calculate lifetime revenue and tickets
+    // const lifetimeRevenue = totalRevenue;
+    // const lifetimeTickets = totalTickets;
+
+    // // Calculate lifetime average ticket price
+    // const lifetimeAvgTicket =
+    //   lifetimeTickets > 0 ? lifetimeRevenue / lifetimeTickets : 0;
+
     return {
       revenue: {
-        value: Math.round(thisWeekRevenue),
+        value: Math.round(totalRevenue),
         percent: parseFloat(
           percentChange(thisWeekRevenue, lastWeekRevenue).toFixed(1),
         ),
         series: get7DaySeries(thisWeekSales, startDate),
       },
       tickets: {
-        value: thisWeekTickets,
+        value: totalTickets, // Change to lifetime tickets
         percent: parseFloat(
           percentChange(thisWeekTickets, lastWeekTickets).toFixed(1),
         ),
         series: get7DayTicketsSeries(thisWeekSales, startDate),
       },
       averageTicket: {
-        value: Math.round(thisWeekAvgTicket),
+        value: Math.round(avgTicket), 
         percent: parseFloat(
           percentChange(thisWeekAvgTicket, lastWeekAvgTicket).toFixed(1),
         ),
@@ -182,7 +195,6 @@ export class DashboardController {
       },
     };
   }
-
   @authenticate('jwt')
   @get('/clients/chart-data')
   @response(200, {
@@ -402,7 +414,6 @@ export class DashboardController {
         },
       ],
     });
-
 
     // Flatten all TrainerTargets
     const trainerTargets = targets.flatMap(t =>
