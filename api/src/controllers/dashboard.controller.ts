@@ -60,8 +60,7 @@ export class DashboardController {
 
     const filter: any = {
       where: {
-        isActive: true,
-        type: 'sales',
+        isDeleted: false,
       },
     };
 
@@ -69,11 +68,13 @@ export class DashboardController {
       filter.where.kpiId = {inq: kpiIds};
     }
 
+    console.log('filter', JSON.stringify(filter));
+
     const allSales = await this.salesRepository.find({
       ...filter,
       include: ['membershipDetails'],
     });
-
+    console.log('All Sales:', allSales.length);
     // Calculate total revenue from all sales
     const totalRevenue = allSales.reduce(
       (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
@@ -179,7 +180,7 @@ export class DashboardController {
         series: get7DayTicketsSeries(thisWeekSales, startDate),
       },
       averageTicket: {
-        value: Math.round(avgTicket), 
+        value: Math.round(avgTicket),
         percent: parseFloat(
           percentChange(thisWeekAvgTicket, lastWeekAvgTicket).toFixed(1),
         ),
