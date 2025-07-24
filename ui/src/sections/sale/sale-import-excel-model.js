@@ -1,22 +1,19 @@
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
 import { useEffect, useMemo, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
 import LoadingButton from '@mui/lab/LoadingButton';
 import Box from '@mui/material/Box';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import MenuItem from '@mui/material/MenuItem';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 // components
 import { useSnackbar } from 'src/components/snackbar';
-import FormProvider, { RHFAutocomplete, RHFSelect, RHFTextField } from 'src/components/hook-form';
+import FormProvider, { RHFAutocomplete } from 'src/components/hook-form';
 import axiosInstance from 'src/utils/axios';
 import { useGetBranchsWithFilter } from 'src/api/branch';
 import { Chip, Typography } from '@mui/material';
@@ -27,8 +24,6 @@ export default function SaleDownloadDummyExcelModel({ open, onClose }) {
   const { enqueueSnackbar } = useSnackbar();
 
   const [departments, setDepartments] = useState([]);
-
-  const [kpis, setKpis] = useState([]);
 
   const rawFilter = {
     where: {
@@ -43,14 +38,12 @@ export default function SaleDownloadDummyExcelModel({ open, onClose }) {
   const NewSaleSchema = Yup.object().shape({
     branch: Yup.object().required('Branch is required'),
     department: Yup.object().required('Department is required'),
-    kpi: Yup.object().required('KPI is required'),
   });
 
   const defaultValues = useMemo(
     () => ({
       branch: null,
       department: null,
-      kpi: null,
     }),
     []
   );
@@ -68,16 +61,13 @@ export default function SaleDownloadDummyExcelModel({ open, onClose }) {
     setValue,
     formState: { isSubmitting, errors },
   } = methods;
-  console.log('errors', errors);
   const selectedBranch = watch('branch');
-  const selectedDepartment = watch('department');
 
   const onSubmit = handleSubmit(async (formData) => {
     try {
       const payload = {
         branchId: formData.branch?.id,
         departmentId: formData.department?.id,
-        kpiId: formData.kpi?.id,
       };
 
       const response = await axiosInstance.post('/export-template', payload, {
@@ -109,27 +99,11 @@ export default function SaleDownloadDummyExcelModel({ open, onClose }) {
       const dept = selectedBranch.departments || [];
       setDepartments(dept);
       setValue('department', null); // reset department
-      setValue('kpi', null); // reset kpi
-      setKpis([]); // clear kpis
     } else {
       setDepartments([]);
       setValue('department', null);
-      setValue('kpi', null);
-      setKpis([]);
     }
   }, [selectedBranch, setValue]);
-
-  // 🔁 When department changes
-  useEffect(() => {
-    if (selectedDepartment) {
-      const kpiOptions = selectedDepartment.kpis || [];
-      setKpis(kpiOptions);
-      setValue('kpi', null); // reset kpi
-    } else {
-      setKpis([]);
-      setValue('kpi', null);
-    }
-  }, [selectedDepartment, setValue]);
 
   return (
     <Dialog
@@ -208,35 +182,6 @@ export default function SaleDownloadDummyExcelModel({ open, onClose }) {
                   />
                 ))
               }
-            />
-            <RHFAutocomplete
-              name="kpi"
-              label="KPI"
-              options={kpis || []}
-              getOptionLabel={(option) => `${option?.name}` || ''}
-              isOptionEqualToValue={(option, value) => option?.id === value?.id}
-              filterOptions={(options, state) =>
-                options.filter((option) =>
-                  option.name.toLowerCase().includes(state.inputValue.toLowerCase())
-                )
-              }
-              renderOption={(props, option) => {
-                const newProps = {
-                  ...props,
-                  key: option.id || option.name, // Ensure uniqueness
-                };
-
-                return (
-                  <li {...newProps}>
-                    <div>
-                      <Typography variant="subtitle2">{option?.name}</Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {option?.type}
-                      </Typography>
-                    </div>
-                  </li>
-                );
-              }}
             />
           </Box>
         </DialogContent>

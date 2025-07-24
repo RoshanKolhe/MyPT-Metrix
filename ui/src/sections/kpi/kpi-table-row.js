@@ -29,7 +29,7 @@ export default function KpiTableRow({
   quickEdit,
   handleQuickEditRow,
 }) {
-  const { name, description, isActive, type } = row;
+  const { id, name, description, isActive, type } = row;
 
   const confirm = useBoolean();
 
@@ -39,7 +39,7 @@ export default function KpiTableRow({
         {/* <TableCell padding="checkbox">
           <Checkbox checked={selected} onClick={onSelectRow} />
         </TableCell> */}
-
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{id}</TableCell>
         <TableCell sx={{ whiteSpace: 'nowrap' }}>{name}</TableCell>
         <TableCell sx={{ whiteSpace: 'nowrap' }}>{description}</TableCell>
         <TableCell sx={{ whiteSpace: 'nowrap' }}>{type}</TableCell>

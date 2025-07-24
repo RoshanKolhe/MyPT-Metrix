@@ -12,7 +12,8 @@ import CustomPopover, { usePopover } from 'src/components/custom-popover';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Box, Grid } from '@mui/material';
 import { useBoolean } from 'src/hooks/use-boolean';
-import SaleDownloadDummyExcelModel from './sale-download-dummy-excel-model';
+import SaleDownloadDummyExcelModel from './sale-import-excel-model';
+import SaleImportExcelModel from './sale-download-dummy-excel-model copy';
 
 // ----------------------------------------------------------------------
 
@@ -22,13 +23,19 @@ export default function SaleTableToolbar({
   //
   roleOptions,
   onExport,
+  refreshSales,
 }) {
   const popover = usePopover();
   const downloadTemplate = useBoolean();
+  const importTemplate = useBoolean();
 
   const handleOpenDialog = useCallback(() => {
     downloadTemplate.onTrue();
   }, [downloadTemplate]);
+
+  const handleOpenImportDialog = useCallback(() => {
+    importTemplate.onTrue();
+  }, [importTemplate]);
 
   const handleFilterName = useCallback(
     (event) => {
@@ -111,7 +118,7 @@ export default function SaleTableToolbar({
         </MenuItem>
         <MenuItem
           onClick={() => {
-            popover.onClose();
+            handleOpenImportDialog();
           }}
         >
           <Iconify icon="solar:import-bold" />
@@ -135,6 +142,13 @@ export default function SaleTableToolbar({
           downloadTemplate.onFalse();
         }}
       />
+      <SaleImportExcelModel
+        open={importTemplate.value}
+        onClose={() => {
+          importTemplate.onFalse();
+        }}
+        refreshSales={refreshSales}
+      />
     </>
   );
 }
@@ -144,4 +158,5 @@ SaleTableToolbar.propTypes = {
   onFilters: PropTypes.func,
   roleOptions: PropTypes.array,
   onExport: PropTypes.func,
+  refreshSales: PropTypes.func,
 };

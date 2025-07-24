@@ -48,8 +48,8 @@ export default function EcommerceYearlySales({
   const chartOptions = useChart({
     colors,
     legend: {
-      position: 'top', 
-      horizontalAlign: 'left', 
+      position: 'top',
+      horizontalAlign: 'left',
       fontSize: '14px',
       markers: {
         width: 12,

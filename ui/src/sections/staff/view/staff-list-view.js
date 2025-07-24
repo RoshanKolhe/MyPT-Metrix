@@ -48,6 +48,7 @@ import StaffQuickEditForm from '../staff-quick-edit-form';
 const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...USER_STATUS_OPTIONS];
 
 const TABLE_HEAD = [
+  { id: 'id', label: '#' },
   { id: 'name', label: 'Name' },
   { id: 'phoneNumber', label: 'Phone Number', width: 180 },
   { id: 'status', label: 'Status', width: 100 },

@@ -196,6 +196,7 @@ export class DashboardController {
       },
     };
   }
+
   @authenticate('jwt')
   @get('/clients/chart-data')
   @response(200, {
@@ -256,7 +257,7 @@ export class DashboardController {
     return {categories, series};
   }
 
-  // @authenticate('jwt')
+  @authenticate('jwt')
   @get('/dashboard/forecast')
   async forecastData(
     @param.query.string('interval')

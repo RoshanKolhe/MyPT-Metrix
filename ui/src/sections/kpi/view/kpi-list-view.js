@@ -51,6 +51,7 @@ import KpiTableRow from '../kpi-table-row';
 const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...COMMON_STATUS_OPTIONS];
 
 const TABLE_HEAD = [
+  { id: 'id', label: '#' },
   { id: 'name', label: 'Kpi Name' },
   { id: 'description', label: 'Description', width: 180 },
   { id: 'type', label: 'Type', width: 180 },

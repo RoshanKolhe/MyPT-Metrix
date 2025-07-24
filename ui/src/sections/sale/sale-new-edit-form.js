@@ -772,7 +772,7 @@ export default function SaleNewEditForm({ currentSale }) {
                     <MenuItem value="leads_update">Leads Update</MenuItem>
                     <MenuItem value="walkins">Walkins</MenuItem>
                     <MenuItem value="phoneins">Phoneins</MenuItem>
-                    <MenuItem value="whatsa_app_direct">Whatsa app direct</MenuItem>
+                    <MenuItem value="whatsa_app_direct">Whats app direct</MenuItem>
                     <MenuItem value="website_form">Website form</MenuItem>
                     <MenuItem value="google_ads">Google Ads</MenuItem>
                     <MenuItem value="meta_ads">Meta Ads</MenuItem>

@@ -23,7 +23,11 @@ import {
   Response,
 } from '@loopback/rest';
 import {MembershipDetails, Sales} from '../models';
-import {SalesRepository, UserRepository} from '../repositories';
+import {
+  SalesRepository,
+  TrainerRepository,
+  UserRepository,
+} from '../repositories';
 import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {PermissionKeys} from '../authorization/permission-keys';
 import {inject} from '@loopback/core';
@@ -41,6 +45,8 @@ export class SalesController {
     public salesRepository: SalesRepository,
     @repository(UserRepository)
     public userRepository: UserRepository,
+    @repository(TrainerRepository)
+    public trainerRepository: TrainerRepository,
   ) {}
 
   @authenticate({
@@ -309,6 +315,7 @@ export class SalesController {
     });
   }
 
+  @authenticate('jwt')
   @post('/export-template', {
     responses: {
       description: 'Excel Template Download',
@@ -328,14 +335,13 @@ export class SalesController {
             properties: {
               branchId: {type: 'number'},
               departmentId: {type: 'number'},
-              kpiId: {type: 'number'},
             },
-            required: ['branchId', 'departmentId', 'kpiId'],
+            required: ['branchId', 'departmentId'],
           },
         },
       },
     })
-    requestBody: {branchId: number; departmentId: number; kpiId: number},
+    requestBody: {branchId: number; departmentId: number},
 
     @inject(RestBindings.Http.RESPONSE) response: Response,
   ): Promise<Response> {
@@ -345,6 +351,7 @@ export class SalesController {
     const salesSheet = workbook.addWorksheet('SalesAndMembershipDetails');
     salesSheet.addRow([
       'srNo',
+      'kpiId',
       'memberName',
       'memberEmail',
       'memberContactNumber(971561127654)',
@@ -377,12 +384,8 @@ export class SalesController {
 
     // Sheet 3: Meta
     const metaSheet = workbook.addWorksheet('Meta');
-    metaSheet.addRow(['branchId', 'departmentId', 'kpiId']);
-    metaSheet.addRow([
-      requestBody.branchId,
-      requestBody.departmentId,
-      requestBody.kpiId,
-    ]);
+    metaSheet.addRow(['branchId', 'departmentId']);
+    metaSheet.addRow([requestBody.branchId, requestBody.departmentId]);
 
     // Set headers and return Excel file
     response.setHeader(
@@ -398,6 +401,7 @@ export class SalesController {
     return response;
   }
 
+  @authenticate('jwt')
   @post('/import-sales-template', {
     responses: {
       '200': {
@@ -466,6 +470,15 @@ export class SalesController {
             startDate: 'startDate',
             expiryDate: 'expiryDate',
             freezingDays: 'freezingDays',
+            kpiId: 'kpiId',
+          };
+
+          const paymentExcelToModelMap: {[key: string]: string} = {
+            srNoRefFromSales: 'srNoRefFromSales',
+            paymentAmount: 'amount',
+            paymentReceiptNumber: 'paymentReceiptNumber',
+            'paymentMode(viya_app,mypt,cash,pos,bank,link,tabby,tamara,cheque,atm)':
+              'paymentMode',
           };
 
           const membershipFields = [
@@ -481,6 +494,17 @@ export class SalesController {
             'freezingDays',
           ];
 
+          const membershipTypeOptions = [
+            {label: 'Academy', value: 'academy'},
+            {label: 'Gym Membership', value: 'gym'},
+            {label: 'PT Membership', value: 'pt'},
+            {label: 'Home Membership', value: 'home'},
+            {label: 'Reformer Pilates', value: 'reformer'},
+            {label: 'EMS Only', value: 'ems'},
+            {label: 'Group Ex Only', value: 'group'},
+            {label: 'Others', value: 'others'},
+          ];
+
           const salesHeaders = salesSheet.getRow(1).values.slice(1);
           const paymentHeaders = paymentsSheet.getRow(1).values.slice(1);
 
@@ -489,7 +513,6 @@ export class SalesController {
 
           // Parse Sales Sheet
           for (let i = 2; i <= salesSheet.rowCount; i++) {
-            
             const row = salesSheet.getRow(i);
             const raw: any = {};
             const membershipDetails: any = {};
@@ -501,7 +524,17 @@ export class SalesController {
               const value = row.getCell(idx + 1).value ?? null;
 
               if (membershipFields.includes(mappedKey)) {
-                membershipDetails[mappedKey] = value;
+                if (
+                  mappedKey === 'membershipType' &&
+                  typeof value === 'string'
+                ) {
+                  const selectedValues = value.split(',').map(v => v.trim());
+                  membershipDetails[mappedKey] = membershipTypeOptions.filter(
+                    opt => selectedValues.includes(opt.value),
+                  );
+                } else {
+                  membershipDetails[mappedKey] = value;
+                }
               } else {
                 raw[mappedKey] = value;
               }
@@ -513,7 +546,6 @@ export class SalesController {
               ...raw,
               branchId: meta.branchId,
               departmentId: meta.departmentId,
-              kpiId: meta.kpiId,
               deletedBy: null,
               membershipDetails,
             };
@@ -526,27 +558,187 @@ export class SalesController {
             const row = paymentsSheet.getRow(i);
             const payment: any = {};
             paymentHeaders.forEach((header: any, idx: number) => {
-              payment[header] = row.getCell(idx + 1).value ?? null;
+              const mappedKey = paymentExcelToModelMap[header];
+              if (mappedKey) {
+                payment[mappedKey] = row.getCell(idx + 1).value ?? null;
+              }
             });
             if (payment.srNoRefFromSales) payments.push(payment);
           }
 
-          // Map payments to sales by srNo
-          const salesWithPayments = sales.map(sale => {
+          const importedSales: any[] = [];
+          let skipped = 0;
+
+          for (const sale of sales) {
             const relatedPayments = payments.filter(
               p => String(p.srNoRefFromSales) === String(sale.srNo),
             );
-            return {
+
+            const finalPayload = {
               ...sale,
               paymentTypes: relatedPayments,
             };
-          });
 
-          resolve({meta, sales: salesWithPayments});
+            if (!this.validateSale(finalPayload)) {
+              skipped += 1;
+              continue;
+            }
+
+            try {
+              const repo = new DefaultTransactionalRepository(
+                Sales,
+                this.dataSource,
+              );
+              const tx = await repo.beginTransaction(
+                IsolationLevel.READ_COMMITTED,
+              );
+
+              const {srNo, membershipDetails, ...salesFields} = finalPayload;
+              const salesTrainer = await this.trainerRepository.findById(
+                salesFields.salesTrainerId,
+              );
+              if (!salesTrainer) {
+                throw new Error('Invalid salesTrainerId. User does not exist.');
+              }
+              if (salesFields.trainerId) {
+                const trainer = await this.userRepository
+                  .findById(salesFields.trainerId)
+                  .catch(() => null);
+                if (!trainer) {
+                  throw new Error('Invalid trainerId. User does not exist.');
+                }
+              }
+              const createdSale = await this.salesRepository.create(
+                salesFields,
+                {
+                  transaction: tx,
+                },
+              );
+
+              if (membershipDetails) {
+                await this.salesRepository
+                  .membershipDetails(createdSale.id)
+                  .create(membershipDetails, {transaction: tx});
+              }
+
+              // Optional: add paymentTypes storage here if needed
+
+              await tx.commit();
+              importedSales.push(createdSale);
+            } catch (error) {
+              skipped += 1;
+              console.log(
+                `Skipped srNo: ${sale.srNo} due to error:`,
+                error.message,
+              );
+            }
+          }
+
+          resolve({
+            importedCount: importedSales.length,
+            skippedCount: skipped,
+          });
         } catch (error) {
           reject(error);
         }
       });
     });
+  }
+
+  validateSale(sale: any): boolean {
+    const allowedValues = {
+      gender: ['male', 'female'],
+      trainingAt: ['academy', 'ladies', 'mixed', 'home', 'hybrid'],
+      memberType: ['new', 'rnl', 'upgrade', 'top_up', 'emi', 'viya_fit'],
+      sourceOfLead: [
+        'leads_update',
+        'walkins',
+        'phoneins',
+        'whatsa_app_direct',
+        'website_form',
+        'google_ads',
+        'meta_ads',
+        'insta_direct_message',
+        'mypt_app',
+        'referral',
+        'outreach',
+        'total',
+      ],
+      membershipType: [
+        'academy',
+        'gym',
+        'pt',
+        'home',
+        'reformer',
+        'ems',
+        'group',
+        'others',
+      ],
+    };
+
+    if (!sale.memberName || !sale.contactNumber || !sale.salesTrainerId)
+      return false;
+
+    const isValidDate = (d: any) => !isNaN(new Date(d).getTime());
+
+    if (
+      sale.gender &&
+      !allowedValues.gender.includes(String(sale.gender).toLowerCase())
+    )
+      return false;
+
+    if (
+      sale.trainingAt &&
+      !allowedValues.trainingAt.includes(String(sale.trainingAt).toLowerCase())
+    )
+      return false;
+
+    if (
+      sale.memberType &&
+      !allowedValues.memberType.includes(String(sale.memberType).toLowerCase())
+    )
+      return false;
+
+    if (
+      sale.sourceOfLead &&
+      !allowedValues.sourceOfLead.includes(
+        String(sale.sourceOfLead).toLowerCase(),
+      )
+    )
+      return false;
+
+    if (sale.membershipDetails) {
+      const md = sale.membershipDetails;
+
+      // Validate membershipType as array of {label, value}
+      if (
+        md.membershipType &&
+        Array.isArray(md.membershipType) &&
+        md.membershipType.some(
+          (type: any) =>
+            !allowedValues.membershipType.includes(
+              String(type.value).toLowerCase(),
+            ),
+        )
+      ) {
+        return false;
+      }
+
+      if (
+        !md.purchaseDate ||
+        !md.discountedPrice ||
+        !md.startDate ||
+        !md.expiryDate ||
+        isNaN(md.discountedPrice) ||
+        isNaN(md.actualPrice) ||
+        !isValidDate(md.purchaseDate) ||
+        !isValidDate(md.startDate) ||
+        !isValidDate(md.expiryDate)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

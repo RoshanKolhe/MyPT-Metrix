@@ -301,6 +301,7 @@ export default function SaleListView() {
             //
             roleOptions={_roles}
             onExport={handleExport}
+            refreshSales={refreshSales}
           />
 
           {canReset && (

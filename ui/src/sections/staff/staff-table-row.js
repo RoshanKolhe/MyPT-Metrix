@@ -30,7 +30,7 @@ export default function StaffTableRow({
   quickEdit,
   handleQuickEditRow,
 }) {
-  const { firstName, lastName, avatar, isActive, email, phoneNumber } = row;
+  const { id, firstName, lastName, avatar, isActive, email, phoneNumber } = row;
 
   const confirm = useBoolean();
 
@@ -42,7 +42,7 @@ export default function StaffTableRow({
         {/* <TableCell padding="checkbox">
           <Checkbox checked={selected} onClick={onSelectRow} />
         </TableCell> */}
-
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{id}</TableCell>
         <TableCell sx={{ display: 'flex', alignItems: 'center' }}>
           <Avatar alt={firstName} src={avatar?.fileUrl} sx={{ mr: 2 }} />
 
