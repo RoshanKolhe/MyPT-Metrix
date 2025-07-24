@@ -1,29 +1,49 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import useSWR from 'swr';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 // utils
 import { fetcher, endpoints } from 'src/utils/axios';
+import { buildFilter, formatDate } from 'src/utils/constants';
 
 // ----------------------------------------------------------------------
+const conductionSortFields = [
+  'id',
+  'conductions',
+  'conductionDate',
+  'createdAt',
+  'updatedAt',
+  'deletedAt',
+  'isDeleted',
+];
 
-export function useGetConductions() {
-  const URL = endpoints.conduction.list;
+
+export function useGetConductions({ page, rowsPerPage, order, orderBy, startDate, endDate, searchTextValue, }) {
+  const filter = buildFilter({ page, rowsPerPage, order, orderBy, startDate, endDate , validSortFields: conductionSortFields, searchTextValue, });
+
+  const queryString = `filter=${encodeURIComponent(JSON.stringify(filter))}`;
+  const URL = `${endpoints.conduction.list}?${queryString}`;
+  console.log('Filter being sent:', filter);
+  console.log('Search text:', searchTextValue);
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshConductions = () => {
-    // Use the `mutate` function to trigger a revalidation
+  const refreshConductions = useCallback(() => {
     mutate();
-  };
+  }, [mutate]);
+  const memoizedValue = useMemo(
+    () => ({
+      conductions: data?.data || [],
+      totalCount: data?.total || 0,
+      conductionsLoading: isLoading,
+      conductionsError: error,
+      conductionsValidating: isValidating,
+      conductionsEmpty: !isLoading && (!data?.data || data.data.length === 0),
+      refreshConductions,
+    }),
+    [data?.data, data?.total, error, isLoading, isValidating, refreshConductions]
+  );
 
-  return {
-    conductions: data || [],
-    conductionsLoading: isLoading,
-    conductionsError: error,
-    conductionsValidating: isValidating,
-    conductionsEmpty: !isLoading && !data?.length,
-    refreshConductions, // Include the refresh function separately
-  };
+  return memoizedValue;
 }
 
 // ----------------------------------------------------------------------

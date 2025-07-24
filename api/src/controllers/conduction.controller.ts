@@ -17,6 +17,7 @@ import {
   requestBody,
   response,
   HttpErrors,
+  getFilterSchemaFor,
 } from '@loopback/rest';
 import {Conduction} from '../models';
 import {ConductionRepository, UserRepository} from '../repositories';
@@ -80,36 +81,57 @@ export class ConductionController {
   })
   @get('/conductions')
   @response(200, {
-    description: 'Array of Conduction model instances',
+    description: 'Array of Conduction model instances with pagination',
     content: {
       'application/json': {
         schema: {
-          type: 'array',
-          items: getModelSchemaRef(Conduction, {includeRelations: true}),
+          type: 'object',
+          properties: {
+            data: {
+              type: 'array',
+              items: getModelSchemaRef(Conduction, {includeRelations: true}),
+            },
+            total: {type: 'number'},
+          },
         },
       },
     },
   })
   async find(
     @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
-    @param.filter(Conduction) filter?: Filter<Conduction>,
-  ): Promise<Conduction[]> {
+    @param.query.object('filter', getFilterSchemaFor(Conduction))
+    filter?: Filter<Conduction>,
+  ): Promise<{data: Conduction[]; total: number}> {
     const user = await this.userRepository.findById(currentUser.id);
 
     const isCGM = user.permissions?.includes(PermissionKeys.CGM);
     const isHOD = user.permissions?.includes(PermissionKeys.HOD);
     const isSubHOD = user.permissions?.includes(PermissionKeys.SUB_HOD);
 
+    filter = filter ?? {};
+
     const updatedFilter: Filter<Conduction> = {
       ...filter,
-      include: ['trainer', 'kpi', 'branch', 'department'],
       where: {
-        ...(filter?.where ?? {}),
-        isDeleted: false, // Apply for all roles
+        ...(filter.where ?? {}),
+        isDeleted: false,
       },
+      include: [
+        {relation: 'trainer',
+          scope:{
+            where:{
+              trainer:{
+                firstName:''
+              }
+            }
+          }
+        },
+        {relation: 'kpi'},
+        {relation: 'branch'},
+        {relation: 'department'},
+      ],
     };
 
-    // Apply branch filter for CGM, HOD, and SUB_HOD
     if ((isCGM || isHOD || isSubHOD) && user.branchId) {
       updatedFilter.where = {
         ...updatedFilter.where,
@@ -117,7 +139,10 @@ export class ConductionController {
       };
     }
 
-    return this.conductionRepository.find(updatedFilter);
+    const data = await this.conductionRepository.find(updatedFilter);
+    const total = await this.conductionRepository.count(updatedFilter.where);
+
+    return {data, total: total.count};
   }
 
   @authenticate({
