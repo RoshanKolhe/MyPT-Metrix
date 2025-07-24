@@ -37,10 +37,12 @@ import {
   TablePaginationCustom,
 } from 'src/components/table';
 //
+import * as XLSX from 'xlsx';
 import { useGetBranchs } from 'src/api/branch';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'notistack';
 import { _roles, COMMON_STATUS_OPTIONS } from 'src/utils/constants';
+import { useAuthContext } from 'src/auth/hooks';
 import BranchTableToolbar from '../branch-table-toolbar';
 import BranchTableFiltersResult from '../branch-table-filters-result';
 import BranchTableRow from '../branch-table-row';
@@ -51,6 +53,7 @@ import BranchQuickEditForm from '../branch-quick-edit-form';
 const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...COMMON_STATUS_OPTIONS];
 
 const TABLE_HEAD = [
+  { id: 'id', label: '#' },
   { id: 'name', label: 'Branch Name' },
   { id: 'description', label: 'Description', width: 180 },
   { id: 'isActive', label: 'Status', width: 180 },
@@ -66,6 +69,9 @@ const defaultFilters = {
 // ----------------------------------------------------------------------
 
 export default function BranchListView() {
+  const { user } = useAuthContext();
+  const isSuperAdmin = user?.permissions?.includes('super_admin');
+
   const table = useTable();
 
   const settings = useSettingsContext();
@@ -84,8 +90,7 @@ export default function BranchListView() {
 
   const [filters, setFilters] = useState(defaultFilters);
 
-  const { branches, branchesLoading, branchesEmpty, refreshBranchs } =
-    useGetBranchs();
+  const { branches, branchesLoading, branchesEmpty, refreshBranchs } = useGetBranchs();
 
   const dataFiltered = applyFilter({
     inputData: tableData,
@@ -181,6 +186,22 @@ export default function BranchListView() {
     setFilters(defaultFilters);
   }, []);
 
+  const handleExport = useCallback(() => {
+    const fileName = 'branches.xlsx';
+
+    const formatted = dataFiltered.map((item) => ({
+      Id: item.id || '',
+      Name: item.name || '',
+      Description: item.description || '',
+      Status: item.isActive ? 'Active' : 'In-Active' || '',
+      CreatedAt: item.createdAt || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(formatted);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Branches');
+    XLSX.writeFile(wb, fileName);
+  }, [dataFiltered]);
+
   useEffect(() => {
     if (branches) {
       // const updatedBranchs = branches.filter((obj) => !obj.permissions.includes('super_admin'));
@@ -199,14 +220,16 @@ export default function BranchListView() {
             { name: 'List' },
           ]}
           action={
-            <Button
-              component={RouterLink}
-              href={paths.dashboard.branch.new}
-              variant="contained"
-              startIcon={<Iconify icon="mingcute:add-line" />}
-            >
-              New Branch
-            </Button>
+            isSuperAdmin && (
+              <Button
+                component={RouterLink}
+                href={paths.dashboard.branch.new}
+                variant="contained"
+                startIcon={<Iconify icon="mingcute:add-line" />}
+              >
+                New Branch
+              </Button>
+            )
           }
           sx={{
             mb: { xs: 3, md: 5 },
@@ -254,6 +277,7 @@ export default function BranchListView() {
             onFilters={handleFilters}
             //
             roleOptions={_roles}
+            onExport={handleExport}
           />
 
           {canReset && (

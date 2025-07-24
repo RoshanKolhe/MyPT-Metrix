@@ -12,6 +12,7 @@ import Container from '@mui/material/Container';
 import TableBody from '@mui/material/TableBody';
 import IconButton from '@mui/material/IconButton';
 import TableContainer from '@mui/material/TableContainer';
+import * as XLSX from 'xlsx';
 // routes
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hook';
@@ -41,6 +42,7 @@ import { useGetDepartments } from 'src/api/department';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'notistack';
 import { _roles, COMMON_STATUS_OPTIONS } from 'src/utils/constants';
+import { useAuthContext } from 'src/auth/hooks';
 import DepartmentTableToolbar from '../department-table-toolbar';
 import DepartmentTableFiltersResult from '../department-table-filters-result';
 import DepartmentTableRow from '../department-table-row';
@@ -51,6 +53,7 @@ import DepartmentQuickEditForm from '../department-quick-edit-form';
 const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...COMMON_STATUS_OPTIONS];
 
 const TABLE_HEAD = [
+  { id: 'id', label: '#' },
   { id: 'name', label: 'Department Name' },
   { id: 'description', label: 'Description', width: 180 },
   { id: 'isActive', label: 'Status', width: 180 },
@@ -66,6 +69,8 @@ const defaultFilters = {
 // ----------------------------------------------------------------------
 
 export default function DepartmentListView() {
+  const { user } = useAuthContext();
+  const isSuperAdmin = user?.permissions?.includes('super_admin');
   const table = useTable();
 
   const settings = useSettingsContext();
@@ -181,6 +186,22 @@ export default function DepartmentListView() {
     setFilters(defaultFilters);
   }, []);
 
+  const handleExport = useCallback(() => {
+    const fileName = 'department.xlsx';
+
+    const formatted = dataFiltered.map((item) => ({
+      Id: item.id || '',
+      Name: item.name || '',
+      Description: item.description || '',
+      Status: item.isActive ? 'Active' : 'In-Active' || '',
+      CreatedAt: item.createdAt || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(formatted);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Departments');
+    XLSX.writeFile(wb, fileName);
+  }, [dataFiltered]);
+
   useEffect(() => {
     if (departments) {
       // const updatedDepartments = departments.filter((obj) => !obj.permissions.includes('super_admin'));
@@ -202,14 +223,16 @@ export default function DepartmentListView() {
             mb: { xs: 3, md: 5 },
           }}
           action={
-            <Button
-              component={RouterLink}
-              href={paths.dashboard.department.new}
-              variant="contained"
-              startIcon={<Iconify icon="mingcute:add-line" />}
-            >
-              New Department
-            </Button>
+            isSuperAdmin && (
+              <Button
+                component={RouterLink}
+                href={paths.dashboard.department.new}
+                variant="contained"
+                startIcon={<Iconify icon="mingcute:add-line" />}
+              >
+                New Department
+              </Button>
+            )
           }
         />
 
@@ -254,6 +277,7 @@ export default function DepartmentListView() {
             onFilters={handleFilters}
             //
             roleOptions={_roles}
+            onExport={handleExport}
           />
 
           {canReset && (

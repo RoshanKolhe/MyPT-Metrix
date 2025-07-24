@@ -134,12 +134,12 @@ export function useNavData() {
             title: t('department'),
             path: paths.dashboard.department.root,
             icon: ICONS.label,
-            roles: ['super_admin'],
+            roles: ['super_admin', 'admin'],
             children: [
               {
                 title: t('list'),
                 path: paths.dashboard.department.list,
-                roles: ['super_admin'],
+                roles: ['super_admin', 'admin'],
               },
               {
                 title: t('create'),
@@ -153,12 +153,12 @@ export function useNavData() {
             title: t('Kpi'),
             path: paths.dashboard.kpi.root,
             icon: ICONS.kpi,
-            roles: ['super_admin'],
+            roles: ['super_admin', 'admin'],
             children: [
               {
                 title: t('list'),
                 path: paths.dashboard.kpi.list,
-                roles: ['super_admin'],
+                roles: ['super_admin', 'admin'],
               },
               {
                 title: t('create'),
@@ -172,12 +172,12 @@ export function useNavData() {
             title: t('branch'),
             path: paths.dashboard.branch.root,
             icon: ICONS.branch,
-            roles: ['super_admin'],
+            roles: ['super_admin', 'admin'],
             children: [
               {
                 title: t('list'),
                 path: paths.dashboard.branch.list,
-                roles: ['super_admin'],
+                roles: ['super_admin', 'admin'],
               },
               {
                 title: t('create'),
