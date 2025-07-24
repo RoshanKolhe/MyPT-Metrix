@@ -12,8 +12,8 @@ import CustomPopover, { usePopover } from 'src/components/custom-popover';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Box, Grid } from '@mui/material';
 import { useBoolean } from 'src/hooks/use-boolean';
-import SaleDownloadDummyExcelModel from './sale-import-excel-model';
-import SaleImportExcelModel from './sale-download-dummy-excel-model copy';
+import SaleDownloadDummyExcelModel from './sale-download-dummy-excel-model';
+import SaleImportExcelModel from './sale-import-excel-model';
 
 // ----------------------------------------------------------------------
 
@@ -142,6 +142,7 @@ export default function SaleTableToolbar({
           downloadTemplate.onFalse();
         }}
       />
+      
       <SaleImportExcelModel
         open={importTemplate.value}
         onClose={() => {

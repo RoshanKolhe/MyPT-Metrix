@@ -1,6 +1,4 @@
 import {
-  Count,
-  CountSchema,
   Filter,
   FilterExcludingWhere,
   repository,
@@ -17,6 +15,8 @@ import {
   requestBody,
   response,
   HttpErrors,
+  RestBindings,
+  Response,
 } from '@loopback/rest';
 import {Trainer} from '../models';
 import {TrainerRepository, UserRepository} from '../repositories';
@@ -24,6 +24,7 @@ import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {PermissionKeys} from '../authorization/permission-keys';
 import {inject} from '@loopback/core';
 import {UserProfile} from '@loopback/security';
+import {Workbook} from 'exceljs';
 
 export class TrainerController {
   constructor(
@@ -281,5 +282,68 @@ export class TrainerController {
     });
 
     return trainers;
+  }
+
+  @authenticate('jwt')
+  @post('/staff/export-template', {
+    responses: {
+      description: 'Excel Template Download',
+      content: {
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+          schema: {type: 'string', format: 'binary'},
+        },
+      },
+    },
+  })
+  async exportTemplate(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              branchId: {type: 'number'},
+              departmentId: {type: 'number'},
+            },
+            required: ['branchId', 'departmentId'],
+          },
+        },
+      },
+    })
+    requestBody: {branchId: number; departmentId: number},
+
+    @inject(RestBindings.Http.RESPONSE) response: Response,
+  ): Promise<Response> {
+    const workbook = new Workbook();
+
+    // Sheet 1: SalesAndMembershipDetails
+    const salesSheet = workbook.addWorksheet('StaffDetails');
+    salesSheet.addRow([
+      'srNo',
+      'firstName',
+      'lastName',
+      'dob',
+      'email',
+      'phoneNumber',
+      'supervisorId',
+    ]);
+
+    // Sheet 3: Meta
+    const metaSheet = workbook.addWorksheet('Meta');
+    metaSheet.addRow(['branchId', 'departmentId']);
+    metaSheet.addRow([requestBody.branchId, requestBody.departmentId]);
+
+    // Set headers and return Excel file
+    response.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    response.setHeader(
+      'Content-Disposition',
+      'attachment; filename=template.xlsx',
+    );
+
+    await workbook.xlsx.write(response);
+    return response;
   }
 }

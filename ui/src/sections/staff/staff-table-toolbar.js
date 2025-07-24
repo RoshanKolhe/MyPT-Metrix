@@ -10,10 +10,11 @@ import IconButton from '@mui/material/IconButton';
 import FormControl from '@mui/material/FormControl';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import InputAdornment from '@mui/material/InputAdornment';
-import Select from '@mui/material/Select';
+import { useBoolean } from 'src/hooks/use-boolean';
 // components
 import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
+import StaffDownloadDummyExcelModel from './staff-download-dummy-excel-model';
 
 // ----------------------------------------------------------------------
 
@@ -24,6 +25,7 @@ export default function StaffTableToolbar({
   roleOptions,
 }) {
   const popover = usePopover();
+  const downloadTemplate = useBoolean();
 
   const handleFilterName = useCallback(
     (event) => {
@@ -32,15 +34,9 @@ export default function StaffTableToolbar({
     [onFilters]
   );
 
-  const handleFilterRole = useCallback(
-    (event) => {
-      onFilters(
-        'role',
-        typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value
-      );
-    },
-    [onFilters]
-  );
+  const handleOpenDialog = useCallback(() => {
+    downloadTemplate.onTrue();
+  }, [downloadTemplate]);
 
   return (
     <>
@@ -81,8 +77,17 @@ export default function StaffTableToolbar({
         open={popover.open}
         onClose={popover.onClose}
         arrow="right-top"
-        sx={{ width: 140 }}
+        sx={{ width: 240 }}
       >
+        <MenuItem
+          onClick={() => {
+            handleOpenDialog();
+          }}
+        >
+          <Iconify icon="solar:import-bold" />
+          Download Template
+        </MenuItem>
+
         <MenuItem
           onClick={() => {
             popover.onClose();
@@ -101,6 +106,13 @@ export default function StaffTableToolbar({
           Export
         </MenuItem>
       </CustomPopover>
+
+      <StaffDownloadDummyExcelModel
+        open={downloadTemplate.value}
+        onClose={() => {
+          downloadTemplate.onFalse();
+        }}
+      />
     </>
   );
 }
