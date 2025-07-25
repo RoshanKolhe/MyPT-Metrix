@@ -236,6 +236,7 @@ export default function StaffListView() {
             onFilters={handleFilters}
             //
             roleOptions={_roles}
+            refreshStaffs={refreshStaffs}
           />
 
           {canReset && (
@@ -394,16 +395,12 @@ function applyFilter({ inputData, comparator, filters }) {
 
   if (name) {
     inputData = inputData.filter((staff) =>
-      Object.values(staff).some((value) =>
-        String(value).toLowerCase().includes(name.toLowerCase())
-      )
+      Object.values(staff).some((value) => String(value).toLowerCase().includes(name.toLowerCase()))
     );
   }
 
   if (status !== 'all') {
-    inputData = inputData.filter((staff) =>
-      status === '1' ? staff.isActive : !staff.isActive
-    );
+    inputData = inputData.filter((staff) => (status === '1' ? staff.isActive : !staff.isActive));
   }
 
   if (role.length) {

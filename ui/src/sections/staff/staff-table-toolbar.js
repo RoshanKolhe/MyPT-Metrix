@@ -15,6 +15,7 @@ import { useBoolean } from 'src/hooks/use-boolean';
 import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
 import StaffDownloadDummyExcelModel from './staff-download-dummy-excel-model';
+import StaffImportExcelModel from './staff-import-excel-model';
 
 // ----------------------------------------------------------------------
 
@@ -23,9 +24,11 @@ export default function StaffTableToolbar({
   onFilters,
   //
   roleOptions,
+  refreshStaffs,
 }) {
   const popover = usePopover();
   const downloadTemplate = useBoolean();
+  const importTemplate = useBoolean();
 
   const handleFilterName = useCallback(
     (event) => {
@@ -37,6 +40,10 @@ export default function StaffTableToolbar({
   const handleOpenDialog = useCallback(() => {
     downloadTemplate.onTrue();
   }, [downloadTemplate]);
+
+  const handleOpenImportDialog = useCallback(() => {
+    importTemplate.onTrue();
+  }, [importTemplate]);
 
   return (
     <>
@@ -90,7 +97,7 @@ export default function StaffTableToolbar({
 
         <MenuItem
           onClick={() => {
-            popover.onClose();
+            handleOpenImportDialog();
           }}
         >
           <Iconify icon="solar:import-bold" />
@@ -113,6 +120,14 @@ export default function StaffTableToolbar({
           downloadTemplate.onFalse();
         }}
       />
+
+      <StaffImportExcelModel
+        open={importTemplate.value}
+        onClose={() => {
+          importTemplate.onFalse();
+        }}
+        refreshStaffs={refreshStaffs}
+      />
     </>
   );
 }
@@ -121,4 +136,5 @@ StaffTableToolbar.propTypes = {
   filters: PropTypes.object,
   onFilters: PropTypes.func,
   roleOptions: PropTypes.array,
+  refreshStaffs: PropTypes.func,
 };

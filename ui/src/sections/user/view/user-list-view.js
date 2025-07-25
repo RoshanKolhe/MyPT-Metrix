@@ -84,7 +84,9 @@ export default function UserListView() {
       : _roles;
 
   console.log(roleOptions);
-  const table = useTable();
+  const table = useTable({
+    defaultOrderBy: 'id',
+  });
 
   const settings = useSettingsContext();
 

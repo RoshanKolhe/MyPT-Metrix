@@ -29,6 +29,7 @@ export class Trainer extends Entity {
 
   @property({
     type: 'string',
+    required: true,
   })
   email: string;
 
