@@ -16,6 +16,7 @@ import TableContainer from '@mui/material/TableContainer';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hook';
 import { RouterLink } from 'src/routes/components';
+import * as XLSX from 'xlsx';
 // hooks
 import { useBoolean } from 'src/hooks/use-boolean';
 // components
@@ -164,6 +165,25 @@ export default function StaffListView() {
     setFilters(defaultFilters);
   }, []);
 
+  const handleExport = useCallback(() => {
+    const fileName = 'Staff Report.xlsx';
+
+    const formatted = dataFiltered.map((item) => ({
+      FirstName: item?.firstName || '',
+      LastName: item?.lastName || '',
+      Email: item?.email || '',
+      PhoneNumber: item?.phoneNumber || '',
+      SuperVisor: item?.supervisor?.firstName || '',
+      Branch: item?.branch?.name || '',
+      Department: item?.department?.name || '',
+      CreatedAt: item?.createdAt || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(formatted);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Staff');
+    XLSX.writeFile(wb, fileName);
+  }, [dataFiltered]);
+
   useEffect(() => {
     if (staffs) {
       setTableData(staffs);
@@ -237,6 +257,7 @@ export default function StaffListView() {
             //
             roleOptions={_roles}
             refreshStaffs={refreshStaffs}
+            onExport={handleExport}
           />
 
           {canReset && (

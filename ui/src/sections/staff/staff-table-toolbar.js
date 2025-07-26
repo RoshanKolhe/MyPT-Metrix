@@ -24,6 +24,7 @@ export default function StaffTableToolbar({
   onFilters,
   //
   roleOptions,
+  onExport,
   refreshStaffs,
 }) {
   const popover = usePopover();
@@ -107,6 +108,7 @@ export default function StaffTableToolbar({
         <MenuItem
           onClick={() => {
             popover.onClose();
+            onExport();
           }}
         >
           <Iconify icon="solar:export-bold" />
@@ -137,4 +139,5 @@ StaffTableToolbar.propTypes = {
   onFilters: PropTypes.func,
   roleOptions: PropTypes.array,
   refreshStaffs: PropTypes.func,
+  onExport: PropTypes.func,
 };
