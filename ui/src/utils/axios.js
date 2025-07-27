@@ -60,6 +60,7 @@ export const endpoints = {
     getChartData: (filter) => `/clients/chart-data?${filter}`,
     getFilteredConductionsData: (filter) => `/conductions/chart-data?${filter}`,
     getConductionsData: (filter) => `/conductions/chart-data?${filter}`,
+    getForecastingData: (filter) => `dashboard/forecast?${filter}`,
     getDashboradSummary: `/dashboard/summary`,
   },
   staff: {

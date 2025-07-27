@@ -81,7 +81,7 @@ export default function StaffListView() {
 
   const [filters, setFilters] = useState(defaultFilters);
 
-  const { staffs, staffsLoading, staffsEmpty, refreshStaffs } = useGetStaffs();
+  const { staffs, refreshStaffs } = useGetStaffs();
 
   const dataFiltered = applyFilter({
     inputData: tableData,

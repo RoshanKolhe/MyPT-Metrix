@@ -257,7 +257,7 @@ export class DashboardController {
     return {categories, series};
   }
 
-  @authenticate('jwt')
+  // @authenticate('jwt')
   @get('/dashboard/forecast')
   async forecastData(
     @param.query.string('interval')
@@ -419,8 +419,8 @@ export class DashboardController {
 
     // Flatten all TrainerTargets
     const trainerTargets = targets.flatMap(t =>
-      t.departmentTargets.flatMap((dt: any) =>
-        dt.trainerTargets.map((tt: any) => ({
+      (t.departmentTargets ?? []).flatMap((dt: any) =>
+        (dt.trainerTargets ?? []).map((tt: any) => ({
           trainerId: tt.trainerId,
           trainer: tt.trainer,
           kpiId: tt.kpiId,
@@ -465,7 +465,7 @@ export class DashboardController {
 
       result.push({
         trainerId: tt.trainerId,
-        name: tt.trainer?.name || 'Unknown',
+        name: tt.trainer?.firstName || 'Unknown',
         departmentId: tt.departmentId,
         role: tt.trainer?.role,
         target: tt.targetValue,
@@ -478,6 +478,13 @@ export class DashboardController {
         },
       });
     }
+
+    result.sort((a, b) => b.achieved - a.achieved);
+
+    // Add rank
+    result.forEach((item, index) => {
+      item.rank = index + 1;
+    });
 
     return result;
   }

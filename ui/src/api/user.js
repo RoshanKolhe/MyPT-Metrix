@@ -170,3 +170,22 @@ export function useGetDashboradConductionsData(filter) {
     refreshDashboradConductionsData,
   };
 }
+
+export function useGetDashboradForecastingData(filter) {
+  const URL = endpoints.user.getForecastingData(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradChartData = () => {
+    // Use the `mutate` function to trigger a revalidation
+    mutate();
+  };
+
+  return {
+    dashboradChartData: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradChartData,
+  };
+}

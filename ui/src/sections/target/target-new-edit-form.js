@@ -4,12 +4,12 @@ import * as Yup from 'yup';
 import { useEffect, useState, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { Card, Stack, Grid, Typography, Box, TextField, Button } from '@mui/material';
+import { Card, Grid, Typography, TextField } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'src/components/snackbar';
 import FormProvider, { RHFAutocomplete, RHFTextField } from 'src/components/hook-form';
-import { useGetBranchs, useGetBranchsWithFilter } from 'src/api/branch';
+import { useGetBranchsWithFilter } from 'src/api/branch';
 import { useAuthContext } from 'src/auth/hooks';
 import { useRouter } from 'src/routes/hook';
 import { paths } from 'src/routes/paths';
@@ -96,7 +96,7 @@ export default function TargetNewEditForm({ currentTarget }) {
 
   const branch = watch('branch');
 
-  const { branchTarget, serviceTarget } = useMemo(() => {
+  const { branchTarget } = useMemo(() => {
     let sales = 0;
     let service = 0;
 

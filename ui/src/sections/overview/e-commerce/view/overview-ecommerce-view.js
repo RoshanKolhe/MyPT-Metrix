@@ -35,6 +35,7 @@ import EcommerceSalesOverview from '../ecommerce-sales-overview';
 import EcommerceWidgetSummary from '../ecommerce-widget-summary';
 import EcommerceLatestProducts from '../ecommerce-latest-products';
 import EcommerceYearlyConductions from '../ecommerce-yearly-conductions';
+import EcommerceTargetForecasting from '../ecommerce-target-forecasting';
 
 // ----------------------------------------------------------------------
 
@@ -170,6 +171,10 @@ export default function OverviewEcommerceView() {
               />
             </Grid>
 
+            <Grid xs={12} md={12} lg={12}>
+              <EcommerceTargetForecasting title="Forecasting" subheader="Target forecasting" />
+            </Grid>
+
             <Grid xs={12} md={6} lg={4}>
               <EcommerceSaleByGender
                 title="Sale By Gender"
@@ -187,7 +192,7 @@ export default function OverviewEcommerceView() {
               <EcommerceSalesOverview title="Sales Overview" data={_ecommerceSalesOverview} />
             </Grid>
 
-            <Grid xs={12} md={6} lg={8}>
+            <Grid xs={12} md={12} lg={12}>
               <EcommerceBestSalesman
                 title="Best Salesman"
                 tableData={_ecommerceBestSalesman}
@@ -199,10 +204,6 @@ export default function OverviewEcommerceView() {
                   { id: 'rank', label: 'Rank', align: 'right' },
                 ]}
               />
-            </Grid>
-
-            <Grid xs={12} md={6} lg={4}>
-              <EcommerceLatestProducts title="Latest Products" list={_ecommerceLatestProducts} />
             </Grid>
           </Grid>
         </>
