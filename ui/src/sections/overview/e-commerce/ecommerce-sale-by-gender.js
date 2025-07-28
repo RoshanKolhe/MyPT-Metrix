@@ -9,7 +9,7 @@ import { fNumber } from 'src/utils/format-number';
 import Chart, { useChart } from 'src/components/chart';
 import { useGetDashboradMaleToFemaleRatio } from 'src/api/user';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 // ----------------------------------------------------------------------
 
@@ -56,16 +56,19 @@ export default function EcommerceSaleByGender({ title, subheader, ...other }) {
   } = dashboradMaleToFemaleRatioData;
 
   // Build chart data dynamically
-  const chartData = {
-    colors: [
-      [theme.palette.primary.light, theme.palette.primary.main],
-      [theme.palette.warning.light, theme.palette.warning.main],
-    ],
-    series: [
-      { label: 'Male', value: parseFloat(maleRatio) },
-      { label: 'Female', value: parseFloat(femaleRatio) },
-    ],
-  };
+  const chartData = useMemo(
+    () => ({
+      colors: [
+        [theme.palette.primary.light, theme.palette.primary.main],
+        [theme.palette.warning.light, theme.palette.warning.main],
+      ],
+      series: [
+        { label: 'Male', value: parseFloat(maleRatio) },
+        { label: 'Female', value: parseFloat(femaleRatio) },
+      ],
+    }),
+    [maleRatio, femaleRatio, theme]
+  );
 
   const chartSeries = chartData.series.map((item) => item.value);
 
@@ -97,9 +100,8 @@ export default function EcommerceSaleByGender({ title, subheader, ...other }) {
         dataLabels: {
           value: { offsetY: 16 },
           total: {
-            formatter: () => {
-              console.log(fNumber(totalUniqueClients));
-              return fNumber(totalUniqueClients);
+            formatter () {
+              return fNumber(totalUniqueClients); // read latest state value
             },
           },
         },
