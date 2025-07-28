@@ -189,3 +189,22 @@ export function useGetDashboradForecastingData(filter) {
     refreshDashboradChartData,
   };
 }
+
+export function useGetDashboradMaleToFemaleRatio(filter) {
+  const URL = endpoints.user.getMaleToFemaleRatio(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradMaleToFemaleRatio = () => {
+    // Use the `mutate` function to trigger a revalidation
+    mutate();
+  };
+
+  return {
+    dashboradMaleToFemaleRatioData: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradMaleToFemaleRatio,
+  };
+}

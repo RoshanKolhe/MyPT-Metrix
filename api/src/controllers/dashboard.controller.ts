@@ -554,4 +554,72 @@ export class DashboardController {
 
     return {categories, series};
   }
+
+  @get('/gender-ratio', {
+    responses: {
+      '200': {
+        description: 'Male vs Female client ratio based on unique email',
+        content: {'application/json': {schema: {type: 'object'}}},
+      },
+    },
+  })
+  async getGenderRatio(
+    @param.query.string('startDate') startDate?: string,
+    @param.query.string('endDate') endDate?: string,
+    @param.query.string('departmentId') departmentId?: string,
+    @param.query.string('kpiId') kpiId?: string,
+    @param.query.string('branchId') branchId?: string,
+  ): Promise<object> {
+    const where: any = {};
+
+    // Apply date filter if both dates are provided
+    if (startDate && endDate) {
+      where.createdAt = {
+        between: [new Date(startDate), new Date(endDate)],
+      };
+    }
+
+    // Apply additional filters if provided
+    if (departmentId) where.departmentId = departmentId;
+    if (kpiId) where.kpiId = kpiId;
+    if (branchId) where.branchId = branchId;
+
+    const sales = await this.salesRepository.find({
+      where,
+      fields: {email: true, gender: true},
+    });
+
+    const uniqueClients = new Map<string, string>();
+
+    for (const sale of sales) {
+      const email = sale.email?.toLowerCase();
+      const gender = sale.gender?.toLowerCase();
+
+      if (email && gender && !uniqueClients.has(email)) {
+        uniqueClients.set(email, gender);
+      }
+    }
+
+    let maleCount = 0;
+    let femaleCount = 0;
+
+    for (const gender of uniqueClients.values()) {
+      if (gender === 'male') maleCount++;
+      else if (gender === 'female') femaleCount++;
+    }
+
+    const total = maleCount + femaleCount;
+    const maleRatio = total ? ((maleCount / total) * 100).toFixed(2) : '0.00';
+    const femaleRatio = total
+      ? ((femaleCount / total) * 100).toFixed(2)
+      : '0.00';
+
+    return {
+      maleCount,
+      femaleCount,
+      maleRatio: Number(maleRatio),
+      femaleRatio: Number(femaleRatio),
+      totalUniqueClients: total,
+    };
+  }
 }

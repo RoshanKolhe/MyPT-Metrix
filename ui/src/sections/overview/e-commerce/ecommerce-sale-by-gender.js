@@ -7,6 +7,9 @@ import Card from '@mui/material/Card';
 import { fNumber } from 'src/utils/format-number';
 // components
 import Chart, { useChart } from 'src/components/chart';
+import { useGetDashboradMaleToFemaleRatio } from 'src/api/user';
+import { endOfMonth, format, startOfMonth } from 'date-fns';
+import { useState } from 'react';
 
 // ----------------------------------------------------------------------
 
@@ -28,28 +31,52 @@ const StyledChart = styled(Chart)(({ theme }) => ({
 
 // ----------------------------------------------------------------------
 
-export default function EcommerceSaleByGender({ title, subheader, total, chart, ...other }) {
+export default function EcommerceSaleByGender({ title, subheader, ...other }) {
   const theme = useTheme();
 
+  const [startDate, setStartDate] = useState(startOfMonth(new Date()));
+  const [endDate, setEndDate] = useState(endOfMonth(new Date()));
+  const [selectedKpis, setSelectedKpis] = useState([]);
+
+  // Build query string
+  const queryParams = new URLSearchParams();
+  if (selectedKpis.length) queryParams.append('kpiIds', selectedKpis.join(','));
+  if (startDate) queryParams.append('startDate', format(startDate, 'yyyy-MM-dd'));
+  if (endDate) queryParams.append('endDate', format(endDate, 'yyyy-MM-dd'));
+  const kpiQueryString = queryParams.toString();
+
+  // Fetch chart data from API
+  const { dashboradMaleToFemaleRatioData = {} } = useGetDashboradMaleToFemaleRatio(kpiQueryString);
   const {
-    colors = [
+    maleCount = 0,
+    femaleCount = 0,
+    maleRatio = 0,
+    femaleRatio = 0,
+    totalUniqueClients = 0,
+  } = dashboradMaleToFemaleRatioData;
+
+  // Build chart data dynamically
+  const chartData = {
+    colors: [
       [theme.palette.primary.light, theme.palette.primary.main],
       [theme.palette.warning.light, theme.palette.warning.main],
     ],
-    series,
-    options,
-  } = chart;
+    series: [
+      { label: 'Male', value: parseFloat(maleRatio) },
+      { label: 'Female', value: parseFloat(femaleRatio) },
+    ],
+  };
 
-  const chartSeries = series.map((i) => i.value);
+  const chartSeries = chartData.series.map((item) => item.value);
 
   const chartOptions = useChart({
-    colors: colors.map((colr) => colr[1]),
+    colors: chartData.colors.map((colr) => colr[1]),
     chart: {
       sparkline: {
         enabled: true,
       },
     },
-    labels: series.map((i) => i.label),
+    labels: chartData.series.map((item) => item.label),
     legend: {
       floating: true,
       position: 'bottom',
@@ -58,7 +85,7 @@ export default function EcommerceSaleByGender({ title, subheader, total, chart, 
     fill: {
       type: 'gradient',
       gradient: {
-        colorStops: colors.map((colr) => [
+        colorStops: chartData.colors.map((colr) => [
           { offset: 0, color: colr[0] },
           { offset: 100, color: colr[1] },
         ]),
@@ -70,12 +97,14 @@ export default function EcommerceSaleByGender({ title, subheader, total, chart, 
         dataLabels: {
           value: { offsetY: 16 },
           total: {
-            formatter: () => fNumber(total),
+            formatter: () => {
+              console.log(fNumber(totalUniqueClients));
+              return fNumber(totalUniqueClients);
+            },
           },
         },
       },
     },
-    ...options,
   });
 
   return (

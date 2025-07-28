@@ -61,6 +61,7 @@ export const endpoints = {
     getFilteredConductionsData: (filter) => `/conductions/chart-data?${filter}`,
     getConductionsData: (filter) => `/conductions/chart-data?${filter}`,
     getForecastingData: (filter) => `dashboard/forecast?${filter}`,
+    getMaleToFemaleRatio: (filter) => `gender-ratio?${filter}`,
     getDashboradSummary: `/dashboard/summary`,
   },
   staff: {

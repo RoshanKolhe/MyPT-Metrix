@@ -178,13 +178,6 @@ export default function OverviewEcommerceView() {
             <Grid xs={12} md={6} lg={4}>
               <EcommerceSaleByGender
                 title="Sale By Gender"
-                total={2324}
-                chart={{
-                  series: [
-                    { label: 'Mens', value: 44 },
-                    { label: 'Womens', value: 75 },
-                  ],
-                }}
               />
             </Grid>
 
