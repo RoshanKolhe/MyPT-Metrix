@@ -33,7 +33,7 @@ export default function EcommerceTargetForecasting({
   onFilterChange,
   ...other
 }) {
-  const [interval, setInterval] = useState('monthly');
+  const [interval, setInterval] = useState('yearly');
   const [endDate, setEndDate] = useState(endOfMonth(new Date()));
   const [selectedKpis, setSelectedKpis] = useState([]);
 

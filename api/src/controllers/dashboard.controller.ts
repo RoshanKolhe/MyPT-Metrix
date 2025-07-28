@@ -280,7 +280,7 @@ export class DashboardController {
       endDate = new Date(today.getFullYear(), 11, 31);
     }
 
-    // Fetch targets and sales data
+    // Fetch targets and sales
     const targets = await this.targetRepository.find({
       where: {
         and: [
@@ -298,7 +298,7 @@ export class DashboardController {
       include: ['membershipDetails'],
     });
 
-    // Prepare time buckets (labels)
+    // Prepare time labels
     const labels: string[] = [];
     const days =
       Math.floor(
@@ -314,13 +314,19 @@ export class DashboardController {
       }
     }
 
+    // === Target Series (Cumulative) ===
     const targetTotal = targets.reduce(
       (sum, t) => sum + (t.targetValue || 0),
       0,
     );
-    const targetSeries = Array(days).fill(Math.round(targetTotal / days));
+    const dailyTarget = targetTotal / days;
+    const targetSeries: number[] = [];
+    for (let i = 0; i < days; i++) {
+      targetSeries[i] = Math.round(dailyTarget * (i + 1)); // cumulative
+    }
 
-    const actualSeries = Array(days).fill(0);
+    // === Actual Series (Cumulative) ===
+    const actualDaily = Array(days).fill(0);
     for (const sale of sales) {
       if (!sale.createdAt) continue;
       const d = new Date(sale.createdAt);
@@ -328,12 +334,20 @@ export class DashboardController {
         (d.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
       );
       if (idx >= 0 && idx < days) {
-        actualSeries[idx] += sale.membershipDetails?.discountedPrice || 0;
+        actualDaily[idx] += sale.membershipDetails?.discountedPrice || 0;
       }
     }
 
-    const actualToDate = actualSeries.reduce((sum, val) => sum + val, 0);
-    const daysWithData = actualSeries.filter(v => v > 0).length || 1;
+    const actualSeries: number[] = [];
+    let runningTotal = 0;
+    for (let i = 0; i < days; i++) {
+      runningTotal += actualDaily[i];
+      actualSeries.push(runningTotal);
+    }
+
+    // === Projection & Variance ===
+    const actualToDate = actualSeries[actualSeries.length - 1] || 0;
+    const daysWithData = actualDaily.filter(v => v > 0).length || 1;
     const projected = (actualToDate / daysWithData) * days;
     const varianceAmount = Math.round(projected - targetTotal);
     const variancePercent = parseFloat(
@@ -350,6 +364,7 @@ export class DashboardController {
       message = `Projected to miss target by $${Math.abs(varianceAmount).toLocaleString()} (${variancePercent}%)`;
     }
 
+    // === Response ===
     return {
       interval,
       startDate: startDate.toISOString().split('T')[0],
