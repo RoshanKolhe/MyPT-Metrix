@@ -122,7 +122,7 @@ export default function SaleNewEditForm({ currentSale }) {
       noOfSessions: Yup.number()
         .transform((value, originalValue) => (originalValue === '' ? null : value))
         .typeError('Number of session must be a number')
-        .min(0, 'FNumber of session cannot be negative')
+        .min(0, 'Number of session cannot be negative')
         .nullable(),
       paymentTypes: Yup.array()
         .of(
