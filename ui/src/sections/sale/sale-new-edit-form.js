@@ -119,7 +119,11 @@ export default function SaleNewEditForm({ currentSale }) {
         .typeError('Freezing days must be a number')
         .min(0, 'Freezing days cannot be negative')
         .nullable(),
-      noOfSessions: Yup.number().typeError('Sessions count is required').min(1).required(),
+      noOfSessions: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? null : value))
+        .typeError('Number of session must be a number')
+        .min(0, 'FNumber of session cannot be negative')
+        .nullable(),
       paymentTypes: Yup.array()
         .of(
           Yup.object().shape({
