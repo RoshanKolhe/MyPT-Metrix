@@ -458,7 +458,7 @@ export class SalesController {
             trainerId: 'trainerId',
             'trainingAt(academy,ladies,mixed,home,hybrid)': 'trainingAt',
             'memberType(new,rnl,upgrade,top_up,emi,viya_fit)': 'memberType',
-            'sourceOfLead(leads_update,walkins,phoneins,whatsa_app_direct,website_form,google_ads,meta_ads,insta_direct_message,mypt_app,referral,outreach,total)':
+            'sourceOfLead(leads_update,walkins,phoneins,whatsa_app_direct,whatsa_app_direct_form,google_ads,meta_ads,insta_direct_message,mypt_app,referral,outreach,total)':
               'sourceOfLead',
             'membershipType(academy,gym,pt,home,reformer,ems,group,others)':
               'membershipType',
@@ -522,6 +522,7 @@ export class SalesController {
 
             salesHeaders.forEach((header: any, idx: number) => {
               const mappedKey = excelToModelMap[header];
+              console.log(mappedKey);
               if (!mappedKey) return;
 
               const value = row.getCell(idx + 1).value ?? null;
