@@ -116,9 +116,10 @@ export default function SaleNewEditForm({ currentSale }) {
         .min(Yup.ref('startDate'), 'End date must be after start date'),
       freezingDays: Yup.number()
         .transform((value, originalValue) => (originalValue === '' ? null : value))
-        .typeError('Freezing days be a number')
+        .typeError('Freezing days must be a number')
         .min(0, 'Freezing days cannot be negative')
         .nullable(),
+      noOfSessions: Yup.number().typeError('Sessions count is required').min(1).required(),
       paymentTypes: Yup.array()
         .of(
           Yup.object().shape({
@@ -154,6 +155,7 @@ export default function SaleNewEditForm({ currentSale }) {
       validityDays: currentSale?.membershipDetails?.validityDays || '',
       freeDays: currentSale?.membershipDetails?.freeDays || '',
       numberOfFreeSessions: currentSale?.membershipDetails?.freeSessions || '',
+      noOfSessions: currentSale?.membershipDetails?.noOfSessions || '',
       startDate: currentSale?.membershipDetails?.startDate
         ? new Date(currentSale?.membershipDetails?.startDate)
         : null,
@@ -252,6 +254,7 @@ export default function SaleNewEditForm({ currentSale }) {
           validityDays: formData.validityDays,
           freeDays: formData.freeDays ? formData.freeDays : 0,
           freeSessions: formData.numberOfFreeSessions ? formData.numberOfFreeSessions : 0,
+          noOfSessions: formData.noOfSessions ? formData.noOfSessions : 0,
           startDate: formData.startDate,
           expiryDate: formData.expiryDate,
           freezingDays: formData.freezingDays ? formData.freezingDays : 0,
@@ -882,6 +885,9 @@ export default function SaleNewEditForm({ currentSale }) {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <RHFTextField name="numberOfFreeSessions" label="Free Sessions" type="number" />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFTextField name="noOfSessions" label="Sessions" type="number" />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Controller

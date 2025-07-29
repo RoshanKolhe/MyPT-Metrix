@@ -368,6 +368,7 @@ export class SalesController {
       'validityDays',
       'freeDays',
       'freeSessions',
+      'sessions',
       'startDate',
       'expiryDate',
       'freezingDays',
@@ -467,6 +468,7 @@ export class SalesController {
             validityDays: 'validityDays',
             freeDays: 'freeDays',
             freeSessions: 'freeSessions',
+            sessions: 'noOfSessions',
             startDate: 'startDate',
             expiryDate: 'expiryDate',
             freezingDays: 'freezingDays',
@@ -489,6 +491,7 @@ export class SalesController {
             'validityDays',
             'freeDays',
             'freeSessions',
+            'noOfSessions',
             'startDate',
             'expiryDate',
             'freezingDays',
@@ -549,7 +552,7 @@ export class SalesController {
               deletedBy: null,
               membershipDetails,
             };
-
+            console.log('Parsed Sale:', finalSale);
             sales.push(finalSale);
           }
 
@@ -626,11 +629,8 @@ export class SalesController {
               await tx.commit();
               importedSales.push(createdSale);
             } catch (error) {
+              console.log(error);
               skipped += 1;
-              console.log(
-                `Skipped srNo: ${sale.srNo} due to error:`,
-                error.message,
-              );
             }
           }
 
@@ -639,6 +639,7 @@ export class SalesController {
             skippedCount: skipped,
           });
         } catch (error) {
+          console.log(error);
           reject(error);
         }
       });
@@ -735,6 +736,7 @@ export class SalesController {
         !isValidDate(md.startDate) ||
         !isValidDate(md.expiryDate)
       ) {
+        console.log('Invalid membership details:');
         return false;
       }
     }

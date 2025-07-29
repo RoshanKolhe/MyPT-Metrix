@@ -55,6 +55,13 @@ export class MembershipDetails extends Entity {
   freeSessions?: number | null;
 
   @property({
+    type: 'number',
+    required: false,
+    nullable: true,
+  })
+  noOfSessions?: number | null;
+
+  @property({
     type: 'string',
     required: true,
   })
