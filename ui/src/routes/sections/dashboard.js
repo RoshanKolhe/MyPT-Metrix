@@ -154,11 +154,13 @@ export const dashboardRoutes = [
           { path: ':id/view', element: <DepartmentViewPage /> },
           {
             path: ':id/edit',
-            element: (
-              <RolesAuthRoute roles={['super_admin']}>
-                <DepartmentEditPage />
-              </RolesAuthRoute>
-            ),
+            element: <RolesAuthRoute roles={['super_admin']} />,
+            children: [
+              {
+                path: '',
+                element: <DepartmentEditPage />,
+              },
+            ],
           },
         ],
       },
@@ -169,6 +171,7 @@ export const dashboardRoutes = [
           { element: <KpiListPage />, index: true },
           { path: 'list', element: <KpiListPage /> },
           { path: ':id/view', element: <KpiViewPage /> },
+
           {
             path: 'new',
             element: (
@@ -179,11 +182,13 @@ export const dashboardRoutes = [
           },
           {
             path: ':id/edit',
-            element: (
-              <RolesAuthRoute roles={['super_admin']}>
-                <KpiEditPage />
-              </RolesAuthRoute>
-            ),
+            element: <RolesAuthRoute roles={['super_admin']} />,
+            children: [
+              {
+                path: '',
+                element: <KpiEditPage />,
+              },
+            ],
           },
         ],
       },
@@ -203,11 +208,13 @@ export const dashboardRoutes = [
           },
           {
             path: ':id/edit',
-            element: (
-              <RolesAuthRoute roles={['super_admin']}>
-                <BranchEditPage />
-              </RolesAuthRoute>
-            ),
+            element: <RolesAuthRoute roles={['super_admin']} />,
+            children: [
+              {
+                path: '',
+                element: <BranchEditPage />,
+              },
+            ],
           },
           { path: ':id/view', element: <BranchViewPage /> },
         ],
