@@ -17,10 +17,9 @@ export class MembershipDetails extends Entity {
   membershipType: object[];
 
   @property({
-    type: 'string',
-    required: true,
+    type: 'date',
   })
-  purchaseDate: string;
+  purchaseDate?: Date;
 
   @property({
     type: 'number',

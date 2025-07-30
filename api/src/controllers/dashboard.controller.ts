@@ -3,6 +3,7 @@
 import {repository} from '@loopback/repository';
 import {
   ConductionRepository,
+  MembershipDetailsRepository,
   SalesRepository,
   TargetRepository,
   UserRepository,
@@ -27,6 +28,9 @@ export class DashboardController {
   constructor(
     @repository(SalesRepository)
     public salesRepository: SalesRepository,
+    @repository(MembershipDetailsRepository)
+    public membershipDetailsRepository: MembershipDetailsRepository,
+
     @repository(UserRepository)
     public userRepository: UserRepository,
     @repository(TargetRepository)
@@ -200,7 +204,8 @@ export class DashboardController {
   @authenticate('jwt')
   @get('/clients/chart-data')
   @response(200, {
-    description: 'Chart data grouped by KPI',
+    description:
+      'Chart data grouped by KPI (filtered by membershipDetails.purchaseDate)',
   })
   async getClientChartData(
     @param.query.string('startDate') startDate: string,
@@ -213,19 +218,48 @@ export class DashboardController {
           .map(id => Number(id.trim()))
           .filter(id => !isNaN(id))
       : [];
-    const sales: any = await this.salesRepository.find({
-      where: {
-        and: [
-          {createdAt: {gte: new Date(startDate)}},
-          {createdAt: {lte: new Date(endDate)}},
-          {isDeleted: false},
-          ...(kpiIds?.length ? [{kpiId: {inq: kpiIds}}] : []),
-        ],
-      },
-      include: [{relation: 'kpi', scope: {fields: ['id', 'name']}}],
-    });
 
-    // Initialize date range
+    // Step 1: Fetch membershipDetails within the date range
+    const membershipRecords = await this.membershipDetailsRepository.find({
+      where: {
+        purchaseDate: {
+          between: [new Date(startDate), new Date(endDate)],
+        },
+      },
+      include: [
+        {
+          relation: 'sales',
+          scope: {
+            where: {
+              isDeleted: false,
+              ...(kpiIds.length ? {kpiId: {inq: kpiIds}} : {}),
+            },
+            include: [
+              {
+                relation: 'kpi',
+                scope: {
+                  fields: ['id', 'name'],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+    // Step 2: Flatten sales from memberships
+    const filteredSales = membershipRecords
+      .map((m: any) => {
+        if (!m.sales) return null;
+        return {
+          sale: m.sales,
+          purchaseDate: m.purchaseDate,
+        };
+      })
+      .filter(
+        (item): item is {sale: any; purchaseDate: Date | string} => !!item,
+      );
+
+    // Step 3: Prepare categories (date range)
     const categories: string[] = [];
     const dateMap: {[date: string]: {[kpiName: string]: number}} = {};
     const kpiSet = new Set<string>();
@@ -239,16 +273,25 @@ export class DashboardController {
       dateMap[dateStr] = {};
     }
 
-    for (const s of sales) {
-      const dateStr = s.createdAt?.toISOString().split('T')[0];
-      const kpiName = s.kpi?.name || 'Unknown KPI';
+    // Step 4: Count sales per day per KPI
+    for (const {sale, purchaseDate} of filteredSales) {
+      const dateStr =
+        purchaseDate instanceof Date
+          ? purchaseDate.toISOString().split('T')[0]
+          : typeof purchaseDate === 'string'
+            ? new Date(purchaseDate).toISOString().split('T')[0]
+            : null;
+
       if (!dateStr || !dateMap[dateStr]) continue;
 
+      const kpiName = sale.kpi?.name || 'Unknown KPI';
       kpiSet.add(kpiName);
+
       if (!dateMap[dateStr][kpiName]) dateMap[dateStr][kpiName] = 0;
       dateMap[dateStr][kpiName]++;
     }
 
+    // Step 5: Construct series for chart
     const series = Array.from(kpiSet).map(kpiName => ({
       name: kpiName,
       data: categories.map(date => dateMap[date][kpiName] || 0),
@@ -257,7 +300,7 @@ export class DashboardController {
     return {categories, series};
   }
 
-  // @authenticate('jwt')
+  @authenticate('jwt')
   @get('/dashboard/forecast')
   async forecastData(
     @param.query.string('interval')
@@ -402,7 +445,7 @@ export class DashboardController {
     const lastEnd = new Date(startDate);
     lastEnd.setDate(lastEnd.getDate() - 1);
 
-    // Fetch all targets in date range
+    // Fetch targets
     const targets = await this.targetRepository.find({
       where: {
         branchId,
@@ -432,7 +475,7 @@ export class DashboardController {
       ],
     });
 
-    // Flatten all TrainerTargets
+    // Flatten TrainerTargets
     const trainerTargets = targets.flatMap(t =>
       (t.departmentTargets ?? []).flatMap((dt: any) =>
         (dt.trainerTargets ?? []).map((tt: any) => ({
@@ -448,32 +491,44 @@ export class DashboardController {
     const result: any[] = [];
 
     for (const tt of trainerTargets) {
-      // Current period sales
+      // Current period actual value
       const sales = await this.salesRepository.find({
         where: {
           trainerId: tt.trainerId,
           createdAt: {between: [startDate, endDate]},
         },
+        include: ['membershipDetails'],
       });
 
-      const actual = sales.length;
+      const actual = sales.reduce((sum, sale) => {
+        return sum + (sale.membershipDetails?.discountedPrice || 0);
+      }, 0);
 
-      // Last period sales
+      // Last period actual value
       const lastSales = await this.salesRepository.find({
         where: {
           trainerId: tt.trainerId,
           createdAt: {between: [lastStart, lastEnd]},
         },
+        include: ['membershipDetails'],
       });
 
-      const previousActual = lastSales.length;
-      const achieved = tt.targetValue ? (actual / tt.targetValue) * 100 : 0;
-      const delta =
-        previousActual === 0
-          ? 100
-          : ((actual - previousActual) / previousActual) * 100;
+      const previousActual = lastSales.reduce((sum, sale) => {
+        return sum + (sale.membershipDetails?.discountedPrice || 0);
+      }, 0);
 
-      // Status
+      // Achievement % and delta
+      const achieved = tt.targetValue ? (actual / tt.targetValue) * 100 : 0;
+      let delta = 0;
+      if (previousActual === 0 && actual > 0) {
+        delta = 100;
+      } else if (previousActual === 0 && actual === 0) {
+        delta = 0;
+      } else {
+        delta = ((actual - previousActual) / previousActual) * 100;
+      }
+
+      // Performance Status
       let status = 'Under Performer';
       if (achieved >= 100 && achieved < 110) status = 'Achiever';
       else if (achieved >= 110) status = 'Over Achiever';
@@ -484,19 +539,18 @@ export class DashboardController {
         departmentId: tt.departmentId,
         role: tt.trainer?.role,
         target: tt.targetValue,
-        actual,
+        actual: Math.round(actual),
         achieved: +achieved.toFixed(1),
         status,
         changeFromLastPeriod: {
           percent: +delta.toFixed(1),
-          previousActual,
+          previousActual: Math.round(previousActual),
         },
       });
     }
 
+    // Sort and rank
     result.sort((a, b) => b.achieved - a.achieved);
-
-    // Add rank
     result.forEach((item, index) => {
       item.rank = index + 1;
     });
