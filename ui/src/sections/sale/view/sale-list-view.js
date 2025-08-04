@@ -38,7 +38,7 @@ import {
 //
 // eslint-disable-next-line import/no-extraneous-dependencies
 import * as XLSX from 'xlsx';
-import { useGetSales } from 'src/api/sale';
+import { useGetSales, useGetSalesWithFilter } from 'src/api/sale';
 import { _roles } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'notistack';
@@ -65,6 +65,7 @@ const TABLE_HEAD = [
   { id: 'purchaseDate', label: 'Purchase Date' },
   { id: 'membershipType', label: 'Membership Type(s)' },
   { id: 'actualPrice', label: 'Actual Price (AED)' },
+  { id: 'discountedPrice', label: 'Discounted Price (AED)' },
   { id: 'validityDays', label: 'Validity (Days)' },
   { id: 'expiryDate', label: 'Expiry Date' },
   { id: 'freezingDays', label: 'Freezing Days' },
@@ -101,7 +102,20 @@ export default function SaleListView() {
 
   const [filters, setFilters] = useState(defaultFilters);
 
-  const { sales, salesLoading, salesEmpty, refreshSales } = useGetSales();
+  const rawFilter = {
+    where: {
+      isDeleted: false,
+    },
+  };
+
+  const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
+
+  const {
+    filteredSales: sales,
+    salesLoading,
+    salesEmpty,
+    refreshFilterSales: refreshSales,
+  } = useGetSalesWithFilter(encodedFilter);
 
   const dataFiltered = applyFilter({
     inputData: tableData,
@@ -482,9 +496,16 @@ function applyFilter({ inputData, comparator, filters }) {
   }
 
   if (filters.startDate && filters.endDate) {
+    console.log('here');
+    const start = new Date(filters.startDate).toISOString().split('T')[0];
+    const end = new Date(filters.endDate).toISOString().split('T')[0];
+
     inputData = inputData.filter((sale) => {
-      const saleDate = new Date(sale.createdAt);
-      return saleDate >= new Date(filters.startDate) && saleDate <= new Date(filters.endDate);
+      const purchaseDate = sale.membershipDetails?.purchaseDate;
+      if (!purchaseDate) return false;
+
+      const dateOnly = new Date(purchaseDate).toISOString().split('T')[0];
+      return dateOnly >= start && dateOnly <= end;
     });
   }
 

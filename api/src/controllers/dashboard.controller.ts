@@ -263,10 +263,17 @@ export class DashboardController {
         return {
           sale: m.sales,
           purchaseDate: m.purchaseDate,
+          discountedPrice: m.discountedPrice ?? 0,
         };
       })
       .filter(
-        (item): item is {sale: any; purchaseDate: Date | string} => !!item,
+        (
+          item,
+        ): item is {
+          sale: any;
+          purchaseDate: Date | string;
+          discountedPrice: number;
+        } => !!item,
       );
 
     // Step 3: Prepare categories (date range)
@@ -278,27 +285,24 @@ export class DashboardController {
     const end = new Date(endDate);
 
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       categories.push(dateStr);
       dateMap[dateStr] = {};
     }
 
-    // Step 4: Count sales per day per KPI
-    for (const {sale, purchaseDate} of filteredSales) {
-      const dateStr =
-        purchaseDate instanceof Date
-          ? purchaseDate.toISOString().split('T')[0]
-          : typeof purchaseDate === 'string'
-            ? new Date(purchaseDate).toISOString().split('T')[0]
-            : null;
+    // Step 4: Sum discountedPrice per day per KPI
+    for (const {sale, purchaseDate, discountedPrice} of filteredSales) {
+      const d = new Date(purchaseDate);
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-      if (!dateStr || !dateMap[dateStr]) continue;
+      if (!dateMap[dateStr]) continue;
 
       const kpiName = sale.kpi?.name || 'Unknown KPI';
       kpiSet.add(kpiName);
 
       if (!dateMap[dateStr][kpiName]) dateMap[dateStr][kpiName] = 0;
-      dateMap[dateStr][kpiName]++;
+
+      dateMap[dateStr][kpiName] += discountedPrice;
     }
 
     // Step 5: Construct series for chart

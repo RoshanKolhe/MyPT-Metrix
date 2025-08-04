@@ -46,6 +46,11 @@ export default function EcommerceYearlyConductions({
   const { series = [], categories = [], colors, options = {} } = dashboradConductionsData;
   const chartOptions = useChart({
     colors,
+    plotOptions: {
+      bar: {
+        columnWidth: '60%',
+      },
+    },
     legend: {
       position: 'top',
       horizontalAlign: 'left',
@@ -145,7 +150,7 @@ export default function EcommerceYearlyConductions({
       {isMobile && <Box sx={{ mt: 2, px: 3, pb: 2 }}>{FilterFields}</Box>}
       <Box sx={{ mt: 3, mx: 3, overflowX: 'auto' }}>
         <Box sx={{ minWidth: Math.max(series[0]?.data.length * 80, 600) }}>
-          <Chart dir="ltr" type="area" series={series} options={chartOptions} height={364} />
+          <Chart dir="ltr" type="bar" series={series} options={chartOptions} height={364} />
         </Box>
       </Box>
     </Card>
