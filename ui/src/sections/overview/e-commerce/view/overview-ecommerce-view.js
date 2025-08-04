@@ -17,6 +17,7 @@ import { useSettingsContext } from 'src/components/settings';
 import { useGetDashboradSummary } from 'src/api/user';
 import { fShortenNumber } from 'src/utils/format-number';
 import {
+  Autocomplete,
   Box,
   Checkbox,
   FormControl,
@@ -24,10 +25,12 @@ import {
   MenuItem,
   OutlinedInput,
   Select,
+  TextField,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useGetKpisWithFilter } from 'src/api/kpi';
 import { useAuthContext } from 'src/auth/hooks';
+import { useGetBranchsWithFilter } from 'src/api/branch';
 import EcommerceYearlySales from '../ecommerce-yearly-sales';
 import EcommerceBestSalesman from '../ecommerce-best-salesman';
 import EcommerceSaleByGender from '../ecommerce-sale-by-gender';
@@ -43,13 +46,17 @@ export default function OverviewEcommerceView() {
   const { user } = useAuthContext();
   const isSuperOrAdmin =
     user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
-  const [selectedKpis, setSelectedKpis] = useState([]);
 
+  const [selectedKpiIds, setSelectedKpiIds] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState();
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState();
+
+  const [departments, setDepartments] = useState([]);
   const [kpiOptions, setKpiOptions] = useState([]);
   const [salesKpiOptions, setSalesKpiOptions] = useState([]);
   const [serviceKpiOptions, setServiceKpiOptions] = useState([]);
 
-  const kpiQueryString = selectedKpis.length ? `kpiIds=${selectedKpis.join(',')}` : '';
+  const kpiQueryString = selectedKpiIds.length ? `kpiIds=${selectedKpiIds.join(',')}` : '';
 
   const { dashboardCounts } = useGetDashboradSummary(kpiQueryString);
 
@@ -61,61 +68,102 @@ export default function OverviewEcommerceView() {
 
   const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
 
-  const { filteredKpis: kpis } = useGetKpisWithFilter(encodedFilter);
+  const { filteredbranches: branches } = useGetBranchsWithFilter(encodedFilter);
 
   const theme = useTheme();
 
   const settings = useSettingsContext();
 
-  const handleKpiChange = (event) => {
-    const {
-      target: { value },
-    } = event;
-    setSelectedKpis(typeof value === 'string' ? value.split(',') : value);
-  };
+  // useEffect(() => {
+  //   if (kpis && kpis.length) {
+  //     const sales = kpis.filter((kpi) => kpi.type === 'sales');
+  //     const service = kpis.filter((kpi) => kpi.type === 'service');
 
-  useEffect(() => {
-    if (kpis && kpis.length) {
-      const sales = kpis.filter((kpi) => kpi.type === 'sales');
-      const service = kpis.filter((kpi) => kpi.type === 'service');
-
-      setSalesKpiOptions(sales);
-      setServiceKpiOptions(service);
-      setKpiOptions(kpis);
-    }
-  }, [kpis]);
+  //     setSalesKpiOptions(sales);
+  //     setServiceKpiOptions(service);
+  //     setKpiOptions(kpis);
+  //   }
+  // }, [kpis]);
 
   return (
     <Container maxWidth={settings.themeStretch ? false : 'xl'}>
       {isSuperOrAdmin ? (
         <>
           <Box sx={{ mb: 3 }}>
-            <FormControl size="small" sx={{ flexShrink: 0, width: { xs: 1, md: 300 } }}>
-              <InputLabel>KPIs</InputLabel>
-              <Select
-                multiple
-                size="small"
-                value={selectedKpis}
-                onChange={handleKpiChange}
-                input={<OutlinedInput label="KPIs" />}
-                renderValue={(selected) =>
-                  selected
-                    .map((id) => kpis.find((option) => option.id === id)?.name)
-                    .filter(Boolean)
-                    .join(', ')
-                }
-                MenuProps={{ PaperProps: { sx: { maxHeight: 240 } } }}
-              >
-                {salesKpiOptions &&
-                  salesKpiOptions.length &&
-                  salesKpiOptions.map((option) => (
-                    <MenuItem key={option.id} value={option.id}>
-                      <Checkbox size="small" checked={selectedKpis.includes(option.id)} />
-                      {option.name}
-                    </MenuItem>
-                  ))}
-              </Select>
-            </FormControl>
+            <Grid container spacing={2}>
+              {/* Branch Autocomplete */}
+              <Grid item xs={12} md={3}>
+                <FormControl size="small" fullWidth>
+                  <Autocomplete
+                    size="small"
+                    options={branches}
+                    getOptionLabel={(option) => option.name}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    value={branches.find((b) => b.id === selectedBranchId) || null}
+                    onChange={(event, newValue) => {
+                      if (newValue) {
+                        setSelectedBranchId(newValue.id);
+                        setDepartments(newValue.departments || []);
+                        setSelectedDepartmentId(null); // reset department on branch change
+                      } else {
+                        setSelectedBranchId(null);
+                        setDepartments([]);
+                        setSelectedDepartmentId(null);
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Branch" placeholder="Select Branch" />
+                    )}
+                  />
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                {/* Department Autocomplete */}
+                <FormControl size="small" fullWidth>
+                  <Autocomplete
+                    size="small"
+                    options={departments}
+                    getOptionLabel={(option) => option.name}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    value={departments.find((d) => d.id === selectedDepartmentId) || null}
+                    onChange={(event, newValue) => {
+                      if (newValue) {
+                        setSelectedDepartmentId(newValue.id);
+                        setKpiOptions(newValue.kpis || []);
+                        setSelectedKpiIds([]); // Clear selected KPIs
+                      } else {
+                        setSelectedDepartmentId(null);
+                        setKpiOptions([]);
+                        setSelectedKpiIds([]);
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Department" placeholder="Select Department" />
+                    )}
+                  />
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                {/* Department Autocomplete */}
+                <FormControl size="small" fullWidth>
+                  <Autocomplete
+                    multiple
+                    size="small"
+                    options={kpiOptions}
+                    getOptionLabel={(option) => option.name}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    value={kpiOptions.filter((kpi) => selectedKpiIds.includes(kpi.id))}
+                    onChange={(event, newValue) => {
+                      // newValue is an array of selected KPI objects
+                      setSelectedKpiIds(newValue.map((kpi) => kpi.id));
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} label="KPIs" placeholder="Select KPIs" />
+                    )}
+                  />
+                </FormControl>
+              </Grid>
+            </Grid>
           </Box>
           <Grid container spacing={3}>
             <Grid xs={12} md={4}>
@@ -176,14 +224,12 @@ export default function OverviewEcommerceView() {
             </Grid>
 
             <Grid xs={12} md={6} lg={4}>
-              <EcommerceSaleByGender
-                title="Sale By Gender"
-              />
+              <EcommerceSaleByGender title="Sale By Gender" />
             </Grid>
 
-            <Grid xs={12} md={6} lg={8}>
+            {/* <Grid xs={12} md={6} lg={8}>
               <EcommerceSalesOverview title="Sales Overview" data={_ecommerceSalesOverview} />
-            </Grid>
+            </Grid> */}
 
             <Grid xs={12} md={12} lg={12}>
               <EcommerceBestSalesman

@@ -21,10 +21,9 @@ export class Conduction extends Entity {
   conductions: number;
 
   @property({
-    type: 'string',
-    required: true,
+    type: 'date',
   })
-  conductionDate: string;
+  conductionDate?: Date;
 
   @property({
     type: 'date',

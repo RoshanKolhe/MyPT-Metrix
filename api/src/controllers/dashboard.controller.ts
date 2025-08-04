@@ -45,6 +45,10 @@ export class DashboardController {
   @get('/dashboard/summary')
   async getSummary(
     @param.query.string('kpiIds') kpiIdsStr?: string,
+    @param.query.number('branchId') branchId?: number,
+    @param.query.number('departmentId') departmentId?: number,
+    @param.query.string('startDate') startDateStr?: string,
+    @param.query.string('endDate') endDateStr?: string,
   ): Promise<any> {
     const kpiIds = kpiIdsStr
       ? kpiIdsStr
@@ -68,8 +72,13 @@ export class DashboardController {
       },
     };
 
-    if (kpiIds.length > 0) {
-      filter.where.kpiId = {inq: kpiIds};
+    if (kpiIds.length > 0) filter.where.kpiId = {inq: kpiIds};
+    if (branchId) filter.where.branchId = branchId;
+    if (departmentId) filter.where.departmentId = departmentId;
+    if (startDateStr && endDateStr) {
+      filter.where.createdAt = {
+        between: [new Date(startDateStr), new Date(endDateStr)],
+      };
     }
 
     console.log('filter', JSON.stringify(filter));
@@ -246,6 +255,7 @@ export class DashboardController {
         },
       ],
     });
+
     // Step 2: Flatten sales from memberships
     const filteredSales = membershipRecords
       .map((m: any) => {
@@ -578,8 +588,11 @@ export class DashboardController {
       : [];
 
     const whereConditions: any[] = [
-      {createdAt: {gte: new Date(startDate)}},
-      {createdAt: {lte: new Date(endDate)}},
+      {
+        conductionDate: {
+          between: [new Date(startDate), new Date(endDate)],
+        },
+      },
       {isDeleted: false},
     ];
 
