@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Box, Grid, IconButton, Tooltip } from '@mui/material';
+import { Grid, IconButton, Tooltip } from '@mui/material';
 import FormProvider, { RHFAutocomplete } from 'src/components/hook-form';
 import { Controller, useForm } from 'react-hook-form';
 import { DatePicker } from '@mui/x-date-pickers';

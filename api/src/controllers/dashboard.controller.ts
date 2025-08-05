@@ -490,6 +490,9 @@ export class DashboardController {
       },
       include: [
         {
+          relation: 'branch',
+        },
+        {
           relation: 'departmentTargets',
           scope: {
             where: {
@@ -497,6 +500,9 @@ export class DashboardController {
               isDeleted: false,
             },
             include: [
+              {
+                relation: 'department',
+              },
               {
                 relation: 'trainerTargets',
                 scope: {
@@ -511,7 +517,7 @@ export class DashboardController {
     });
 
     // Flatten TrainerTargets
-    const trainerTargets = targets.flatMap(t =>
+    const trainerTargets = targets.flatMap((t: any) =>
       (t.departmentTargets ?? []).flatMap((dt: any) =>
         (dt.trainerTargets ?? []).map((tt: any) => ({
           trainerId: tt.trainerId,
@@ -519,6 +525,9 @@ export class DashboardController {
           kpiId: tt.kpiId,
           targetValue: tt.targetValue,
           departmentId: dt.departmentId,
+          department: dt.department,
+          branchId: t.branchId,
+          branch: t.branch,
         })),
       ),
     );
@@ -572,6 +581,9 @@ export class DashboardController {
         trainerId: tt.trainerId,
         name: tt.trainer?.firstName || 'Unknown',
         departmentId: tt.departmentId,
+        department: tt.department ?? null, // Include department details
+        branchId: tt.branchId,
+        branch: tt.branch ?? null, // Include branch details
         role: tt.trainer?.role,
         target: tt.targetValue,
         actual: Math.round(actual),
