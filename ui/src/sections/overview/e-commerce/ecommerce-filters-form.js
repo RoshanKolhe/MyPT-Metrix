@@ -61,6 +61,10 @@ const EcommerceFiltersForm = ({
     onFilterChange?.({ branch, department, kpis, startDate, endDate });
   }, [kpis]);
 
+  useEffect(() => {
+    onFilterChange?.({ branch, department, kpis, startDate, endDate });
+  }, [kpis, startDate, endDate]);
+
   return (
     <Grid container spacing={2}>
       {/* Always show the icon, left-aligned */}

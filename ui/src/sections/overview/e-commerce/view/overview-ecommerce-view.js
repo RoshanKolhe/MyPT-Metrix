@@ -3,41 +3,22 @@ import { useTheme } from '@mui/material/styles';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Unstable_Grid2';
-// hooks
-import { useMockedUser } from 'src/hooks/use-mocked-user';
 // _mock
-import {
-  _ecommerceSalesOverview,
-  _ecommerceBestSalesman,
-  _ecommerceLatestProducts,
-} from 'src/_mock';
+import { _ecommerceBestSalesman } from 'src/_mock';
 // components
 import { useSettingsContext } from 'src/components/settings';
 //
 import { useGetDashboradSummary } from 'src/api/user';
 import { fShortenNumber } from 'src/utils/format-number';
-import {
-  Autocomplete,
-  Box,
-  Checkbox,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  OutlinedInput,
-  Select,
-  TextField,
-} from '@mui/material';
+import { Box } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { useGetKpisWithFilter } from 'src/api/kpi';
 import { useAuthContext } from 'src/auth/hooks';
 import { useGetBranchsWithFilter } from 'src/api/branch';
-import { endOfMonth, startOfMonth } from 'date-fns';
+import { endOfMonth, format, startOfMonth } from 'date-fns';
 import EcommerceYearlySales from '../ecommerce-yearly-sales';
 import EcommerceBestSalesman from '../ecommerce-best-salesman';
 import EcommerceSaleByGender from '../ecommerce-sale-by-gender';
-import EcommerceSalesOverview from '../ecommerce-sales-overview';
 import EcommerceWidgetSummary from '../ecommerce-widget-summary';
-import EcommerceLatestProducts from '../ecommerce-latest-products';
 import EcommerceYearlyConductions from '../ecommerce-yearly-conductions';
 import EcommerceTargetForecasting from '../ecommerce-target-forecasting';
 import EcommerceFiltersForm from '../ecommerce-filters-form';
@@ -57,16 +38,21 @@ export default function OverviewEcommerceView() {
     endDate: endOfMonth(new Date()),
   });
 
-  const [selectedKpiIds, setSelectedKpiIds] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [departments, setDepartments] = useState([]);
   const [kpiOptions, setKpiOptions] = useState([]);
-  const [salesKpiOptions, setSalesKpiOptions] = useState([]);
   const [serviceKpiOptions, setServiceKpiOptions] = useState([]);
 
-  const kpiQueryString = selectedKpiIds.length ? `kpiIds=${selectedKpiIds.join(',')}` : '';
+  const queryString = [
+    filters.kpis?.length ? `kpiIds=${filters.kpis.map((k) => k.id).join(',')}` : '',
+    filters.branch?.id ? `branchId=${filters.branch.id}` : '',
+    filters.department?.id ? `departmentId=${filters.department.id}` : '',
+    filters.startDate ? `startDate=${format(new Date(filters.startDate), 'yyyy-MM-dd')}` : '',
+    filters.endDate ? `endDate=${format(new Date(filters.endDate), 'yyyy-MM-dd')}` : '',
+  ]
+    .filter(Boolean)
+    .join('&');
 
-  const { dashboardCounts } = useGetDashboradSummary(kpiQueryString);
+  const { dashboardCounts, refreshDashboardSummary } = useGetDashboradSummary(queryString);
 
   const rawFilter = {
     where: {
@@ -84,10 +70,30 @@ export default function OverviewEcommerceView() {
 
   const handleFilterChange = (newValues) => {
     console.log('Filter changed:', newValues);
-    setFilters((prev) => ({
-      ...prev,
+
+    // Merge new values with previous filters
+    const updatedFilters = {
+      ...filters,
       ...newValues,
-    }));
+    };
+
+    setFilters(updatedFilters);
+
+    // Generate query string from updatedFilters
+    const updatedQueryString = [
+      updatedFilters.kpis?.length ? `kpiIds=${updatedFilters.kpis.map((k) => k.id).join(',')}` : '',
+      updatedFilters.branch?.id ? `branchId=${updatedFilters.branch.id}` : '',
+      updatedFilters.department?.id ? `departmentId=${updatedFilters.department.id}` : '',
+      updatedFilters.startDate
+        ? `startDate=${new Date(updatedFilters.startDate).toISOString()}`
+        : '',
+      updatedFilters.endDate ? `endDate=${new Date(updatedFilters.endDate).toISOString()}` : '',
+    ]
+      .filter(Boolean)
+      .join('&');
+
+    // Call with latest query string
+    refreshDashboardSummary(updatedQueryString);
   };
 
   useEffect(() => {

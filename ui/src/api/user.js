@@ -109,9 +109,12 @@ export function useGetDashboradSummary(filter) {
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshDashboardCounts = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
+  const refreshDashboardSummary = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredDashboradSummary(newFilter)
+      : endpoints.user.getDashboradSummary;
+
+    mutate(newURL); // trigger re-fetch for new URL
   };
 
   return {
@@ -119,7 +122,7 @@ export function useGetDashboradSummary(filter) {
     isLoading,
     error,
     isValidating,
-    refreshDashboardCounts,
+    refreshDashboardSummary,
   };
 }
 
