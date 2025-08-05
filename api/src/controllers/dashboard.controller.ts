@@ -77,7 +77,8 @@ export class DashboardController {
     if (departmentId) filter.where.departmentId = departmentId;
     if (startDateStr && endDateStr) {
       filter.where.createdAt = {
-        between: [new Date(startDateStr), new Date(endDateStr)],
+        gte: new Date(new Date(startDateStr).setHours(0, 0, 0, 0)),
+        lte: new Date(new Date(endDateStr).setHours(23, 59, 59, 999)),
       };
     }
 
@@ -131,7 +132,10 @@ export class DashboardController {
     const thisWeekSales = await this.salesRepository.find({
       where: {
         ...filter.where,
-        createdAt: {between: [startDate, today]},
+        createdAt: {
+          gte: new Date(startDate.setHours(0, 0, 0, 0)),
+          lte: new Date(today.setHours(23, 59, 59, 999)),
+        },
       },
       include: ['membershipDetails'],
     });
@@ -139,7 +143,10 @@ export class DashboardController {
     const lastWeekSales = await this.salesRepository.find({
       where: {
         ...filter.where,
-        createdAt: {between: [lastWeekStart, lastWeekEnd]},
+        createdAt: {
+          gte: new Date(lastWeekStart.setHours(0, 0, 0, 0)),
+          lte: new Date(lastWeekEnd.setHours(23, 59, 59, 999)),
+        },
       },
       include: ['membershipDetails'],
     });
@@ -608,10 +615,8 @@ export class DashboardController {
     const whereConditions: any[] = [
       {
         conductionDate: {
-          between: [
-            new Date(startDate),
-            new Date(new Date(endDate).setHours(23, 59, 59, 999)),
-          ],
+          gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+          lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
         },
       },
       {isDeleted: false},
