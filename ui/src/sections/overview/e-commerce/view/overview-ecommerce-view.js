@@ -31,6 +31,7 @@ import { useEffect, useState } from 'react';
 import { useGetKpisWithFilter } from 'src/api/kpi';
 import { useAuthContext } from 'src/auth/hooks';
 import { useGetBranchsWithFilter } from 'src/api/branch';
+import { endOfMonth, startOfMonth } from 'date-fns';
 import EcommerceYearlySales from '../ecommerce-yearly-sales';
 import EcommerceBestSalesman from '../ecommerce-best-salesman';
 import EcommerceSaleByGender from '../ecommerce-sale-by-gender';
@@ -39,6 +40,7 @@ import EcommerceWidgetSummary from '../ecommerce-widget-summary';
 import EcommerceLatestProducts from '../ecommerce-latest-products';
 import EcommerceYearlyConductions from '../ecommerce-yearly-conductions';
 import EcommerceTargetForecasting from '../ecommerce-target-forecasting';
+import EcommerceFiltersForm from '../ecommerce-filters-form';
 
 // ----------------------------------------------------------------------
 
@@ -47,10 +49,16 @@ export default function OverviewEcommerceView() {
   const isSuperOrAdmin =
     user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
 
-  const [selectedKpiIds, setSelectedKpiIds] = useState([]);
-  const [selectedBranchId, setSelectedBranchId] = useState();
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState();
+  const [filters, setFilters] = useState({
+    branch: null,
+    department: null,
+    kpis: [],
+    startDate: startOfMonth(new Date()),
+    endDate: endOfMonth(new Date()),
+  });
 
+  const [selectedKpiIds, setSelectedKpiIds] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [kpiOptions, setKpiOptions] = useState([]);
   const [salesKpiOptions, setSalesKpiOptions] = useState([]);
@@ -74,16 +82,20 @@ export default function OverviewEcommerceView() {
 
   const settings = useSettingsContext();
 
-  // useEffect(() => {
-  //   if (kpis && kpis.length) {
-  //     const sales = kpis.filter((kpi) => kpi.type === 'sales');
-  //     const service = kpis.filter((kpi) => kpi.type === 'service');
+  const handleFilterChange = (newValues) => {
+    console.log('Filter changed:', newValues);
+    setFilters((prev) => ({
+      ...prev,
+      ...newValues,
+    }));
+  };
 
-  //     setSalesKpiOptions(sales);
-  //     setServiceKpiOptions(service);
-  //     setKpiOptions(kpis);
-  //   }
-  // }, [kpis]);
+  useEffect(() => {
+    // Only trigger if filters are complete
+    if (filters.branchId && filters.departmentId) {
+      console.log(filters);
+    }
+  }, [filters]);
 
   return (
     <Container maxWidth={settings.themeStretch ? false : 'xl'}>
@@ -91,77 +103,14 @@ export default function OverviewEcommerceView() {
         <>
           <Box sx={{ mb: 3 }}>
             <Grid container spacing={2}>
-              {/* Branch Autocomplete */}
-              <Grid item xs={12} md={3}>
-                <FormControl size="small" fullWidth>
-                  <Autocomplete
-                    size="small"
-                    options={branches}
-                    getOptionLabel={(option) => option.name}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    value={branches.find((b) => b.id === selectedBranchId) || null}
-                    onChange={(event, newValue) => {
-                      if (newValue) {
-                        setSelectedBranchId(newValue.id);
-                        setDepartments(newValue.departments || []);
-                        setSelectedDepartmentId(null); // reset department on branch change
-                      } else {
-                        setSelectedBranchId(null);
-                        setDepartments([]);
-                        setSelectedDepartmentId(null);
-                      }
-                    }}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Branch" placeholder="Select Branch" />
-                    )}
-                  />
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                {/* Department Autocomplete */}
-                <FormControl size="small" fullWidth>
-                  <Autocomplete
-                    size="small"
-                    options={departments}
-                    getOptionLabel={(option) => option.name}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    value={departments.find((d) => d.id === selectedDepartmentId) || null}
-                    onChange={(event, newValue) => {
-                      if (newValue) {
-                        setSelectedDepartmentId(newValue.id);
-                        setKpiOptions(newValue.kpis || []);
-                        setSelectedKpiIds([]); // Clear selected KPIs
-                      } else {
-                        setSelectedDepartmentId(null);
-                        setKpiOptions([]);
-                        setSelectedKpiIds([]);
-                      }
-                    }}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Department" placeholder="Select Department" />
-                    )}
-                  />
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                {/* Department Autocomplete */}
-                <FormControl size="small" fullWidth>
-                  <Autocomplete
-                    multiple
-                    size="small"
-                    options={kpiOptions}
-                    getOptionLabel={(option) => option.name}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    value={kpiOptions.filter((kpi) => selectedKpiIds.includes(kpi.id))}
-                    onChange={(event, newValue) => {
-                      // newValue is an array of selected KPI objects
-                      setSelectedKpiIds(newValue.map((kpi) => kpi.id));
-                    }}
-                    renderInput={(params) => (
-                      <TextField {...params} label="KPIs" placeholder="Select KPIs" />
-                    )}
-                  />
-                </FormControl>
+              <Grid item xs={12}>
+                <EcommerceFiltersForm
+                  showFilters={showFilters}
+                  setShowFilter={setShowFilters}
+                  branches={branches}
+                  onFilterChange={handleFilterChange}
+                  filterValues={filters}
+                />
               </Grid>
             </Grid>
           </Box>
