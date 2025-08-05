@@ -228,11 +228,12 @@ export class DashboardController {
           .filter(id => !isNaN(id))
       : [];
 
-    // Step 1: Fetch membershipDetails within the date range
+    // Step 1: Fetch membershipDetails within the date range (includes full end day)
     const membershipRecords = await this.membershipDetailsRepository.find({
       where: {
         purchaseDate: {
-          between: [new Date(startDate), new Date(endDate)],
+          gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+          lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
         },
       },
       include: [
@@ -256,6 +257,8 @@ export class DashboardController {
       ],
     });
 
+    console.log(membershipRecords);
+
     // Step 2: Flatten sales from memberships
     const filteredSales = membershipRecords
       .map((m: any) => {
@@ -276,7 +279,7 @@ export class DashboardController {
         } => !!item,
       );
 
-    // Step 3: Prepare categories (date range)
+    // Step 3: Prepare categories (local date format)
     const categories: string[] = [];
     const dateMap: {[date: string]: {[kpiName: string]: number}} = {};
     const kpiSet = new Set<string>();
@@ -284,8 +287,19 @@ export class DashboardController {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const formatLocalDate = (d: Date) =>
+      d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      });
+
+    for (
+      let d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      d <= end;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const dateStr = formatLocalDate(new Date(d));
       categories.push(dateStr);
       dateMap[dateStr] = {};
     }
@@ -293,9 +307,9 @@ export class DashboardController {
     // Step 4: Sum discountedPrice per day per KPI
     for (const {sale, purchaseDate, discountedPrice} of filteredSales) {
       const d = new Date(purchaseDate);
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const dateStr = formatLocalDate(d);
 
-      if (!dateMap[dateStr]) continue;
+      if (!dateMap[dateStr]) continue; // skip if out of range
 
       const kpiName = sale.kpi?.name || 'Unknown KPI';
       kpiSet.add(kpiName);
@@ -594,7 +608,10 @@ export class DashboardController {
     const whereConditions: any[] = [
       {
         conductionDate: {
-          between: [new Date(startDate), new Date(endDate)],
+          between: [
+            new Date(startDate),
+            new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+          ],
         },
       },
       {isDeleted: false},
@@ -616,7 +633,11 @@ export class DashboardController {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    for (
+      let d = new Date(start.getTime());
+      d <= end;
+      d.setDate(d.getDate() + 1)
+    ) {
       const dateStr = d.toISOString().split('T')[0];
       categories.push(dateStr);
       dateMap[dateStr] = {};
