@@ -23,6 +23,7 @@ import { paths } from 'src/routes/paths';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import Iconify from 'src/components/iconify';
+import { countries } from 'src/assets/data';
 
 const PAYMENT_OPTIONS = [
   { value: 'viya_app', label: 'ViyaApp Payment' },
@@ -81,6 +82,7 @@ export default function SaleNewEditForm({ currentSale }) {
         .email('Email must be a valid email address'),
       memberName: Yup.string().required('Member name is required'),
       gender: Yup.string().required('Gender is required'),
+      country: Yup.string().required('Country is required'),
       salesPerson: Yup.object().nullable().required('Sales person is required'),
       trainerName: Yup.object().nullable(),
       trainingAt: Yup.string().required('Training location is required'),
@@ -143,6 +145,7 @@ export default function SaleNewEditForm({ currentSale }) {
       kpis: currentSale?.kpi || null,
       memberName: currentSale?.memberName || '',
       gender: currentSale?.gender || '',
+      country: currentSale?.country || '',
       salesPerson: currentSale?.salesTrainer || null,
       trainerName: currentSale?.trainer || null,
       trainingAt: currentSale?.trainingAt || '',
@@ -240,6 +243,7 @@ export default function SaleNewEditForm({ currentSale }) {
       const inputData = {
         memberName: formData.memberName,
         gender: formData.gender,
+        country: formData.country,
         departmentId: formData.department?.id || null,
         kpiId: formData.kpis?.id || null,
         branchId: formData.branch.id,
@@ -675,6 +679,35 @@ export default function SaleNewEditForm({ currentSale }) {
                       {error && <FormHelperText>{error.message}</FormHelperText>}
                     </FormControl>
                   )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFAutocomplete
+                  name="country"
+                  label="Country"
+                  options={countries.map((country) => country.label)}
+                  getOptionLabel={(option) => option}
+                  renderOption={(props, option) => {
+                    const { code, label, phone } = countries.filter(
+                      (country) => country.label === option
+                    )[0];
+
+                    if (!label) {
+                      return null;
+                    }
+
+                    return (
+                      <li {...props} key={label}>
+                        <Iconify
+                          key={label}
+                          icon={`circle-flags:${code.toLowerCase()}`}
+                          width={28}
+                          sx={{ mr: 1 }}
+                        />
+                        {label} ({code}) +{phone}
+                      </li>
+                    );
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
