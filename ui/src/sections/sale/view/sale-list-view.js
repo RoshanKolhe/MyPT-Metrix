@@ -42,6 +42,7 @@ import { useGetSales, useGetSalesWithFilter } from 'src/api/sale';
 import { _roles } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'notistack';
+import { fDate } from 'src/utils/format-time';
 import SaleTableRow from '../sale-table-row';
 import SaleTableToolbar from '../sale-table-toolbar';
 import SaleTableFiltersResult from '../sale-table-filters-result';
@@ -163,12 +164,12 @@ export default function SaleListView() {
       Department: item.department?.name || '',
       Kpi: item.kpi?.name || '',
       ContactNumber: item.contactNumber || '',
-      PurchaseDate: item.membershipDetails?.purchaseDate || '',
+      PurchaseDate: fDate(item.membershipDetails?.purchaseDate) || '',
       MembershipType: item.membershipDetails?.membershipType?.map((m) => m.label).join(', ') || '',
       ActualPrice: item.membershipDetails?.actualPrice || '',
       DiscountedPrice: item.membershipDetails?.discountedPrice || '',
       ValidityDays: item.membershipDetails?.validityDays || '',
-      ExpiryDate: item.membershipDetails?.expiryDate || '',
+      ExpiryDate: fDate(item.membershipDetails?.expiryDate) || '',
       FreezingDays: item.membershipDetails?.freezingDays || '',
       CreatedAt: item.createdAt || '',
     }));
