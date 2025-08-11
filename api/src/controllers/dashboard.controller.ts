@@ -8,7 +8,14 @@ import {
   TargetRepository,
   UserRepository,
 } from '../repositories';
-import {get, param, post, requestBody, response} from '@loopback/rest';
+import {
+  get,
+  HttpErrors,
+  param,
+  post,
+  requestBody,
+  response,
+} from '@loopback/rest';
 import {Sales} from '../models';
 import {authenticate} from '@loopback/authentication';
 import {
@@ -673,7 +680,9 @@ export class DashboardController {
 
     const series = Array.from(kpiSet).map(kpiName => ({
       name: kpiName,
-      data: categories.map(date => dateMap[date][kpiName] || 0),
+      data: categories.map(date =>
+        Number((dateMap[date][kpiName] || 0).toFixed(2)),
+      ),
     }));
 
     return {categories, series};
@@ -744,6 +753,99 @@ export class DashboardController {
       maleRatio: Number(maleRatio),
       femaleRatio: Number(femaleRatio),
       totalUniqueClients: total,
+    };
+  }
+
+  @get('/member-statistics')
+  async getMemberStats(
+    @param.query.string('startDate') startDateStr: string,
+    @param.query.string('endDate') endDateStr: string,
+    @param.query.string('branchId') branchId?: string,
+    @param.query.string('departmentId') departmentId?: string,
+    @param.query.string('kpiId') kpiId?: string,
+  ): Promise<object> {
+    if (!startDateStr || !endDateStr) {
+      throw new HttpErrors.BadRequest('startDate and endDate are required.');
+    }
+
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new HttpErrors.BadRequest('Invalid date format.');
+    }
+
+    const where: any = {
+      and: [{createdAt: {gte: startDate}}, {createdAt: {lte: endDate}}],
+    };
+
+    if (branchId) where.and.push({branchId: parseInt(branchId)});
+    if (departmentId) where.and.push({departmentId: parseInt(departmentId)});
+    if (kpiId) where.and.push({kpiId: parseInt(kpiId)});
+
+    const sales = await this.salesRepository.find({
+      where,
+      include: [{relation: 'membershipDetails'}], // Include expiryDate
+    });
+
+    const memberMap: {[email: string]: typeof sales} = {};
+    for (const sale of sales) {
+      if (!sale.email) continue;
+      if (!memberMap[sale.email]) memberMap[sale.email] = [];
+      memberMap[sale.email].push(sale);
+    }
+
+    let newMemberCount = 0;
+    let renewedMemberCount = 0;
+    let expiredMemberCount = 0;
+    let unclassifiedMemberCount = 0;
+
+    for (const email in memberMap) {
+      const records = memberMap[email];
+      const hasRenewal = records.some(
+        r => r.memberType?.toLowerCase() === 'rnl',
+      );
+      const hasNew = records.some(r => r.memberType?.toLowerCase() === 'new');
+      let classified = false;
+
+      if (hasRenewal) {
+        renewedMemberCount++;
+        classified = true;
+      } else if (records.length === 1 && hasNew) {
+        newMemberCount++;
+        classified = true;
+      } else if (records.length === 1) {
+        const record = records[0];
+        const expiryDate = record.membershipDetails?.expiryDate
+          ? new Date(record.membershipDetails.expiryDate)
+          : null;
+        if (expiryDate && expiryDate < new Date() && !hasRenewal) {
+          expiredMemberCount++;
+          classified = true;
+        }
+      }
+
+      if (!classified) {
+        unclassifiedMemberCount++;
+      }
+    }
+
+    const totalMemberCount = Object.keys(memberMap).length;
+    const classifiedTotal =
+      newMemberCount + renewedMemberCount + expiredMemberCount;
+
+    const percent = (count: number, base: number) =>
+      base > 0 ? parseFloat(((count / base) * 100).toFixed(2)) : 0;
+
+    return {
+      newMemberCount,
+      renewedMemberCount,
+      expiredMemberCount,
+      unclassifiedMemberCount,
+      totalMemberCount,
+      newMemberPercent: percent(newMemberCount, classifiedTotal),
+      renewedMemberPercent: percent(renewedMemberCount, classifiedTotal),
+      expiredMemberPercent: percent(expiredMemberCount, classifiedTotal),
+      unclassifiedPercent: percent(unclassifiedMemberCount, totalMemberCount),
     };
   }
 }
