@@ -22,6 +22,7 @@ import EcommerceWidgetSummary from '../ecommerce-widget-summary';
 import EcommerceYearlyConductions from '../ecommerce-yearly-conductions';
 import EcommerceTargetForecasting from '../ecommerce-target-forecasting';
 import EcommerceFiltersForm from '../ecommerce-filters-form';
+import EcommerceMemberStatistics from '../ecommerce-member-statistics';
 
 // ----------------------------------------------------------------------
 
@@ -180,6 +181,9 @@ export default function OverviewEcommerceView() {
 
             <Grid xs={12} md={6} lg={4}>
               <EcommerceSaleByGender title="Sale By Gender" />
+            </Grid>
+            <Grid xs={12} md={6} lg={4}>
+              <EcommerceMemberStatistics title="Member Statistics" />
             </Grid>
 
             {/* <Grid xs={12} md={6} lg={8}>

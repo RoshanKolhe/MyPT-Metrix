@@ -211,3 +211,22 @@ export function useGetDashboradMaleToFemaleRatio(filter) {
     refreshDashboradMaleToFemaleRatio,
   };
 }
+
+export function useGetDashboradMemberStatistics(filter) {
+  const URL = endpoints.user.getMemberStatistics(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradMemberStatistics = () => {
+    // Use the `mutate` function to trigger a revalidation
+    mutate();
+  };
+
+  return {
+    dashboardMemberStatistics: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradMemberStatistics,
+  };
+}
