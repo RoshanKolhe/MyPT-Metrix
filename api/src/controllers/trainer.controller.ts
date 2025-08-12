@@ -1,6 +1,8 @@
 import {
+  DefaultTransactionalRepository,
   Filter,
   FilterExcludingWhere,
+  IsolationLevel,
   repository,
   Where,
 } from '@loopback/repository';
@@ -19,7 +21,11 @@ import {
   Response,
 } from '@loopback/rest';
 import {Trainer} from '../models';
-import {TrainerRepository, UserRepository} from '../repositories';
+import {
+  DepartmentTrainerRepository,
+  TrainerRepository,
+  UserRepository,
+} from '../repositories';
 import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {PermissionKeys} from '../authorization/permission-keys';
 import {inject} from '@loopback/core';
@@ -27,13 +33,18 @@ import {UserProfile} from '@loopback/security';
 import {Request as ExpressRequest} from 'express';
 import multer from 'multer';
 import ExcelJS, {Workbook} from 'exceljs';
+import {MyptMetrixDataSource} from '../datasources';
 
 export class TrainerController {
   constructor(
+    @inject('datasources.myptMetrix')
+    public dataSource: MyptMetrixDataSource,
     @repository(TrainerRepository)
     public trainerRepository: TrainerRepository,
     @repository(UserRepository)
     public userRepository: UserRepository,
+    @repository(DepartmentTrainerRepository)
+    public departmentTrainerRepository: DepartmentTrainerRepository,
   ) {}
 
   @authenticate({
@@ -57,26 +68,63 @@ export class TrainerController {
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(Trainer, {
-            title: 'NewTrainer',
-            exclude: ['id'],
-          }),
+          schema: {
+            type: 'object',
+            properties: {
+              firstName: {type: 'string'},
+              lastName: {type: 'string'},
+              email: {type: 'string'},
+              phoneNumber: {type: 'string'},
+              dob: {type: 'string'},
+              isActive: {type: 'boolean'},
+              avatar: {
+                type: 'object',
+                properties: {
+                  fileUrl: {type: 'string'},
+                },
+              },
+              branchId: {type: 'number'},
+              departmentIds: {
+                type: 'array',
+                items: {type: 'number'},
+              },
+              supervisorId: {type: 'number'},
+            },
+          },
         },
       },
     })
-    trainer: Omit<Trainer, 'id'>,
+    body: Omit<Trainer, 'id'> & {departmentIds: number[]},
   ): Promise<Trainer> {
+    const {departmentIds, ...trainerData} = body;
+
+    // Check for duplicate phone/email
     const existingTrainer = await this.trainerRepository.findOne({
       where: {
-        or: [{phoneNumber: trainer.phoneNumber}, {email: trainer.email}],
+        or: [
+          {phoneNumber: trainerData.phoneNumber},
+          {email: trainerData.email},
+        ],
       },
     });
+
     if (existingTrainer) {
       throw new HttpErrors.BadRequest(
         'A staff with the same phone number or email already exists.',
       );
     }
-    return this.trainerRepository.create(trainer);
+
+    // Create trainer
+    const trainer = await this.trainerRepository.create(trainerData);
+
+    // Assign departments via hasManyThrough relation
+    if (departmentIds?.length) {
+      for (const depId of departmentIds) {
+        await this.trainerRepository.departments(trainer.id).link(depId);
+      }
+    }
+
+    return trainer;
   }
 
   @authenticate({
@@ -115,7 +163,7 @@ export class TrainerController {
     const updatedFilter: Filter<Trainer> = {
       ...filter,
       include: [
-        {relation: 'department'},
+        {relation: 'departments'},
         {relation: 'branch'},
         {
           relation: 'supervisor',
@@ -175,8 +223,13 @@ export class TrainerController {
     return this.trainerRepository.findById(id, {
       ...filter,
       include: [
-        {relation: 'department'},
-        {relation: 'branch'},
+        {relation: 'departments'},
+        {
+          relation: 'branch',
+          scope: {
+            include: ['departments'],
+          },
+        },
         {
           relation: 'supervisor',
           scope: {
@@ -211,34 +264,90 @@ export class TrainerController {
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(Trainer, {partial: true}),
+          schema: {
+            type: 'object',
+            properties: {
+              firstName: {type: 'string'},
+              lastName: {type: 'string'},
+              email: {type: 'string'},
+              phoneNumber: {type: 'string'},
+              dob: {type: 'string'},
+              isActive: {type: 'boolean'},
+              avatar: {
+                type: 'object',
+                properties: {
+                  fileUrl: {type: 'string'},
+                },
+              },
+              branchId: {type: 'number'},
+              departmentIds: {
+                type: 'array',
+                items: {type: 'number'},
+              },
+              supervisorId: {type: 'number'},
+            },
+          },
         },
       },
     })
-    trainer: Trainer,
+    body: Partial<Trainer> & {departmentIds?: number[]},
   ): Promise<void> {
-    if (trainer.email || trainer.phoneNumber) {
-      const existingTrainer = await this.trainerRepository.findOne({
-        where: {
-          and: [
-            {
-              or: [
-                trainer.email ? {email: trainer.email} : {},
-                trainer.phoneNumber ? {phoneNumber: trainer.phoneNumber} : {},
-              ],
-            },
-            {id: {neq: id}}, // Exclude current trainer
-          ],
-        },
-      });
+    const repo = new DefaultTransactionalRepository(Trainer, this.dataSource);
+    const tx = await repo.beginTransaction(IsolationLevel.READ_COMMITTED);
 
-      if (existingTrainer) {
-        throw new HttpErrors.BadRequest(
-          'Another staff with the same phone number or email already exists.',
-        );
+    try {
+      const {departmentIds, ...trainerData} = body;
+      if (trainerData.email || trainerData.phoneNumber) {
+        const existingTrainer = await this.trainerRepository.findOne({
+          where: {
+            and: [
+              {
+                or: [
+                  trainerData.email ? {email: trainerData.email} : {},
+                  trainerData.phoneNumber
+                    ? {phoneNumber: trainerData.phoneNumber}
+                    : {},
+                ],
+              },
+              {id: {neq: id}},
+            ],
+          },
+        });
+
+        if (existingTrainer) {
+          throw new HttpErrors.BadRequest(
+            'Another staff with the same phone number or email already exists.',
+          );
+        }
       }
+      await this.trainerRepository.updateById(id, trainerData, {
+        transaction: tx,
+      });
+      console.log(departmentIds);
+
+      if (Array.isArray(departmentIds) && departmentIds.length > 0) {
+        await this.departmentTrainerRepository.deleteAll(
+          {trainerId: id},
+          {transaction: tx},
+        );
+
+        for (const depId of departmentIds) {
+          console.log('Linking department', depId);
+          console.log('ID', id);
+          await this.departmentTrainerRepository.create(
+            {
+              trainerId: id,
+              departmentId: depId,
+            },
+            {transaction: tx},
+          );
+        }
+      }
+      await tx.commit();
+    } catch (error) {
+      await tx.rollback();
+      throw error;
     }
-    await this.trainerRepository.updateById(id, trainer);
   }
 
   @authenticate({
@@ -301,22 +410,22 @@ export class TrainerController {
 
     const trainers = await this.trainerRepository.find({
       where: {
-        branchId,
-        departmentId,
+        branchId, // still directly in Trainer model
         isDeleted: false,
         isActive: true,
       },
       include: [
         {
-          relation: 'department',
+          relation: 'departments', // hasManyThrough relation
           scope: {
+            where: {id: departmentId},
             include: ['kpis'],
           },
         },
       ],
     });
 
-    return trainers;
+    return trainers.filter(t => t.departments && t.departments.length > 0);
   }
 
   @authenticate('jwt')

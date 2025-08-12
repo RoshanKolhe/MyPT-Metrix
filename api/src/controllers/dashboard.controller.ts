@@ -89,13 +89,10 @@ export class DashboardController {
       };
     }
 
-    console.log('filter', JSON.stringify(filter));
-
     const allSales = await this.salesRepository.find({
       ...filter,
       include: ['membershipDetails'],
     });
-    console.log('All Sales:', allSales.length);
     // Calculate total revenue from all sales
     const totalRevenue = allSales.reduce(
       (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
@@ -270,9 +267,6 @@ export class DashboardController {
         },
       ],
     });
-
-    console.log(membershipRecords);
-
     // Step 2: Flatten sales from memberships
     const filteredSales = membershipRecords
       .map((m: any) => {
@@ -395,7 +389,7 @@ export class DashboardController {
       if (interval === 'weekly') {
         labels.push(d.toLocaleString('en-US', {weekday: 'short'}));
       } else {
-        labels.push(d.toISOString().slice(0, 10));
+        labels.push(this.formatDate(d));
       }
     }
 
@@ -452,8 +446,8 @@ export class DashboardController {
     // === Response ===
     return {
       interval,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: this.formatDate(startDate),
+      endDate: this.formatDate(endDate),
       labels,
       targetSeries,
       actualSeries,
@@ -662,13 +656,23 @@ export class DashboardController {
       d <= end;
       d.setDate(d.getDate() + 1)
     ) {
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      });
       categories.push(dateStr);
       dateMap[dateStr] = {};
     }
 
     for (const c of conductions) {
-      const dateStr = c.createdAt?.toISOString().split('T')[0];
+      const dateStr = c.createdAt
+        ? new Date(c.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+          })
+        : null;
       const kpiName = c.kpi?.name || 'Unknown KPI';
       if (!dateStr || !dateMap[dateStr]) continue;
 
@@ -848,4 +852,11 @@ export class DashboardController {
       unclassifiedPercent: percent(unclassifiedMemberCount, totalMemberCount),
     };
   }
+
+  formatDate = (date: Date) =>
+    date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
 }

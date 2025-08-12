@@ -61,16 +61,16 @@ export class MembershipDetails extends Entity {
   noOfSessions?: number | null;
 
   @property({
-    type: 'string',
+    type: 'date',
     required: true,
   })
-  startDate: string;
+  startDate: Date;
 
   @property({
-    type: 'string',
+    type: 'date',
     required: true,
   })
-  expiryDate: string;
+  expiryDate: Date;
 
   @property({
     type: 'number',

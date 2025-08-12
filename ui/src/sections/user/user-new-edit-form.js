@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
@@ -62,6 +62,7 @@ const allRoles = [
 ];
 
 export default function UserNewEditForm({ currentUser }) {
+  const prevBranchId = useRef();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { user } = useAuthContext();
@@ -239,25 +240,24 @@ export default function UserNewEditForm({ currentUser }) {
   }, [role]);
 
   useEffect(() => {
-    if (!branch) {
-      setDepartmentOptions([]);
-      setValue('departments', []);
+    if (currentUser && prevBranchId.current === undefined) {
+      prevBranchId.current = branch?.id;
       return;
     }
 
-    const fetchedDepartments = branch?.departments || [];
-
-    // Prevent overriding for HOD
-    if (userRole === 'hod') {
-      return;
-    }
-
-    console.log('here12');
-    setDepartmentOptions(fetchedDepartments);
-
-    // Only clear departments for new user if not HOD
-    if (!currentUser) {
-      setValue('departments', []);
+    if (prevBranchId.current !== branch?.id) {
+      if (!branch) {
+        setDepartmentOptions([]);
+        setValue('departments', []);
+      } else {
+        if (userRole === 'hod') {
+          prevBranchId.current = branch?.id;
+          return;
+        }
+        setDepartmentOptions(branch?.departments || []);
+        setValue('departments', []);
+      }
+      prevBranchId.current = branch?.id;
     }
   }, [branch, currentUser, setValue, userRole]);
 

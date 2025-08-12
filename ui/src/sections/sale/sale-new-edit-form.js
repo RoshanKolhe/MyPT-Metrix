@@ -500,8 +500,11 @@ export default function SaleNewEditForm({ currentSale }) {
     if (trainers.length > 0) {
       const sales = [];
       const service = [];
+
       trainers.forEach((trainer) => {
-        const kpiTypes = trainer.department?.kpis?.map((kpi) => kpi.type) || [];
+        // Collect all kpi types from all departments
+        const kpiTypes =
+          trainer.departments?.flatMap((dept) => dept.kpis?.map((kpi) => kpi.type) || []) || [];
 
         if (kpiTypes.includes('sales')) {
           sales.push(trainer);

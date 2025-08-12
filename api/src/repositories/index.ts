@@ -13,3 +13,4 @@ export * from './membership-details.repository';
 export * from './sales.repository';
 export * from './conduction.repository';
 export * from './notification.repository';
+export * from './department-trainer.repository';
