@@ -8,7 +8,13 @@ import { _ecommerceBestSalesman } from 'src/_mock';
 // components
 import { useSettingsContext } from 'src/components/settings';
 //
-import { useGetDashboradSummary } from 'src/api/user';
+import {
+  useGetDashboradChartData,
+  useGetDashboradConductionsData,
+  useGetDashboradMaleToFemaleRatio,
+  useGetDashboradMemberStatistics,
+  useGetDashboradSummary,
+} from 'src/api/user';
 import { fShortenNumber } from 'src/utils/format-number';
 import { Box } from '@mui/material';
 import { useEffect, useState } from 'react';
@@ -37,11 +43,10 @@ export default function OverviewEcommerceView() {
     kpis: [],
     startDate: startOfMonth(new Date()),
     endDate: endOfMonth(new Date()),
+    country: null,
   });
 
   const [showFilters, setShowFilters] = useState(false);
-  const [kpiOptions, setKpiOptions] = useState([]);
-  const [serviceKpiOptions, setServiceKpiOptions] = useState([]);
 
   const queryString = [
     filters.kpis?.length ? `kpiIds=${filters.kpis.map((k) => k.id).join(',')}` : '',
@@ -54,6 +59,11 @@ export default function OverviewEcommerceView() {
     .join('&');
 
   const { dashboardCounts, refreshDashboardSummary } = useGetDashboradSummary(queryString);
+  const { dashboradChartData = {}, refreshDashboradChartData } =
+    useGetDashboradChartData(queryString);
+  const { dashboradConductionsData = {} } = useGetDashboradConductionsData(queryString);
+  const { dashboradMaleToFemaleRatioData = {} } = useGetDashboradMaleToFemaleRatio(queryString);
+  const { dashboardMemberStatistics = {} } = useGetDashboradMemberStatistics(queryString);
 
   const rawFilter = {
     where: {
@@ -81,28 +91,24 @@ export default function OverviewEcommerceView() {
     setFilters(updatedFilters);
 
     // Generate query string from updatedFilters
+  };
+
+  const handleSubmitFiltersForm = (formData) => {
+    console.info('Form submitted with data:', formData);
     const updatedQueryString = [
-      updatedFilters.kpis?.length ? `kpiIds=${updatedFilters.kpis.map((k) => k.id).join(',')}` : '',
-      updatedFilters.branch?.id ? `branchId=${updatedFilters.branch.id}` : '',
-      updatedFilters.department?.id ? `departmentId=${updatedFilters.department.id}` : '',
-      updatedFilters.startDate
-        ? `startDate=${new Date(updatedFilters.startDate).toISOString()}`
-        : '',
-      updatedFilters.endDate ? `endDate=${new Date(updatedFilters.endDate).toISOString()}` : '',
+      filters.kpis?.length ? `kpiIds=${filters.kpis.map((k) => k.id).join(',')}` : '',
+      filters.branch?.id ? `branchId=${filters.branch.id}` : '',
+      filters.department?.id ? `departmentId=${filters.department.id}` : '',
+      filters.startDate ? `startDate=${new Date(filters.startDate).toISOString()}` : '',
+      filters.endDate ? `endDate=${new Date(filters.endDate).toISOString()}` : '',
     ]
       .filter(Boolean)
       .join('&');
 
     // Call with latest query string
     refreshDashboardSummary(updatedQueryString);
+    refreshDashboradChartData(updatedQueryString);
   };
-
-  useEffect(() => {
-    // Only trigger if filters are complete
-    if (filters.branchId && filters.departmentId) {
-      console.log(filters);
-    }
-  }, [filters]);
 
   return (
     <Container maxWidth={settings.themeStretch ? false : 'xl'}>
@@ -117,6 +123,7 @@ export default function OverviewEcommerceView() {
                   branches={branches}
                   onFilterChange={handleFilterChange}
                   filterValues={filters}
+                  handleSubmitFiltersForm={handleSubmitFiltersForm}
                 />
               </Grid>
             </Grid>
@@ -162,7 +169,8 @@ export default function OverviewEcommerceView() {
                 title="Daily KPI Sales"
                 subheader="Tracks daily PT & Membership client additions over time"
                 chart={[]}
-                kpiOptions={kpiOptions}
+                filterValues={filters}
+                dashboradChartData={dashboradChartData}
               />
             </Grid>
 
@@ -171,19 +179,26 @@ export default function OverviewEcommerceView() {
                 title="Daily Conductions"
                 subheader="Tracks daily conductions over time"
                 chart={[]}
-                kpiOptions={serviceKpiOptions}
+                filterValues={filters}
+                dashboradConductionsData={dashboradConductionsData}
+              />
+            </Grid>
+
+            <Grid xs={12} md={6} lg={4}>
+              <EcommerceSaleByGender
+                title="Sale By Gender"
+                dashboradMaleToFemaleRatioData={dashboradMaleToFemaleRatioData}
+              />
+            </Grid>
+            <Grid xs={12} md={6} lg={4}>
+              <EcommerceMemberStatistics
+                title="Member Statistics"
+                dashboardMemberStatistics={dashboardMemberStatistics}
               />
             </Grid>
 
             <Grid xs={12} md={12} lg={12}>
               <EcommerceTargetForecasting title="Forecasting" subheader="Target forecasting" />
-            </Grid>
-
-            <Grid xs={12} md={6} lg={4}>
-              <EcommerceSaleByGender title="Sale By Gender" />
-            </Grid>
-            <Grid xs={12} md={6} lg={4}>
-              <EcommerceMemberStatistics title="Member Statistics" />
             </Grid>
 
             {/* <Grid xs={12} md={6} lg={8}>

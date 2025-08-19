@@ -231,6 +231,8 @@ export class DashboardController {
     @param.query.string('startDate') startDate: string,
     @param.query.string('endDate') endDate: string,
     @param.query.string('kpiIds') kpiIdsStr?: string,
+    @param.query.string('branchId') branchId?: string,
+    @param.query.string('departmentId') departmentId?: string,
   ): Promise<object> {
     const kpiIds = kpiIdsStr
       ? kpiIdsStr
@@ -254,6 +256,8 @@ export class DashboardController {
             where: {
               isDeleted: false,
               ...(kpiIds.length ? {kpiId: {inq: kpiIds}} : {}),
+              ...(branchId ? {branchId: Number(branchId)} : {}),
+              ...(departmentId ? {departmentId: Number(departmentId)} : {}),
             },
             include: [
               {
@@ -267,6 +271,7 @@ export class DashboardController {
         },
       ],
     });
+
     // Step 2: Flatten sales from memberships
     const filteredSales = membershipRecords
       .map((m: any) => {
@@ -704,22 +709,29 @@ export class DashboardController {
     @param.query.string('startDate') startDate?: string,
     @param.query.string('endDate') endDate?: string,
     @param.query.string('departmentId') departmentId?: string,
-    @param.query.string('kpiId') kpiId?: string,
+    @param.query.string('kpiIds') kpiIdsStr?: string,
     @param.query.string('branchId') branchId?: string,
   ): Promise<object> {
     const where: any = {};
 
-    // Apply date filter if both dates are provided
     if (startDate && endDate) {
       where.createdAt = {
         between: [new Date(startDate), new Date(endDate)],
       };
     }
 
-    // Apply additional filters if provided
     if (departmentId) where.departmentId = departmentId;
-    if (kpiId) where.kpiId = kpiId;
     if (branchId) where.branchId = branchId;
+
+    if (kpiIdsStr) {
+      const kpiIds = kpiIdsStr
+        .split(',')
+        .map(id => parseInt(id.trim()))
+        .filter(id => !isNaN(id));
+      if (kpiIds.length > 0) {
+        where.kpiId = {inq: kpiIds};
+      }
+    }
 
     const sales = await this.salesRepository.find({
       where,
@@ -766,7 +778,7 @@ export class DashboardController {
     @param.query.string('endDate') endDateStr: string,
     @param.query.string('branchId') branchId?: string,
     @param.query.string('departmentId') departmentId?: string,
-    @param.query.string('kpiId') kpiId?: string,
+    @param.query.string('kpiIds') kpiIdsStr?: string,
   ): Promise<object> {
     if (!startDateStr || !endDateStr) {
       throw new HttpErrors.BadRequest('startDate and endDate are required.');
@@ -784,8 +796,15 @@ export class DashboardController {
 
     if (branchId) where.and.push({branchId: parseInt(branchId)});
     if (departmentId) where.and.push({departmentId: parseInt(departmentId)});
-    if (kpiId) where.and.push({kpiId: parseInt(kpiId)});
-
+    if (kpiIdsStr) {
+      const kpiIds = kpiIdsStr
+        .split(',')
+        .map(id => parseInt(id.trim()))
+        .filter(id => !isNaN(id));
+      if (kpiIds.length > 0) {
+        where.and.push({kpiId: {inq: kpiIds}});
+      }
+    }
     const sales = await this.salesRepository.find({
       where,
       include: [{relation: 'membershipDetails'}], // Include expiryDate

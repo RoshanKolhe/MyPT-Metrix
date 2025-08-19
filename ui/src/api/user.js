@@ -136,9 +136,12 @@ export function useGetDashboradChartData(filter) {
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshDashboradChartData = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
+  const refreshDashboradChartData = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredChartData(newFilter)
+      : endpoints.user.getChartData;
+
+    mutate(newURL); // trigger re-fetch for new URL
   };
 
   return {
@@ -160,9 +163,12 @@ export function useGetDashboradConductionsData(filter) {
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshDashboradConductionsData = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
+  const refreshDashboradConductionsData = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredConductionsData(newFilter)
+      : endpoints.user.getConductionsData;
+
+    mutate(newURL); // trigger re-fetch for new URL
   };
 
   return {

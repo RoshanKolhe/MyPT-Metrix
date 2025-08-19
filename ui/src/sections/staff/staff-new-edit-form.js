@@ -293,6 +293,7 @@ export default function StaffNewEditForm({ currentStaff }) {
         setValue('departments', []);
         setValue('reportingUser', null);
       } else {
+        console.log('here');
         setDepartmentOptions(branch?.departments || []);
         setValue('departments', []);
         setValue('reportingUser', null);
@@ -313,13 +314,11 @@ export default function StaffNewEditForm({ currentStaff }) {
       (user?.permissions?.includes('hod') || user?.permissions?.includes('sub_hod')) &&
       user?.branch
     ) {
-      console.log('here');
       setValue('branch', user.branch);
     }
   }, [setValue, user]);
 
   useEffect(() => {
-    console.log('here12');
     document.body.classList.remove('light-mode', 'dark-mode');
     document.body.classList.add(isDark ? 'dark-mode' : 'light-mode');
   }, [isDark]);

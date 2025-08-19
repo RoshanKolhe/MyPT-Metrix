@@ -31,29 +31,19 @@ const StyledChart = styled(Chart)(({ theme }) => ({
 
 // ----------------------------------------------------------------------
 
-export default function EcommerceSaleByGender({ title, subheader, ...other }) {
+export default function EcommerceSaleByGender({
+  title,
+  subheader,
+  dashboradMaleToFemaleRatioData,
+  ...other
+}) {
   const theme = useTheme();
 
-  const [startDate, setStartDate] = useState(startOfMonth(new Date()));
-  const [endDate, setEndDate] = useState(endOfMonth(new Date()));
-  const [selectedKpis, setSelectedKpis] = useState([]);
-
-  // Build query string
-  const queryParams = new URLSearchParams();
-  if (selectedKpis.length) queryParams.append('kpiIds', selectedKpis.join(','));
-  if (startDate) queryParams.append('startDate', format(startDate, 'yyyy-MM-dd'));
-  if (endDate) queryParams.append('endDate', format(endDate, 'yyyy-MM-dd'));
-  const kpiQueryString = queryParams.toString();
-
   // Fetch chart data from API
-  const { dashboradMaleToFemaleRatioData = {} } = useGetDashboradMaleToFemaleRatio(kpiQueryString);
-  const {
-    maleCount = 0,
-    femaleCount = 0,
-    maleRatio = 0,
-    femaleRatio = 0,
-    totalUniqueClients = 0,
-  } = dashboradMaleToFemaleRatioData;
+  const { maleCount, femaleCount, maleRatio, femaleRatio, totalUniqueClients } =
+    dashboradMaleToFemaleRatioData;
+
+  console.log('totalUniqueClients', totalUniqueClients);
 
   // Build chart data dynamically
   const chartData = useMemo(
@@ -72,42 +62,45 @@ export default function EcommerceSaleByGender({ title, subheader, ...other }) {
 
   const chartSeries = chartData.series.map((item) => item.value);
 
-  const chartOptions = useChart({
-    colors: chartData.colors.map((colr) => colr[1]),
-    chart: {
-      sparkline: {
-        enabled: true,
+  const chartConfig = useMemo(
+    () => ({
+      colors: chartData.colors.map((colr) => colr[1]),
+      chart: {
+        sparkline: { enabled: true },
       },
-    },
-    labels: chartData.series.map((item) => item.label),
-    legend: {
-      floating: true,
-      position: 'bottom',
-      horizontalAlign: 'center',
-    },
-    fill: {
-      type: 'gradient',
-      gradient: {
-        colorStops: chartData.colors.map((colr) => [
-          { offset: 0, color: colr[0] },
-          { offset: 100, color: colr[1] },
-        ]),
+      labels: chartData.series.map((item) => item.label),
+      legend: {
+        floating: true,
+        position: 'bottom',
+        horizontalAlign: 'center',
       },
-    },
-    plotOptions: {
-      radialBar: {
-        hollow: { size: '68%' },
-        dataLabels: {
-          value: { offsetY: 16 },
-          total: {
-            formatter () {
-              return fNumber(totalUniqueClients); // read latest state value
+      fill: {
+        type: 'gradient',
+        gradient: {
+          colorStops: chartData.colors.map((colr) => [
+            { offset: 0, color: colr[0] },
+            { offset: 100, color: colr[1] },
+          ]),
+        },
+      },
+      plotOptions: {
+        radialBar: {
+          hollow: { size: '68%' },
+          dataLabels: {
+            value: { offsetY: 16 },
+            total: {
+              formatter() {
+                return fNumber(totalUniqueClients); // read latest state value
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    [chartData, totalUniqueClients]
+  );
+
+  const chartOptions = useChart(chartConfig);
 
   return (
     <Card {...other}>
@@ -119,6 +112,7 @@ export default function EcommerceSaleByGender({ title, subheader, ...other }) {
         series={chartSeries}
         options={chartOptions}
         height={300}
+        key={totalUniqueClients}
       />
     </Card>
   );
@@ -129,4 +123,5 @@ EcommerceSaleByGender.propTypes = {
   subheader: PropTypes.string,
   title: PropTypes.string,
   total: PropTypes.number,
+  dashboradMaleToFemaleRatioData: PropTypes.object,
 };

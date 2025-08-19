@@ -6,6 +6,8 @@ import FormProvider, { RHFAutocomplete } from 'src/components/hook-form';
 import { Controller, useForm } from 'react-hook-form';
 import { DatePicker } from '@mui/x-date-pickers';
 import Iconify from 'src/components/iconify';
+import { LoadingButton } from '@mui/lab';
+import { countries } from 'src/assets/data';
 
 const EcommerceFiltersForm = ({
   showFilters,
@@ -13,12 +15,13 @@ const EcommerceFiltersForm = ({
   filterValues = {},
   onFilterChange,
   setShowFilter,
+  handleSubmitFiltersForm,
 }) => {
   const methods = useForm({
     defaultValues: filterValues,
   });
 
-  const { control, watch, setValue } = methods;
+  const { control, watch, setValue, handleSubmit } = methods;
 
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [kpiOptions, setKpiOptions] = useState([]);
@@ -32,6 +35,16 @@ const EcommerceFiltersForm = ({
   console.log('kpis', kpis);
   const startDate = watch('startDate');
   const endDate = watch('endDate');
+  const country = watch('country');
+
+  const onSubmit = handleSubmit(async (formData) => {
+    try {
+      console.info('DATA', formData);
+      handleSubmitFiltersForm(formData);
+    } catch (error) {
+      console.error(error);
+    }
+  });
 
   // Update department options on branch change
   useEffect(() => {
@@ -63,7 +76,7 @@ const EcommerceFiltersForm = ({
 
   useEffect(() => {
     onFilterChange?.({ branch, department, kpis, startDate, endDate });
-  }, [kpis, startDate, endDate]);
+  }, [kpis, startDate, endDate, country]);
 
   return (
     <Grid container spacing={2}>
@@ -88,7 +101,7 @@ const EcommerceFiltersForm = ({
       {/* Show filter form only when showFilters is true */}
       {showFilters && (
         <Grid item xs={12}>
-          <FormProvider methods={methods}>
+          <FormProvider methods={methods} onSubmit={onSubmit}>
             <Grid container spacing={2}>
               <Grid item xs={12} md={3}>
                 <Controller
@@ -167,6 +180,43 @@ const EcommerceFiltersForm = ({
                   isOptionEqualToValue={(option, value) => option?.id === value?.id}
                 />
               </Grid>
+
+              <Grid item xs={12} sm={3}>
+                <RHFAutocomplete
+                  size="small"
+                  name="country"
+                  label="Country"
+                  options={countries.map((countryData) => countryData.label)}
+                  getOptionLabel={(option) => option}
+                  renderOption={(props, option) => {
+                    const { code, label, phone } = countries.filter(
+                      (countryData) => countryData.label === option
+                    )[0];
+
+                    if (!label) {
+                      return null;
+                    }
+
+                    return (
+                      <li {...props} key={label}>
+                        <Iconify
+                          key={label}
+                          icon={`circle-flags:${code.toLowerCase()}`}
+                          width={28}
+                          sx={{ mr: 1 }}
+                        />
+                        {label} ({code}) +{phone}
+                      </li>
+                    );
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={3}>
+                <LoadingButton type="submit" variant="contained">
+                  Apply
+                </LoadingButton>
+              </Grid>
             </Grid>
           </FormProvider>
         </Grid>
@@ -187,6 +237,7 @@ EcommerceFiltersForm.propTypes = {
   }),
   onFilterChange: PropTypes.func,
   setShowFilter: PropTypes.func,
+  handleSubmitFiltersForm: PropTypes.func,
 };
 
 export default EcommerceFiltersForm;
