@@ -56,6 +56,7 @@ export class DashboardController {
     @param.query.number('departmentId') departmentId?: number,
     @param.query.string('startDate') startDateStr?: string,
     @param.query.string('endDate') endDateStr?: string,
+    @param.query.string('country') country?: string,
   ): Promise<any> {
     const kpiIds = kpiIdsStr
       ? kpiIdsStr
@@ -82,6 +83,7 @@ export class DashboardController {
     if (kpiIds.length > 0) filter.where.kpiId = {inq: kpiIds};
     if (branchId) filter.where.branchId = branchId;
     if (departmentId) filter.where.departmentId = departmentId;
+    if (country) filter.where.country = country;
     if (startDateStr && endDateStr) {
       filter.where.createdAt = {
         gte: new Date(new Date(startDateStr).setHours(0, 0, 0, 0)),
@@ -233,6 +235,7 @@ export class DashboardController {
     @param.query.string('kpiIds') kpiIdsStr?: string,
     @param.query.string('branchId') branchId?: string,
     @param.query.string('departmentId') departmentId?: string,
+    @param.query.string('country') country?: string,
   ): Promise<object> {
     const kpiIds = kpiIdsStr
       ? kpiIdsStr
@@ -258,6 +261,7 @@ export class DashboardController {
               ...(kpiIds.length ? {kpiId: {inq: kpiIds}} : {}),
               ...(branchId ? {branchId: Number(branchId)} : {}),
               ...(departmentId ? {departmentId: Number(departmentId)} : {}),
+              ...(country ? {country: country} : {}),
             },
             include: [
               {

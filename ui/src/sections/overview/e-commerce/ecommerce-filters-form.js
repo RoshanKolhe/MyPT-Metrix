@@ -75,7 +75,7 @@ const EcommerceFiltersForm = ({
   }, [kpis]);
 
   useEffect(() => {
-    onFilterChange?.({ branch, department, kpis, startDate, endDate });
+    onFilterChange?.({ branch, department, kpis, startDate, endDate, country });
   }, [kpis, startDate, endDate, country]);
 
   return (

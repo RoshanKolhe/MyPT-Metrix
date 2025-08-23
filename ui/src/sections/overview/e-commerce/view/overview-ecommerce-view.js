@@ -17,7 +17,7 @@ import {
 } from 'src/api/user';
 import { fShortenNumber } from 'src/utils/format-number';
 import { Box } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuthContext } from 'src/auth/hooks';
 import { useGetBranchsWithFilter } from 'src/api/branch';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
@@ -54,6 +54,7 @@ export default function OverviewEcommerceView() {
     filters.department?.id ? `departmentId=${filters.department.id}` : '',
     filters.startDate ? `startDate=${format(new Date(filters.startDate), 'yyyy-MM-dd')}` : '',
     filters.endDate ? `endDate=${format(new Date(filters.endDate), 'yyyy-MM-dd')}` : '',
+    filters.country ? `country=${filters.country}` : '', // <-- NEW line
   ]
     .filter(Boolean)
     .join('&');
@@ -101,6 +102,7 @@ export default function OverviewEcommerceView() {
       filters.department?.id ? `departmentId=${filters.department.id}` : '',
       filters.startDate ? `startDate=${new Date(filters.startDate).toISOString()}` : '',
       filters.endDate ? `endDate=${new Date(filters.endDate).toISOString()}` : '',
+      filters.country ? `country=${filters.country}` : '',
     ]
       .filter(Boolean)
       .join('&');
