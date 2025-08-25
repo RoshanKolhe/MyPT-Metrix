@@ -176,16 +176,6 @@ export default function OverviewEcommerceView() {
               />
             </Grid>
 
-            <Grid xs={12} md={12} lg={12}>
-              <EcommerceYearlyConductions
-                title="Daily Conductions"
-                subheader="Tracks daily conductions over time"
-                chart={[]}
-                filterValues={filters}
-                dashboradConductionsData={dashboradConductionsData}
-              />
-            </Grid>
-
             <Grid xs={12} md={6} lg={4}>
               <EcommerceSaleByGender
                 title="Sale By Gender"
@@ -196,6 +186,16 @@ export default function OverviewEcommerceView() {
               <EcommerceMemberStatistics
                 title="Member Statistics"
                 dashboardMemberStatistics={dashboardMemberStatistics}
+              />
+            </Grid>
+
+            <Grid xs={12} md={12} lg={12}>
+              <EcommerceYearlyConductions
+                title="Daily Conductions"
+                subheader="Tracks daily conductions over time"
+                chart={[]}
+                filterValues={filters}
+                dashboradConductionsData={dashboradConductionsData}
               />
             </Grid>
 
