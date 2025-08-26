@@ -715,6 +715,7 @@ export class DashboardController {
     @param.query.string('departmentId') departmentId?: string,
     @param.query.string('kpiIds') kpiIdsStr?: string,
     @param.query.string('branchId') branchId?: string,
+    @param.query.string('country') country?: string,
   ): Promise<object> {
     const where: any = {};
 
@@ -726,6 +727,9 @@ export class DashboardController {
 
     if (departmentId) where.departmentId = departmentId;
     if (branchId) where.branchId = branchId;
+    if (country) {
+      where.country = country;
+    }
 
     if (kpiIdsStr) {
       const kpiIds = kpiIdsStr
@@ -783,6 +787,7 @@ export class DashboardController {
     @param.query.string('branchId') branchId?: string,
     @param.query.string('departmentId') departmentId?: string,
     @param.query.string('kpiIds') kpiIdsStr?: string,
+    @param.query.string('country') country?: string,
   ): Promise<object> {
     if (!startDateStr || !endDateStr) {
       throw new HttpErrors.BadRequest('startDate and endDate are required.');
@@ -800,6 +805,9 @@ export class DashboardController {
 
     if (branchId) where.and.push({branchId: parseInt(branchId)});
     if (departmentId) where.and.push({departmentId: parseInt(departmentId)});
+    if (country) {
+      where.and.push({country: country});
+    }
     if (kpiIdsStr) {
       const kpiIds = kpiIdsStr
         .split(',')

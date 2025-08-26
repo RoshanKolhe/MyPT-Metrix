@@ -204,9 +204,12 @@ export function useGetDashboradMaleToFemaleRatio(filter) {
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshDashboradMaleToFemaleRatio = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
+  const refreshDashboradMaleToFemaleRatio = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredConductionsData(newFilter)
+      : endpoints.user.getConductionsData;
+
+    mutate(newURL); // trigger re-fetch for new URL
   };
 
   return {
@@ -223,9 +226,12 @@ export function useGetDashboradMemberStatistics(filter) {
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshDashboradMemberStatistics = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
+  const refreshDashboradMemberStatistics = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredConductionsData(newFilter)
+      : endpoints.user.getConductionsData;
+
+    mutate(newURL); // trigger re-fetch for new URL
   };
 
   return {

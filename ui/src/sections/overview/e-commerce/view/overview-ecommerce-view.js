@@ -62,9 +62,12 @@ export default function OverviewEcommerceView() {
   const { dashboardCounts, refreshDashboardSummary } = useGetDashboradSummary(queryString);
   const { dashboradChartData = {}, refreshDashboradChartData } =
     useGetDashboradChartData(queryString);
-  const { dashboradConductionsData = {} } = useGetDashboradConductionsData(queryString);
-  const { dashboradMaleToFemaleRatioData = {} } = useGetDashboradMaleToFemaleRatio(queryString);
-  const { dashboardMemberStatistics = {} } = useGetDashboradMemberStatistics(queryString);
+  const { dashboradConductionsData = {}, refreshDashboradConductionsData } =
+    useGetDashboradConductionsData(queryString);
+  const { dashboradMaleToFemaleRatioData = {}, refreshDashboradMaleToFemaleRatio } =
+    useGetDashboradMaleToFemaleRatio(queryString);
+  const { dashboardMemberStatistics = {}, refreshDashboradMemberStatistics } =
+    useGetDashboradMemberStatistics(queryString);
 
   const rawFilter = {
     where: {
@@ -110,6 +113,9 @@ export default function OverviewEcommerceView() {
     // Call with latest query string
     refreshDashboardSummary(updatedQueryString);
     refreshDashboradChartData(updatedQueryString);
+    refreshDashboradMaleToFemaleRatio(updatedQueryString);
+    refreshDashboradConductionsData(updatedQueryString);
+    refreshDashboradMemberStatistics(updatedQueryString);
   };
 
   return (
@@ -171,7 +177,6 @@ export default function OverviewEcommerceView() {
                 title="Daily KPI Sales"
                 subheader="Tracks daily PT & Membership client additions over time"
                 chart={[]}
-                filterValues={filters}
                 dashboradChartData={dashboradChartData}
               />
             </Grid>
