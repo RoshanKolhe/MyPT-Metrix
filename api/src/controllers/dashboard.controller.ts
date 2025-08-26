@@ -890,4 +890,53 @@ export class DashboardController {
       month: 'long',
       year: 'numeric',
     });
+
+  @get('/member-conduction-stats')
+  @response(200, {
+    description: 'Overall members and conduction stats with filters',
+  })
+  async getStats(
+    @param.query.string('startDate') startDateStr: string,
+    @param.query.string('endDate') endDateStr: string,
+    @param.query.string('branchId') branchId?: string,
+    @param.query.string('departmentId') departmentId?: string,
+    @param.query.string('email') email?: string,
+  ): Promise<any> {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    // 1. Get distinct member emails from sales
+    let sales;
+    if (email) {
+      sales = await this.salesRepository.find({where: {email}});
+    } else {
+      sales = await this.salesRepository.find();
+    }
+    const uniqueEmails = [...new Set(sales.map(s => s.email))];
+    const totalMembers = uniqueEmails.length;
+
+    // 2. Get conductions with filters
+    const conductionFilter: any = {
+      where: {
+        conductionDate: {between: [startDate, endDate]},
+      },
+    };
+    if (branchId) conductionFilter.where.branchId = branchId;
+    if (departmentId) conductionFilter.where.departmentId = departmentId;
+    if (uniqueEmails.length > 0)
+      conductionFilter.where.email = {inq: uniqueEmails};
+
+    const conductions = await this.conductionRepository.find(conductionFilter);
+    const totalConductions = conductions.length;
+
+    // 3. Calculate average
+    const avgConductions =
+      totalMembers > 0 ? totalConductions / totalMembers : 0;
+
+    return {
+      totalMembers,
+      totalConductions,
+      avgConductions,
+    };
+  }
 }

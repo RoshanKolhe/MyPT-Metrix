@@ -64,6 +64,9 @@ export const endpoints = {
     getMaleToFemaleRatio: (filter) => `gender-ratio?${filter}`,
     getMemberStatistics: (filter) => `member-statistics?${filter}`,
     getDashboradSummary: `/dashboard/summary`,
+
+    getFilteredConductionDashboradSummary: (filter) => `/member-conduction-stats?${filter}`,
+    getConductionDashboradSummary: `/member-conduction-stats'`,
   },
   staff: {
     list: '/trainers',

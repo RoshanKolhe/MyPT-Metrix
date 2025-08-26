@@ -11,6 +11,7 @@ import { useSettingsContext } from 'src/components/settings';
 import {
   useGetDashboradChartData,
   useGetDashboradConductionsData,
+  useGetDashboradConductionSummary,
   useGetDashboradMaleToFemaleRatio,
   useGetDashboradMemberStatistics,
   useGetDashboradSummary,
@@ -29,6 +30,7 @@ import EcommerceYearlyConductions from '../ecommerce-yearly-conductions';
 import EcommerceTargetForecasting from '../ecommerce-target-forecasting';
 import EcommerceFiltersForm from '../ecommerce-filters-form';
 import EcommerceMemberStatistics from '../ecommerce-member-statistics';
+import AnalyticsWidgetSummary from '../analytics-widget-summary';
 
 // ----------------------------------------------------------------------
 
@@ -60,6 +62,8 @@ export default function OverviewEcommerceView() {
     .join('&');
 
   const { dashboardCounts, refreshDashboardSummary } = useGetDashboradSummary(queryString);
+  const { conductionDashboardCounts, refreshDashboardConductionSummary } =
+    useGetDashboradConductionSummary(queryString);
   const { dashboradChartData = {}, refreshDashboradChartData } =
     useGetDashboradChartData(queryString);
   const { dashboradConductionsData = {}, refreshDashboradConductionsData } =
@@ -169,6 +173,32 @@ export default function OverviewEcommerceView() {
                   colors: [theme.palette.warning.light, theme.palette.warning.main],
                   series: dashboardCounts?.averageTicket?.series || [],
                 }}
+              />
+            </Grid>
+
+            <Grid xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Total Members"
+                total={conductionDashboardCounts?.totalMembers || 0}
+                icon={<img alt="icon" src="/assets/icons/glass/ic_glass_users.png" />}
+              />
+            </Grid>
+
+            <Grid xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Total Conductions"
+                total={conductionDashboardCounts?.totalConductions || 0}
+                color="info"
+                icon={<img alt="icon" src="/assets/icons/glass/ic_glass_bag.png" />}
+              />
+            </Grid>
+
+            <Grid xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Avg Conductions"
+                total={conductionDashboardCounts?.avgConductions || 0}
+                color="warning"
+                icon={<img alt="icon" src="/assets/icons/glass/ic_glass_buy.png" />}
               />
             </Grid>
 

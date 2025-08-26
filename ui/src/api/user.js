@@ -242,3 +242,30 @@ export function useGetDashboradMemberStatistics(filter) {
     refreshDashboradMemberStatistics,
   };
 }
+
+export function useGetDashboradConductionSummary(filter) {
+  let URL;
+  if (filter) {
+    URL = endpoints.user.getFilteredConductionDashboradSummary(filter);
+  } else {
+    URL = endpoints.user.getConductionDashboradSummary;
+  }
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboardConductionSummary = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredDashboradSummary(newFilter)
+      : endpoints.user.getDashboradSummary;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    conductionDashboardCounts: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboardConductionSummary,
+  };
+}
