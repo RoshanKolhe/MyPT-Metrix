@@ -26,6 +26,7 @@ import {
   DepartmentTargetRepository,
   NotificationRepository,
   TargetRepository,
+  TrainerRepository,
   TrainerTargetRepository,
   UserRepository,
 } from '../repositories';
@@ -33,6 +34,7 @@ import {authenticate, AuthenticationBindings} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {UserProfile} from '@loopback/security';
 import {MyptMetrixDataSource} from '../datasources';
+import {WhatsAppService} from '../services/whatsapp.service';
 
 export class TargetController {
   constructor(
@@ -50,6 +52,10 @@ export class TargetController {
     public userRepository: UserRepository,
     @repository(NotificationRepository)
     public notificationRepository: NotificationRepository,
+    @repository(TrainerRepository)
+    public trainerRepository: TrainerRepository,
+    @inject('service.whatsapp.service')
+    public whatsAppService: WhatsAppService,
   ) {}
 
   @authenticate('jwt')
@@ -602,6 +608,7 @@ export class TargetController {
             type: 'object',
             required: ['trainerKpiTargets'],
             properties: {
+              targetId: {type: 'number'},
               trainerKpiTargets: {
                 type: 'array',
                 items: {
@@ -635,6 +642,7 @@ export class TargetController {
       },
     })
     body: {
+      targetId: number;
       trainerKpiTargets: {
         trainerId: number;
         kpiTargets: {
@@ -645,19 +653,8 @@ export class TargetController {
         }[];
       }[];
     },
-  ): Promise<{
-    message: string;
-    count: number;
-    data: {
-      trainerId: number;
-      kpiId: number;
-      departmentTargetId: number;
-      trainerTargetId: number;
-      created?: boolean;
-      updated?: boolean;
-    }[];
-  }> {
-    const {trainerKpiTargets} = body;
+  ): Promise<any> {
+    const {targetId, trainerKpiTargets} = body;
     const result: {
       trainerId: number;
       kpiId: number;
@@ -722,7 +719,67 @@ export class TargetController {
       }
 
       await tx.commit();
+      const groupedByTrainer: Record<
+        number,
+        {kpiId: number; targetValue: number}[]
+      > = {};
+      for (const item of result) {
+        if (!groupedByTrainer[item.trainerId]) {
+          groupedByTrainer[item.trainerId] = [];
+        }
+        const originalTarget = body.trainerKpiTargets
+          .find(t => t.trainerId === item.trainerId)!
+          .kpiTargets.find(k => k.kpiId === item.kpiId)!;
+        groupedByTrainer[item.trainerId].push({
+          kpiId: item.kpiId,
+          targetValue: originalTarget.targetValue,
+        });
+      }
 
+      for (const trainerId of Object.keys(groupedByTrainer)) {
+        const trainer = await this.trainerRepository.findById(
+          Number(trainerId),
+        );
+        if (!trainer.phoneNumber) {
+          console.warn(
+            `Trainer ${trainerId} has no phone number, skipping notification`,
+          );
+          continue;
+        }
+
+        const kpiLines = groupedByTrainer[Number(trainerId)]
+          .map(k => `KPI ${k.kpiId}: ${k.targetValue}`)
+          .join('\n');
+
+        const target = await this.targetRepository.findById(targetId);
+
+        const payload = {
+          phone: `+${trainer.phoneNumber}`,
+          enable_acculync: false,
+          media: {
+            type: 'media_template',
+            lang_code: 'en',
+            template_name: 'trainer_target_assigned',
+            body: [
+              {text: trainer.firstName || 'Trainer'},
+              {text: new Date(target.startDate).toLocaleDateString()},
+              {text: new Date(target.endDate).toLocaleDateString()},
+              {text: kpiLines},
+            ],
+            header: [{text: '📊 Target Assignment'}],
+          },
+        };
+
+        try {
+          console.log(`payload`, payload);
+          // await this.whatsAppService.sendMessage(trainerId);
+        } catch (err) {
+          console.error(
+            `❌ Failed to send notification to trainer ${trainerId}`,
+            err,
+          );
+        }
+      }
       return {
         message: 'Trainer KPI targets processed successfully',
         count: result.length,

@@ -4,13 +4,13 @@ import {UserRepository} from '../repositories';
 import {generateUniqueId} from '../utils/constants';
 
 @cronJob()
-export class CheckDailyEntriesAtNoon extends CronJob {
+export class CheckDailyEntriesAtNoon extends CronJob { 
   constructor(
     @repository(UserRepository)
     public userRepository: UserRepository,
   ) {
     super({
-      cronTime: '0 12 * * *', // Every 30 seconds
+      cronTime: '*/30 * * * * *', // Every 30 seconds
       onTick: async () => {
         await this.runJob();
       },
