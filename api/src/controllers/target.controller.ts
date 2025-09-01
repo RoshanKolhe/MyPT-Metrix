@@ -20,7 +20,7 @@ import {
   response,
   HttpErrors,
 } from '@loopback/rest';
-import {DepartmentTarget, Target} from '../models';
+import {DepartmentTarget, Target, TrainerTarget} from '../models';
 import {
   DepartmentRepository,
   DepartmentTargetRepository,
@@ -606,7 +606,7 @@ export class TargetController {
         'application/json': {
           schema: {
             type: 'object',
-            required: ['trainerKpiTargets'],
+            required: ['targetId', 'trainerKpiTargets'],
             properties: {
               targetId: {type: 'number'},
               trainerKpiTargets: {
@@ -654,6 +654,11 @@ export class TargetController {
       }[];
     },
   ): Promise<any> {
+    const repo = new DefaultTransactionalRepository(
+      TrainerTarget,
+      this.dataSource,
+    );
+    const tx = await repo.beginTransaction(IsolationLevel.READ_COMMITTED);
     const {targetId, trainerKpiTargets} = body;
     const result: {
       trainerId: number;
@@ -664,13 +669,8 @@ export class TargetController {
       updated?: boolean;
     }[] = [];
 
-    const tx = await this.trainerTargetRepository.dataSource.beginTransaction(
-      IsolationLevel.READ_COMMITTED,
-    );
-
     try {
-      const repo = this.trainerTargetRepository;
-
+      // Create / update trainer targets
       for (const {trainerId, kpiTargets} of trainerKpiTargets) {
         for (const {
           kpiId,
@@ -679,7 +679,7 @@ export class TargetController {
           trainerTargetId,
         } of kpiTargets) {
           if (trainerTargetId) {
-            await repo.updateById(
+            await this.trainerTargetRepository.updateById(
               trainerTargetId,
               {
                 targetValue,
@@ -695,7 +695,7 @@ export class TargetController {
               updated: true,
             });
           } else {
-            const created = await repo.create(
+            const created = await this.trainerTargetRepository.create(
               {
                 departmentTargetId,
                 trainerId,
@@ -718,7 +718,7 @@ export class TargetController {
         }
       }
 
-      await tx.commit();
+      // Group by trainer for notifications
       const groupedByTrainer: Record<
         number,
         {kpiId: number; targetValue: number}[]
@@ -736,6 +736,7 @@ export class TargetController {
         });
       }
 
+      // Send notifications
       for (const trainerId of Object.keys(groupedByTrainer)) {
         const trainer = await this.trainerRepository.findById(
           Number(trainerId),
@@ -771,8 +772,9 @@ export class TargetController {
         };
 
         try {
-          console.log(`payload`, payload);
-          // await this.whatsAppService.sendMessage(trainerId);
+          console.log(`payload`, JSON.stringify(payload));
+          const response = await this.whatsAppService.sendMessage(payload);
+          console.log(`response`, JSON.stringify(response));
         } catch (err) {
           console.error(
             `❌ Failed to send notification to trainer ${trainerId}`,
@@ -780,6 +782,7 @@ export class TargetController {
           );
         }
       }
+      await tx.commit();
       return {
         message: 'Trainer KPI targets processed successfully',
         count: result.length,
