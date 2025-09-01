@@ -381,10 +381,6 @@ export const COMMON_STATUS_OPTIONS = [
   { value: '0', label: 'In-Active' },
 ];
 
-export const formatRFQId = (rfqId) => `RFQ${rfqId.toString().padStart(4, '0')}`;
-export const formatChallanId = (challanId) => `CHLN${challanId.toString().padStart(4, '0')}`;
-export const formatQcReportId = (rfqId) => `QCR${rfqId.toString().padStart(4, '0')}`;
-export const formatDispatchId = (dispatchId) => `DSP${dispatchId.toString().padStart(4, '0')}`;
 export const formatTime = (isoString) => {
   const date = new Date(isoString);
   const minutes = date.getMinutes();

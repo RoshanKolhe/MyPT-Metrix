@@ -47,7 +47,10 @@ export default function TargetAssignTrainerView() {
         }}
       />
 
-      <TargetNewEditAssignTrainerForm currentDepartmentTarget={currentDepartmentTarget?.data} />
+      <TargetNewEditAssignTrainerForm
+        currentDepartmentTarget={currentDepartmentTarget?.data}
+        targetId={targetId}
+      />
     </Container>
   );
 }

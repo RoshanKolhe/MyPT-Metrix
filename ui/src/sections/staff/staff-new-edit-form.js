@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
@@ -53,6 +53,8 @@ import 'react-phone-input-2/lib/material.css';
 // ----------------------------------------------------------------------
 
 export default function StaffNewEditForm({ currentStaff }) {
+  console.log(currentStaff);
+  const prevBranchId = useRef();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { user } = useAuthContext();
@@ -79,7 +81,7 @@ export default function StaffNewEditForm({ currentStaff }) {
 
   const { filteredbranches: branches } = useGetBranchsWithFilter(encodedFilter);
 
-  const [departments, setDepartments] = useState([]);
+  const [departmentOptions, setDepartmentOptions] = useState([]);
 
   const [reportingUserOptions, setReportingUserOptions] = useState([]);
 
@@ -107,7 +109,7 @@ export default function StaffNewEditForm({ currentStaff }) {
       isActive: currentStaff?.isActive ?? 1,
       avatarUrl: currentStaff?.avatar?.fileUrl || null,
       phoneNumber: currentStaff?.phoneNumber || '',
-      department: currentStaff?.department || null,
+      departments: currentStaff?.departments || [],
       branch: currentStaff?.branch || null,
       reportingUser: currentStaff?.supervisor || null,
     }),
@@ -133,7 +135,7 @@ export default function StaffNewEditForm({ currentStaff }) {
   console.log(errors);
 
   const branch = watch('branch');
-  const department = watch('department');
+  const selectedDepartments = watch('departments');
   const values = watch();
 
   const onSubmit = handleSubmit(async (formData) => {
@@ -146,6 +148,7 @@ export default function StaffNewEditForm({ currentStaff }) {
         phoneNumber: formData.phoneNumber,
         isActive: formData.isActive,
         dob: formData.dob,
+        departmentIds: formData.departments?.map((dep) => dep.id ?? dep) || [],
       };
       if (formData.avatarUrl) {
         inputData.avatar = {
@@ -199,11 +202,11 @@ export default function StaffNewEditForm({ currentStaff }) {
     [setValue]
   );
 
-  const fetchReportingUsers = async (branchId, departmentId) => {
+  const fetchReportingUsers = async (branchId, departmentIds) => {
     try {
       const response = await axiosInstance.post('/users/by-branch-department', {
         branchId,
-        departmentId,
+        departmentIds,
       });
       setReportingUserOptions(response.data);
     } catch (error) {
@@ -211,14 +214,15 @@ export default function StaffNewEditForm({ currentStaff }) {
       setReportingUserOptions([]);
     }
   };
+
   useEffect(() => {
     const branchId = branch?.id;
-    const departmentId = department?.id;
+    const departmentIds = selectedDepartments?.map((dep) => dep.id ?? dep) || [];
 
     const isEditing = !!currentStaff?.id;
 
-    if (branchId && departmentId) {
-      fetchReportingUsers(branchId, departmentId).then(() => {
+    if (branchId && departmentIds.length > 0) {
+      fetchReportingUsers(branchId, departmentIds).then(() => {
         if (isEditing && currentStaff?.supervisor) {
           setValue('reportingUser', currentStaff.supervisor);
         }
@@ -227,7 +231,7 @@ export default function StaffNewEditForm({ currentStaff }) {
       setReportingUserOptions([]);
       setValue('reportingUser', null);
     }
-  }, [branch, department, setValue, currentStaff]);
+  }, [branch, setValue, currentStaff, selectedDepartments]);
 
   useEffect(() => {
     if (isSuperOrAdmin) {
@@ -235,7 +239,9 @@ export default function StaffNewEditForm({ currentStaff }) {
         prev.concat(
           Yup.object().shape({
             branch: Yup.object().required('Branch is required'),
-            department: Yup.object().required('Department is required'),
+            departments: Yup.array()
+              .min(1, 'At least one department must be selected')
+              .required('Departments are required'),
             reportingUser: Yup.object().required('Reporting User is required'),
           })
         )
@@ -245,7 +251,9 @@ export default function StaffNewEditForm({ currentStaff }) {
         prev.concat(
           Yup.object().shape({
             branch: Yup.mixed().notRequired(),
-            department: Yup.object().required('Department is required'),
+            departments: Yup.array()
+              .min(1, 'At least one department must be selected')
+              .required('Departments are required'),
             reportingUser: Yup.object().required('Reporting User is required'),
           })
         )
@@ -272,33 +280,27 @@ export default function StaffNewEditForm({ currentStaff }) {
     }
   }, [shouldAutoAssignBranch, user?.branch, branches, setValue]);
 
-  // useEffect(() => {
-  //   if (!branch) {
-  //     setDepartments([]);
-  //     setValue('departments', []);
-  //     return;
-  //   }
-
-  //   const fetchedDepartments = branch?.departments || [];
-
-  //   setDepartments(fetchedDepartments);
-
-  //   if (!currentStaff) {
-  //     setValue('departments', []);
-  //   }
-  // }, [branch, currentStaff, setValue]);
   useEffect(() => {
-  if (!branch) {
-    setDepartments([]);
-    setValue('department', null);
-    return;
-  }
+    if (currentStaff && prevBranchId.current === undefined) {
+      prevBranchId.current = branch?.id;
+      return;
+    }
 
-  const selectedBranch = branches?.find((b) => b.id === branch.id);
-  const availableDepartments = selectedBranch?.departments || [];
-
-  setDepartments(availableDepartments);
-}, [branch, branches, setValue]);
+    // Only run reset if branch ID changed
+    if (prevBranchId.current !== branch?.id) {
+      if (!branch) {
+        setDepartmentOptions([]);
+        setValue('departments', []);
+        setValue('reportingUser', null);
+      } else {
+        console.log('here');
+        setDepartmentOptions(branch?.departments || []);
+        setValue('departments', []);
+        setValue('reportingUser', null);
+      }
+      prevBranchId.current = branch?.id;
+    }
+  }, [branch, currentStaff, setValue]);
 
   useEffect(() => {
     if (currentStaff) {
@@ -312,13 +314,11 @@ export default function StaffNewEditForm({ currentStaff }) {
       (user?.permissions?.includes('hod') || user?.permissions?.includes('sub_hod')) &&
       user?.branch
     ) {
-      console.log('here');
       setValue('branch', user.branch);
     }
   }, [setValue, user]);
 
   useEffect(() => {
-    console.log('here12');
     document.body.classList.remove('light-mode', 'dark-mode');
     document.body.classList.add(isDark ? 'dark-mode' : 'light-mode');
   }, [isDark]);
@@ -483,21 +483,36 @@ export default function StaffNewEditForm({ currentStaff }) {
 
                     {/* Department Select */}
                     <RHFAutocomplete
-                      name="department"
-                      label="Department"
-                      options={departments || []}
+                      multiple
+                      name="departments"
+                      label="Departments"
+                      options={departmentOptions || []}
                       getOptionLabel={(option) => `${option?.name}` || ''}
                       filterOptions={(x) => x}
-                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      isOptionEqualToValue={(option, value) => option?.id === value?.id}
                       renderOption={(props, option) => (
                         <li {...props}>
-                          <Typography variant="subtitle2">{option?.name}</Typography>
+                          <Typography variant="subtitle2" fontWeight="bold">
+                            {option?.name}
+                          </Typography>
                         </li>
                       )}
+                      renderTags={(selected, getTagProps) =>
+                        selected.map((option, tagIndex) => (
+                          <Chip
+                            {...getTagProps({ index: tagIndex })}
+                            key={option.id}
+                            label={option.name}
+                            size="small"
+                            color="info"
+                            variant="soft"
+                          />
+                        ))
+                      }
                     />
 
                     {/* Reporting User Select */}
-                    {branch?.id && department?.id && (
+                    {branch?.id && selectedDepartments && selectedDepartments.length ? (
                       <RHFAutocomplete
                         name="reportingUser"
                         label="Reporting User"
@@ -523,7 +538,7 @@ export default function StaffNewEditForm({ currentStaff }) {
                           </li>
                         )}
                       />
-                    )}
+                    ) : null}
                   </>
                 ) : user?.permissions?.includes('hod') || user?.permissions?.includes('subhod') ? (
                   <>
@@ -545,8 +560,8 @@ export default function StaffNewEditForm({ currentStaff }) {
 
                     {/* Department Fixed to User's Department */}
                     <RHFAutocomplete
-                      name="department"
-                      label="Department"
+                      name="departments"
+                      label="Departments"
                       options={user?.departments ? user.departments : []}
                       getOptionLabel={(option) => `${option?.name}` || ''}
                       filterOptions={(x) => x}
@@ -559,7 +574,7 @@ export default function StaffNewEditForm({ currentStaff }) {
                     />
 
                     {/* Reporting User Select */}
-                    {branch?.id && department?.id && (
+                    {branch?.id && selectedDepartments && selectedDepartments.length && (
                       <RHFAutocomplete
                         name="reportingUser"
                         label="Reporting User"

@@ -269,7 +269,6 @@ export default function ConductionNewEditForm({ currentConduction, currentDepart
               .typeError(`${kpi.name} must be a number`)
               .required(`${kpi.name} is required`)
               .min(0, `${kpi.name} cannot be negative`)
-              .integer(`${kpi.name} must be a whole number`);
           });
           trainerKpiShape[trainer.id] = Yup.object().shape(kpiShape);
         });
@@ -474,7 +473,7 @@ export default function ConductionNewEditForm({ currentConduction, currentDepart
                                     size="small"
                                     type="number"
                                     onKeyDown={(e) => {
-                                      const invalidKeys = ['e', 'E', '+', '-', '.'];
+                                      const invalidKeys = ['e', 'E', '+', '-'];
                                       if (invalidKeys.includes(e.key)) {
                                         e.preventDefault();
                                       }

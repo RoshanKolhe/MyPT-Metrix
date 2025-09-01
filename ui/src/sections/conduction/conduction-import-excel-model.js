@@ -26,7 +26,7 @@ import { m } from 'framer-motion';
 
 // ----------------------------------------------------------------------
 
-export default function SaleImportExcelModel({ open, onClose, refreshSales }) {
+export default function ConductionImportExcelModel({ open, onClose, refreshConductions }) {
   const { enqueueSnackbar } = useSnackbar();
 
   const NewSaleImportSchema = Yup.object().shape({
@@ -81,10 +81,10 @@ export default function SaleImportExcelModel({ open, onClose, refreshSales }) {
       const formData = new FormData();
       formData.append('file', data.file);
 
-      const response = await axiosInstance.post('/import-sales-template', formData);
+      const response = await axiosInstance.post('/import-conduction-template', formData);
 
       const { importedCount, skippedCount } = response.data;
-      refreshSales();
+      refreshConductions();
       reset();
       onClose();
 
@@ -197,8 +197,8 @@ export default function SaleImportExcelModel({ open, onClose, refreshSales }) {
   );
 }
 
-SaleImportExcelModel.propTypes = {
+ConductionImportExcelModel.propTypes = {
   onClose: PropTypes.func,
   open: PropTypes.bool,
-  refreshSales: PropTypes.func,
+  refreshConductions: PropTypes.func,
 };

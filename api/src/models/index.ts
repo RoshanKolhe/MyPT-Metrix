@@ -13,3 +13,4 @@ export * from './sales.model';
 export * from './membership-details.model';
 export * from './conduction.model';
 export * from './notification.model';
+export * from './department-trainer.model';

@@ -22,6 +22,7 @@ export default function DepartmentTableToolbar({
   onFilters,
   //
   roleOptions,
+  onExport,
 }) {
   const popover = usePopover();
 
@@ -104,6 +105,7 @@ export default function DepartmentTableToolbar({
         <MenuItem
           onClick={() => {
             popover.onClose();
+            onExport();
           }}
         >
           <Iconify icon="solar:export-bold" />
@@ -118,4 +120,5 @@ DepartmentTableToolbar.propTypes = {
   filters: PropTypes.object,
   onFilters: PropTypes.func,
   roleOptions: PropTypes.array,
+  onExport: PropTypes.func,
 };

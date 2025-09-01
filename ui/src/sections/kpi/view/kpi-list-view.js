@@ -41,6 +41,8 @@ import { useGetKpis } from 'src/api/kpi';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'notistack';
 import { _roles, COMMON_STATUS_OPTIONS } from 'src/utils/constants';
+import * as XLSX from 'xlsx';
+import { useAuthContext } from 'src/auth/hooks';
 import KpiTableToolbar from '../kpi-table-toolbar';
 import KpiTableFiltersResult from '../kpi-table-filters-result';
 import KpiQuickEditForm from '../kpi-quick-edit-form';
@@ -68,6 +70,9 @@ const defaultFilters = {
 // ----------------------------------------------------------------------
 
 export default function KpiListView() {
+  const { user } = useAuthContext();
+  const isSuperAdmin = user?.permissions?.includes('super_admin');
+
   const table = useTable();
 
   const settings = useSettingsContext();
@@ -182,9 +187,24 @@ export default function KpiListView() {
     setFilters(defaultFilters);
   }, []);
 
+  const handleExport = useCallback(() => {
+    const fileName = 'kpi.xlsx';
+
+    const formatted = dataFiltered.map((item) => ({
+      Id: item.id || '',
+      Name: item.name || '',
+      Description: item.description || '',
+      Status: item.isActive ? 'Active' : 'In-Active' || '',
+      CreatedAt: item.createdAt || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(formatted);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Kpi');
+    XLSX.writeFile(wb, fileName);
+  }, [dataFiltered]);
+
   useEffect(() => {
     if (kpis) {
-      // const updatedKpis = kpis.filter((obj) => !obj.permissions.includes('super_admin'));
       setTableData(kpis);
     }
   }, [kpis]);
@@ -203,14 +223,16 @@ export default function KpiListView() {
             mb: { xs: 3, md: 5 },
           }}
           action={
-            <Button
-              component={RouterLink}
-              href={paths.dashboard.kpi.new}
-              variant="contained"
-              startIcon={<Iconify icon="mingcute:add-line" />}
-            >
-              New Kpi
-            </Button>
+            isSuperAdmin && (
+              <Button
+                component={RouterLink}
+                href={paths.dashboard.kpi.new}
+                variant="contained"
+                startIcon={<Iconify icon="mingcute:add-line" />}
+              >
+                New Kpi
+              </Button>
+            )
           }
         />
 
@@ -255,6 +277,7 @@ export default function KpiListView() {
             onFilters={handleFilters}
             //
             roleOptions={_roles}
+            onExport={handleExport}
           />
 
           {canReset && (

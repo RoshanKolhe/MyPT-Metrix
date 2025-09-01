@@ -23,6 +23,7 @@ import { paths } from 'src/routes/paths';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/material.css';
 import Iconify from 'src/components/iconify';
+import { countries } from 'src/assets/data';
 
 const PAYMENT_OPTIONS = [
   { value: 'viya_app', label: 'ViyaApp Payment' },
@@ -81,6 +82,7 @@ export default function SaleNewEditForm({ currentSale }) {
         .email('Email must be a valid email address'),
       memberName: Yup.string().required('Member name is required'),
       gender: Yup.string().required('Gender is required'),
+      country: Yup.string().required('Country is required'),
       salesPerson: Yup.object().nullable().required('Sales person is required'),
       trainerName: Yup.object().nullable(),
       trainingAt: Yup.string().required('Training location is required'),
@@ -116,8 +118,13 @@ export default function SaleNewEditForm({ currentSale }) {
         .min(Yup.ref('startDate'), 'End date must be after start date'),
       freezingDays: Yup.number()
         .transform((value, originalValue) => (originalValue === '' ? null : value))
-        .typeError('Freezing days be a number')
+        .typeError('Freezing days must be a number')
         .min(0, 'Freezing days cannot be negative')
+        .nullable(),
+      noOfSessions: Yup.number()
+        .transform((value, originalValue) => (originalValue === '' ? null : value))
+        .typeError('Number of session must be a number')
+        .min(0, 'Number of session cannot be negative')
         .nullable(),
       paymentTypes: Yup.array()
         .of(
@@ -138,6 +145,7 @@ export default function SaleNewEditForm({ currentSale }) {
       kpis: currentSale?.kpi || null,
       memberName: currentSale?.memberName || '',
       gender: currentSale?.gender || '',
+      country: currentSale?.country || '',
       salesPerson: currentSale?.salesTrainer || null,
       trainerName: currentSale?.trainer || null,
       trainingAt: currentSale?.trainingAt || '',
@@ -154,6 +162,7 @@ export default function SaleNewEditForm({ currentSale }) {
       validityDays: currentSale?.membershipDetails?.validityDays || '',
       freeDays: currentSale?.membershipDetails?.freeDays || '',
       numberOfFreeSessions: currentSale?.membershipDetails?.freeSessions || '',
+      noOfSessions: currentSale?.membershipDetails?.noOfSessions || '',
       startDate: currentSale?.membershipDetails?.startDate
         ? new Date(currentSale?.membershipDetails?.startDate)
         : null,
@@ -234,6 +243,7 @@ export default function SaleNewEditForm({ currentSale }) {
       const inputData = {
         memberName: formData.memberName,
         gender: formData.gender,
+        country: formData.country,
         departmentId: formData.department?.id || null,
         kpiId: formData.kpis?.id || null,
         branchId: formData.branch.id,
@@ -252,6 +262,7 @@ export default function SaleNewEditForm({ currentSale }) {
           validityDays: formData.validityDays,
           freeDays: formData.freeDays ? formData.freeDays : 0,
           freeSessions: formData.numberOfFreeSessions ? formData.numberOfFreeSessions : 0,
+          noOfSessions: formData.noOfSessions ? formData.noOfSessions : 0,
           startDate: formData.startDate,
           expiryDate: formData.expiryDate,
           freezingDays: formData.freezingDays ? formData.freezingDays : 0,
@@ -489,8 +500,11 @@ export default function SaleNewEditForm({ currentSale }) {
     if (trainers.length > 0) {
       const sales = [];
       const service = [];
+
       trainers.forEach((trainer) => {
-        const kpiTypes = trainer.department?.kpis?.map((kpi) => kpi.type) || [];
+        // Collect all kpi types from all departments
+        const kpiTypes =
+          trainer.departments?.flatMap((dept) => dept.kpis?.map((kpi) => kpi.type) || []) || [];
 
         if (kpiTypes.includes('sales')) {
           sales.push(trainer);
@@ -668,6 +682,35 @@ export default function SaleNewEditForm({ currentSale }) {
                       {error && <FormHelperText>{error.message}</FormHelperText>}
                     </FormControl>
                   )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFAutocomplete
+                  name="country"
+                  label="Country"
+                  options={countries.map((country) => country.label)}
+                  getOptionLabel={(option) => option}
+                  renderOption={(props, option) => {
+                    const { code, label, phone } = countries.filter(
+                      (country) => country.label === option
+                    )[0];
+
+                    if (!label) {
+                      return null;
+                    }
+
+                    return (
+                      <li {...props} key={label}>
+                        <Iconify
+                          key={label}
+                          icon={`circle-flags:${code.toLowerCase()}`}
+                          width={28}
+                          sx={{ mr: 1 }}
+                        />
+                        {label} ({code}) +{phone}
+                      </li>
+                    );
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -882,6 +925,9 @@ export default function SaleNewEditForm({ currentSale }) {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <RHFTextField name="numberOfFreeSessions" label="Free Sessions" type="number" />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <RHFTextField name="noOfSessions" label="Sessions" type="number" />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Controller

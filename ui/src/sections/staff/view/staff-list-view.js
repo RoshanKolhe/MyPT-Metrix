@@ -16,6 +16,7 @@ import TableContainer from '@mui/material/TableContainer';
 import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hook';
 import { RouterLink } from 'src/routes/components';
+import * as XLSX from 'xlsx';
 // hooks
 import { useBoolean } from 'src/hooks/use-boolean';
 // components
@@ -80,7 +81,7 @@ export default function StaffListView() {
 
   const [filters, setFilters] = useState(defaultFilters);
 
-  const { staffs, staffsLoading, staffsEmpty, refreshStaffs } = useGetStaffs();
+  const { staffs, refreshStaffs } = useGetStaffs();
 
   const dataFiltered = applyFilter({
     inputData: tableData,
@@ -164,6 +165,25 @@ export default function StaffListView() {
     setFilters(defaultFilters);
   }, []);
 
+  const handleExport = useCallback(() => {
+    const fileName = 'Staff Report.xlsx';
+
+    const formatted = dataFiltered.map((item) => ({
+      FirstName: item?.firstName || '',
+      LastName: item?.lastName || '',
+      Email: item?.email || '',
+      PhoneNumber: item?.phoneNumber || '',
+      SuperVisor: item?.supervisor?.firstName || '',
+      Branch: item?.branch?.name || '',
+      Department: item?.department?.name || '',
+      CreatedAt: item?.createdAt || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(formatted);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Staff');
+    XLSX.writeFile(wb, fileName);
+  }, [dataFiltered]);
+
   useEffect(() => {
     if (staffs) {
       setTableData(staffs);
@@ -236,6 +256,8 @@ export default function StaffListView() {
             onFilters={handleFilters}
             //
             roleOptions={_roles}
+            refreshStaffs={refreshStaffs}
+            onExport={handleExport}
           />
 
           {canReset && (
@@ -394,16 +416,12 @@ function applyFilter({ inputData, comparator, filters }) {
 
   if (name) {
     inputData = inputData.filter((staff) =>
-      Object.values(staff).some((value) =>
-        String(value).toLowerCase().includes(name.toLowerCase())
-      )
+      Object.values(staff).some((value) => String(value).toLowerCase().includes(name.toLowerCase()))
     );
   }
 
   if (status !== 'all') {
-    inputData = inputData.filter((staff) =>
-      status === '1' ? staff.isActive : !staff.isActive
-    );
+    inputData = inputData.filter((staff) => (status === '1' ? staff.isActive : !staff.isActive));
   }
 
   if (role.length) {

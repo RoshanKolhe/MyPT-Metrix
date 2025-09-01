@@ -22,8 +22,9 @@ import { useSnackbar } from 'src/components/snackbar';
 import FormProvider from 'src/components/hook-form';
 import { useRouter } from 'src/routes/hook';
 import { paths } from 'src/routes/paths';
+import { LoadingButton } from '@mui/lab';
 
-export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget }) {
+export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget, targetId }) {
   const { enqueueSnackbar } = useSnackbar();
   const router = useRouter();
 
@@ -53,7 +54,7 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
 
   const {
     handleSubmit,
-    formState: { errors },
+    formState: { isSubmitting, errors },
     reset,
   } = methods;
 
@@ -75,6 +76,7 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
       console.log('trainerKpiTargetPayload', trainerKpiTargetPayload);
       await axiosInstance.post('/trainer-targets/assign', {
         trainerKpiTargets: trainerKpiTargetPayload,
+        targetId: Number(targetId),
       });
 
       enqueueSnackbar('Trainer KPI targets saved successfully!', { variant: 'success' });
@@ -223,9 +225,9 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
               </Grid>
 
               <Grid item xs={12}>
-                <Button type="submit" variant="contained">
+                <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
                   Save Trainer KPI Targets
-                </Button>
+                </LoadingButton>
               </Grid>
             </Grid>
           </Card>
@@ -236,5 +238,6 @@ export default function TargetNewEditAssignTrainerForm({ currentDepartmentTarget
 }
 
 TargetNewEditAssignTrainerForm.propTypes = {
+  targetId: PropTypes.string.isRequired,
   currentDepartmentTarget: PropTypes.object.isRequired,
 };

@@ -368,9 +368,11 @@ export class SalesController {
       'validityDays',
       'freeDays',
       'freeSessions',
+      'sessions',
       'startDate',
       'expiryDate',
       'freezingDays',
+      'country',
     ]);
 
     // Sheet 2: Payments
@@ -420,13 +422,14 @@ export class SalesController {
 
       upload(request, response, async err => {
         if (err || !request.file) {
-          reject(new HttpErrors.BadRequest('File upload failed'));
-          return;
+          return reject(new HttpErrors.BadRequest('File upload failed'));
         }
 
         try {
+          console.time('excel-load');
           const workbook = new ExcelJS.Workbook();
           await workbook.xlsx.load(request.file.buffer);
+          console.timeEnd('excel-load');
 
           const salesSheet: any = workbook.getWorksheet(
             'SalesAndMembershipDetails',
@@ -446,7 +449,7 @@ export class SalesController {
             meta[key] = metaRow[idx] ?? null;
           });
 
-          // Excel → Model field map
+          // Map definitions
           const excelToModelMap: {[key: string]: string} = {
             srNo: 'srNo',
             memberName: 'memberName',
@@ -457,7 +460,7 @@ export class SalesController {
             trainerId: 'trainerId',
             'trainingAt(academy,ladies,mixed,home,hybrid)': 'trainingAt',
             'memberType(new,rnl,upgrade,top_up,emi,viya_fit)': 'memberType',
-            'sourceOfLead(leads_update,walkins,phoneins,whatsa_app_direct,website_form,google_ads,meta_ads,insta_direct_message,mypt_app,referral,outreach,total)':
+            'sourceOfLead(leads_update,walkins,phoneins,whatsa_app_direct,whatsa_app_direct_form,google_ads,meta_ads,insta_direct_message,mypt_app,referral,outreach,total)':
               'sourceOfLead',
             'membershipType(academy,gym,pt,home,reformer,ems,group,others)':
               'membershipType',
@@ -467,9 +470,11 @@ export class SalesController {
             validityDays: 'validityDays',
             freeDays: 'freeDays',
             freeSessions: 'freeSessions',
+            sessions: 'noOfSessions',
             startDate: 'startDate',
             expiryDate: 'expiryDate',
             freezingDays: 'freezingDays',
+            country: 'country',
             kpiId: 'kpiId',
           };
 
@@ -489,6 +494,7 @@ export class SalesController {
             'validityDays',
             'freeDays',
             'freeSessions',
+            'noOfSessions',
             'startDate',
             'expiryDate',
             'freezingDays',
@@ -511,7 +517,7 @@ export class SalesController {
           const sales: any[] = [];
           const payments: any[] = [];
 
-          // Parse Sales Sheet
+          // Parse sales
           for (let i = 2; i <= salesSheet.rowCount; i++) {
             const row = salesSheet.getRow(i);
             const raw: any = {};
@@ -542,18 +548,18 @@ export class SalesController {
 
             if (!raw.srNo) continue;
 
-            const finalSale = {
+            sales.push({
               ...raw,
               branchId: meta.branchId,
               departmentId: meta.departmentId,
               deletedBy: null,
               membershipDetails,
-            };
+            });
 
-            sales.push(finalSale);
+            if (i % 100 === 0) await new Promise(r => setImmediate(r)); // yield
           }
 
-          // Parse Payments Sheet
+          // Parse payments
           for (let i = 2; i <= paymentsSheet.rowCount; i++) {
             const row = paymentsSheet.getRow(i);
             const payment: any = {};
@@ -566,53 +572,49 @@ export class SalesController {
             if (payment.srNoRefFromSales) payments.push(payment);
           }
 
-          const importedSales: any[] = [];
-          let skipped = 0;
+          let importedCount = 0;
+          let skippedCount = 0;
 
+          // Process each sale individually
           for (const sale of sales) {
-            const relatedPayments = payments.filter(
-              p => String(p.srNoRefFromSales) === String(sale.srNo),
+            const repo = new DefaultTransactionalRepository(
+              Sales,
+              this.dataSource,
+            );
+            const tx = await repo.beginTransaction(
+              IsolationLevel.READ_COMMITTED,
             );
 
-            const finalPayload = {
-              ...sale,
-              paymentTypes: relatedPayments,
-            };
-
-            if (!this.validateSale(finalPayload)) {
-              skipped += 1;
-              continue;
-            }
-
             try {
-              const repo = new DefaultTransactionalRepository(
-                Sales,
-                this.dataSource,
+              const relatedPayments = payments.filter(
+                p => String(p.srNoRefFromSales) === String(sale.srNo),
               );
-              const tx = await repo.beginTransaction(
-                IsolationLevel.READ_COMMITTED,
-              );
+
+              const finalPayload = {...sale, paymentTypes: relatedPayments};
+
+              if (!this.validateSale(finalPayload)) {
+                skippedCount++;
+                await tx.rollback();
+                continue;
+              }
 
               const {srNo, membershipDetails, ...salesFields} = finalPayload;
+
               const salesTrainer = await this.trainerRepository.findById(
                 salesFields.salesTrainerId,
               );
-              if (!salesTrainer) {
-                throw new Error('Invalid salesTrainerId. User does not exist.');
-              }
+              if (!salesTrainer) throw new Error('Invalid salesTrainerId.');
+
               if (salesFields.trainerId) {
-                const trainer = await this.userRepository
+                const trainer = await this.trainerRepository
                   .findById(salesFields.trainerId)
                   .catch(() => null);
-                if (!trainer) {
-                  throw new Error('Invalid trainerId. User does not exist.');
-                }
+                if (!trainer) throw new Error('Invalid trainerId.');
               }
+
               const createdSale = await this.salesRepository.create(
                 salesFields,
-                {
-                  transaction: tx,
-                },
+                {transaction: tx},
               );
 
               if (membershipDetails) {
@@ -621,25 +623,22 @@ export class SalesController {
                   .create(membershipDetails, {transaction: tx});
               }
 
-              // Optional: add paymentTypes storage here if needed
-
               await tx.commit();
-              importedSales.push(createdSale);
-            } catch (error) {
-              skipped += 1;
-              console.log(
-                `Skipped srNo: ${sale.srNo} due to error:`,
-                error.message,
+              importedCount++;
+            } catch (recordErr) {
+              console.error(
+                `Skipping sale SR: ${sale.srNo} - Error:`,
+                recordErr.message,
               );
+              skippedCount++;
+              await tx.rollback();
+              continue;
             }
           }
 
-          resolve({
-            importedCount: importedSales.length,
-            skippedCount: skipped,
-          });
+          return resolve({importedCount, skippedCount});
         } catch (error) {
-          reject(error);
+          return reject(error);
         }
       });
     });
@@ -676,7 +675,12 @@ export class SalesController {
       ],
     };
 
-    if (!sale.memberName || !sale.contactNumber || !sale.salesTrainerId)
+    if (
+      !sale.memberName ||
+      !sale.contactNumber ||
+      !sale.salesTrainerId ||
+      !sale.country
+    )
       return false;
 
     const isValidDate = (d: any) => !isNaN(new Date(d).getTime());
@@ -735,6 +739,7 @@ export class SalesController {
         !isValidDate(md.startDate) ||
         !isValidDate(md.expiryDate)
       ) {
+        console.log('Invalid membership details:');
         return false;
       }
     }

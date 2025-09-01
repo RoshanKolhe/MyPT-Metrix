@@ -16,6 +16,7 @@ import Label from 'src/components/label';
 import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
 import { ConfirmDialog } from 'src/components/custom-dialog';
+import { useAuthContext } from 'src/auth/hooks';
 
 // ----------------------------------------------------------------------
 
@@ -29,6 +30,8 @@ export default function KpiTableRow({
   quickEdit,
   handleQuickEditRow,
 }) {
+  const { user } = useAuthContext();
+  const isSuperAdmin = user?.permissions?.includes('super_admin');
   const { id, name, description, isActive, type } = row;
 
   const confirm = useBoolean();
@@ -54,16 +57,18 @@ export default function KpiTableRow({
         </TableCell>
 
         <TableCell align="right" sx={{ px: 1, whiteSpace: 'nowrap' }}>
-          <Tooltip title="Edit" placement="top" arrow>
-            <IconButton
-              color={quickEdit.value ? 'inherit' : 'default'}
-              onClick={() => {
-                onEditRow();
-              }}
-            >
-              <Iconify icon="solar:pen-bold" />
-            </IconButton>
-          </Tooltip>
+          {isSuperAdmin && (
+            <Tooltip title="Edit" placement="top" arrow>
+              <IconButton
+                color={quickEdit.value ? 'inherit' : 'default'}
+                onClick={() => {
+                  onEditRow();
+                }}
+              >
+                <Iconify icon="solar:pen-bold" />
+              </IconButton>
+            </Tooltip>
+          )}
 
           <Tooltip title="View" placement="top" arrow>
             <IconButton

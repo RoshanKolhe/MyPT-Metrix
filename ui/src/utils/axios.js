@@ -60,7 +60,13 @@ export const endpoints = {
     getChartData: (filter) => `/clients/chart-data?${filter}`,
     getFilteredConductionsData: (filter) => `/conductions/chart-data?${filter}`,
     getConductionsData: (filter) => `/conductions/chart-data?${filter}`,
+    getForecastingData: (filter) => `dashboard/forecast?${filter}`,
+    getMaleToFemaleRatio: (filter) => `gender-ratio?${filter}`,
+    getMemberStatistics: (filter) => `member-statistics?${filter}`,
     getDashboradSummary: `/dashboard/summary`,
+
+    getFilteredConductionDashboradSummary: (filter) => `/member-conduction-stats?${filter}`,
+    getConductionDashboradSummary: `/member-conduction-stats'`,
   },
   staff: {
     list: '/trainers',

@@ -109,9 +109,12 @@ export function useGetDashboradSummary(filter) {
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshDashboardCounts = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
+  const refreshDashboardSummary = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredDashboradSummary(newFilter)
+      : endpoints.user.getDashboradSummary;
+
+    mutate(newURL); // trigger re-fetch for new URL
   };
 
   return {
@@ -119,7 +122,7 @@ export function useGetDashboradSummary(filter) {
     isLoading,
     error,
     isValidating,
-    refreshDashboardCounts,
+    refreshDashboardSummary,
   };
 }
 
@@ -133,9 +136,12 @@ export function useGetDashboradChartData(filter) {
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshDashboradChartData = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
+  const refreshDashboradChartData = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredChartData(newFilter)
+      : endpoints.user.getChartData;
+
+    mutate(newURL); // trigger re-fetch for new URL
   };
 
   return {
@@ -157,9 +163,12 @@ export function useGetDashboradConductionsData(filter) {
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshDashboradConductionsData = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
+  const refreshDashboradConductionsData = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredConductionsData(newFilter)
+      : endpoints.user.getConductionsData;
+
+    mutate(newURL); // trigger re-fetch for new URL
   };
 
   return {
@@ -168,5 +177,95 @@ export function useGetDashboradConductionsData(filter) {
     error,
     isValidating,
     refreshDashboradConductionsData,
+  };
+}
+
+export function useGetDashboradForecastingData(filter) {
+  const URL = endpoints.user.getForecastingData(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradChartData = () => {
+    // Use the `mutate` function to trigger a revalidation
+    mutate();
+  };
+
+  return {
+    dashboradChartData: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradChartData,
+  };
+}
+
+export function useGetDashboradMaleToFemaleRatio(filter) {
+  const URL = endpoints.user.getMaleToFemaleRatio(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradMaleToFemaleRatio = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredConductionsData(newFilter)
+      : endpoints.user.getConductionsData;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboradMaleToFemaleRatioData: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradMaleToFemaleRatio,
+  };
+}
+
+export function useGetDashboradMemberStatistics(filter) {
+  const URL = endpoints.user.getMemberStatistics(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradMemberStatistics = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredConductionsData(newFilter)
+      : endpoints.user.getConductionsData;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboardMemberStatistics: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradMemberStatistics,
+  };
+}
+
+export function useGetDashboradConductionSummary(filter) {
+  let URL;
+  if (filter) {
+    URL = endpoints.user.getFilteredConductionDashboradSummary(filter);
+  } else {
+    URL = endpoints.user.getConductionDashboradSummary;
+  }
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboardConductionSummary = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredDashboradSummary(newFilter)
+      : endpoints.user.getDashboradSummary;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    conductionDashboardCounts: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboardConductionSummary,
   };
 }

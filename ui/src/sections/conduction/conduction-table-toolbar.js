@@ -16,6 +16,9 @@ import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Box, Grid } from '@mui/material';
+import { useBoolean } from 'src/hooks/use-boolean';
+import ConductionDownloadDummyExcelModel from './conduction-download-dummy-excel-model';
+import ConductionImportExcelModel from './conduction-import-excel-model';
 
 // ----------------------------------------------------------------------
 
@@ -25,8 +28,20 @@ export default function ConductionTableToolbar({
   //
   roleOptions,
   onExport,
+  refreshConductions,
 }) {
   const popover = usePopover();
+
+  const downloadTemplate = useBoolean();
+  const importTemplate = useBoolean();
+
+  const handleOpenDialog = useCallback(() => {
+    downloadTemplate.onTrue();
+  }, [downloadTemplate]);
+
+  const handleOpenImportDialog = useCallback(() => {
+    importTemplate.onTrue();
+  }, [importTemplate]);
 
   const handleFilterName = useCallback(
     (event) => {
@@ -106,11 +121,19 @@ export default function ConductionTableToolbar({
         open={popover.open}
         onClose={popover.onClose}
         arrow="right-top"
-        sx={{ width: 140 }}
+        sx={{ width: 240 }}
       >
         <MenuItem
           onClick={() => {
-            popover.onClose();
+            handleOpenDialog();
+          }}
+        >
+          <Iconify icon="solar:import-bold" />
+          Download Template
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleOpenImportDialog();
           }}
         >
           <Iconify icon="solar:import-bold" />
@@ -127,6 +150,21 @@ export default function ConductionTableToolbar({
           Export
         </MenuItem>
       </CustomPopover>
+
+      <ConductionDownloadDummyExcelModel
+        open={downloadTemplate.value}
+        onClose={() => {
+          downloadTemplate.onFalse();
+        }}
+      />
+
+      <ConductionImportExcelModel
+        open={importTemplate.value}
+        onClose={() => {
+          importTemplate.onFalse();
+        }}
+        refreshConductions={refreshConductions}
+      />
     </>
   );
 }
@@ -135,5 +173,6 @@ ConductionTableToolbar.propTypes = {
   filters: PropTypes.object,
   onFilters: PropTypes.func,
   onExport: PropTypes.func,
+  refreshConductions: PropTypes.func,
   roleOptions: PropTypes.array,
 };

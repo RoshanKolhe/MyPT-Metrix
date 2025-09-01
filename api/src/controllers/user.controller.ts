@@ -687,10 +687,13 @@ export class UserController {
         'application/json': {
           schema: {
             type: 'object',
-            required: ['branchId', 'departmentId'],
+            required: ['branchId', 'departmentIds'],
             properties: {
               branchId: {type: 'number'},
-              departmentId: {type: 'number'},
+              departmentIds: {
+                type: 'array',
+                items: {type: 'number'},
+              },
             },
           },
         },
@@ -698,10 +701,10 @@ export class UserController {
     })
     body: {
       branchId: number;
-      departmentId: number;
+      departmentIds: number[];
     },
   ): Promise<User[]> {
-    const {branchId, departmentId} = body;
+    const {branchId, departmentIds} = body;
 
     const users = await this.userRepository.find({
       where: {branchId},
@@ -711,11 +714,13 @@ export class UserController {
     const filtered = users.filter(user => {
       const perms = user.permissions || [];
 
+      // CGM can always be included
       if (perms.includes('cgm')) return true;
 
+      // HOD or sub-HOD must belong to any of the given department IDs
       if (
         (perms.includes('hod') || perms.includes('sub_hod')) &&
-        user.departments?.some(dep => dep.id === departmentId)
+        user.departments?.some(dep => dep.id && departmentIds.includes(dep.id))
       ) {
         return true;
       }

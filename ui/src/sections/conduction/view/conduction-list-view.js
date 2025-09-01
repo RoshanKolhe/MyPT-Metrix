@@ -289,6 +289,7 @@ export default function ConductionListView() {
             //
             roleOptions={_roles}
             onExport={handleExport}
+            refreshConductions={refreshConductions}
           />
 
           {canReset && (

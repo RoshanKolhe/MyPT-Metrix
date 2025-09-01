@@ -143,9 +143,27 @@ export const dashboardRoutes = [
         children: [
           { element: <DepartmentListPage />, index: true },
           { path: 'list', element: <DepartmentListPage /> },
-          { path: 'new', element: <DepartmentCreatePage /> },
+          {
+            path: 'new',
+            element: <RolesAuthRoute roles={['super_admin']} />,
+            children: [
+              {
+                path: '',
+                element: <DepartmentCreatePage />,
+              },
+            ],
+          },
           { path: ':id/view', element: <DepartmentViewPage /> },
-          { path: ':id/edit', element: <DepartmentEditPage /> },
+          {
+            path: ':id/edit',
+            element: <RolesAuthRoute roles={['super_admin']} />,
+            children: [
+              {
+                path: '',
+                element: <DepartmentEditPage />,
+              },
+            ],
+          },
         ],
       },
       {
@@ -155,8 +173,26 @@ export const dashboardRoutes = [
           { element: <KpiListPage />, index: true },
           { path: 'list', element: <KpiListPage /> },
           { path: ':id/view', element: <KpiViewPage /> },
-          { path: 'new', element: <KpiCreatePage /> },
-          { path: ':id/edit', element: <KpiEditPage /> },
+          {
+            path: 'new',
+            element: <RolesAuthRoute roles={['super_admin']} />,
+            children: [
+              {
+                path: '',
+                element: <KpiCreatePage />,
+              },
+            ],
+          },
+          {
+            path: ':id/edit',
+            element: <RolesAuthRoute roles={['super_admin']} />,
+            children: [
+              {
+                path: '',
+                element: <KpiEditPage />,
+              },
+            ],
+          },
         ],
       },
       {
@@ -165,8 +201,26 @@ export const dashboardRoutes = [
         children: [
           { element: <BranchListPage />, index: true },
           { path: 'list', element: <BranchListPage /> },
-          { path: 'new', element: <BranchCreatePage /> },
-          { path: ':id/edit', element: <BranchEditPage /> },
+          {
+            path: 'new',
+            element: <RolesAuthRoute roles={['super_admin']} />,
+            children: [
+              {
+                path: '',
+                element: <BranchCreatePage />,
+              },
+            ],
+          },
+          {
+            path: ':id/edit',
+            element: <RolesAuthRoute roles={['super_admin']} />,
+            children: [
+              {
+                path: '',
+                element: <BranchEditPage />,
+              },
+            ],
+          },
           { path: ':id/view', element: <BranchViewPage /> },
         ],
       },

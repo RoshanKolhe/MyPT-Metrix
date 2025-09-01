@@ -53,6 +53,11 @@ export class Sales extends Entity {
   })
   contactNumber?: string;
 
+  @property({
+    type: 'string',
+  })
+  country?: string;
+
   @property.array(Object, {
     name: 'paymentTypes',
   })

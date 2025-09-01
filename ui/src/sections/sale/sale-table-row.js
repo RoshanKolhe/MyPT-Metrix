@@ -98,6 +98,7 @@ export default function SaleTableRow({
         <TableCell>{purchaseDate}</TableCell>
         <TableCell>{membershipLabels}</TableCell>
         <TableCell>{membershipDetails?.actualPrice}</TableCell>
+        <TableCell>{membershipDetails?.discountedPrice}</TableCell>
         <TableCell>{membershipDetails?.validityDays}</TableCell>
         <TableCell>{expiryDate}</TableCell>
         <TableCell>{membershipDetails?.freezingDays}</TableCell>

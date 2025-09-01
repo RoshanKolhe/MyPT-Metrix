@@ -7,9 +7,9 @@ import Card from '@mui/material/Card';
 import { fNumber } from 'src/utils/format-number';
 // components
 import Chart, { useChart } from 'src/components/chart';
-import { useGetDashboradMaleToFemaleRatio } from 'src/api/user';
+import { useGetDashboradMemberStatistics } from 'src/api/user';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 // ----------------------------------------------------------------------
 
@@ -31,19 +31,20 @@ const StyledChart = styled(Chart)(({ theme }) => ({
 
 // ----------------------------------------------------------------------
 
-export default function EcommerceSaleByGender({
+export default function EcommerceMemberStatistics({
   title,
   subheader,
-  dashboradMaleToFemaleRatioData,
+  dashboardMemberStatistics,
   ...other
 }) {
   const theme = useTheme();
-
-  // Fetch chart data from API
-  const { maleCount, femaleCount, maleRatio, femaleRatio, totalUniqueClients } =
-    dashboradMaleToFemaleRatioData;
-
-  console.log('totalUniqueClients', totalUniqueClients);
+  const {
+    newMemberPercent,
+    renewedMemberPercent,
+    expiredMemberPercent,
+    unclassifiedMemberCount,
+    totalMemberCount,
+  } = dashboardMemberStatistics;
 
   // Build chart data dynamically
   const chartData = useMemo(
@@ -51,13 +52,15 @@ export default function EcommerceSaleByGender({
       colors: [
         [theme.palette.primary.light, theme.palette.primary.main],
         [theme.palette.warning.light, theme.palette.warning.main],
+        [theme.palette.warning.light, theme.palette.secondary.main],
       ],
       series: [
-        { label: 'Male', value: parseFloat(maleRatio) },
-        { label: 'Female', value: parseFloat(femaleRatio) },
+        { label: 'New Members', value: parseFloat(newMemberPercent) },
+        { label: 'Renewed Members', value: parseFloat(renewedMemberPercent) },
+        { label: 'Expired Members', value: parseFloat(expiredMemberPercent) },
       ],
     }),
-    [maleRatio, femaleRatio, theme]
+    [newMemberPercent, renewedMemberPercent, expiredMemberPercent, theme]
   );
 
   const chartSeries = chartData.series.map((item) => item.value);
@@ -65,9 +68,7 @@ export default function EcommerceSaleByGender({
   const chartConfig = useMemo(
     () => ({
       colors: chartData.colors.map((colr) => colr[1]),
-      chart: {
-        sparkline: { enabled: true },
-      },
+      chart: { sparkline: { enabled: true } },
       labels: chartData.series.map((item) => item.label),
       legend: {
         floating: true,
@@ -90,14 +91,14 @@ export default function EcommerceSaleByGender({
             value: { offsetY: 16 },
             total: {
               formatter() {
-                return fNumber(totalUniqueClients); // read latest state value
+                return fNumber(totalMemberCount || 0);
               },
             },
           },
         },
       },
     }),
-    [chartData, totalUniqueClients]
+    [chartData, totalMemberCount]
   );
 
   const chartOptions = useChart(chartConfig);
@@ -112,16 +113,16 @@ export default function EcommerceSaleByGender({
         series={chartSeries}
         options={chartOptions}
         height={300}
-        key={totalUniqueClients}
+        key={totalMemberCount}
       />
     </Card>
   );
 }
 
-EcommerceSaleByGender.propTypes = {
+EcommerceMemberStatistics.propTypes = {
   chart: PropTypes.object,
   subheader: PropTypes.string,
   title: PropTypes.string,
   total: PropTypes.number,
-  dashboradMaleToFemaleRatioData: PropTypes.object,
+  dashboardMemberStatistics: PropTypes.object,
 };

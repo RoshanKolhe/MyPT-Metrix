@@ -3,17 +3,15 @@ import { useCallback } from 'react';
 // @mui
 import Stack from '@mui/material/Stack';
 import MenuItem from '@mui/material/MenuItem';
-import Checkbox from '@mui/material/Checkbox';
 import TextField from '@mui/material/TextField';
-import InputLabel from '@mui/material/InputLabel';
 import IconButton from '@mui/material/IconButton';
-import FormControl from '@mui/material/FormControl';
-import OutlinedInput from '@mui/material/OutlinedInput';
 import InputAdornment from '@mui/material/InputAdornment';
-import Select from '@mui/material/Select';
+import { useBoolean } from 'src/hooks/use-boolean';
 // components
 import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
+import StaffDownloadDummyExcelModel from './staff-download-dummy-excel-model';
+import StaffImportExcelModel from './staff-import-excel-model';
 
 // ----------------------------------------------------------------------
 
@@ -22,8 +20,12 @@ export default function StaffTableToolbar({
   onFilters,
   //
   roleOptions,
+  onExport,
+  refreshStaffs,
 }) {
   const popover = usePopover();
+  const downloadTemplate = useBoolean();
+  const importTemplate = useBoolean();
 
   const handleFilterName = useCallback(
     (event) => {
@@ -32,15 +34,13 @@ export default function StaffTableToolbar({
     [onFilters]
   );
 
-  const handleFilterRole = useCallback(
-    (event) => {
-      onFilters(
-        'role',
-        typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value
-      );
-    },
-    [onFilters]
-  );
+  const handleOpenDialog = useCallback(() => {
+    downloadTemplate.onTrue();
+  }, [downloadTemplate]);
+
+  const handleOpenImportDialog = useCallback(() => {
+    importTemplate.onTrue();
+  }, [importTemplate]);
 
   return (
     <>
@@ -81,11 +81,20 @@ export default function StaffTableToolbar({
         open={popover.open}
         onClose={popover.onClose}
         arrow="right-top"
-        sx={{ width: 140 }}
+        sx={{ width: 240 }}
       >
         <MenuItem
           onClick={() => {
-            popover.onClose();
+            handleOpenDialog();
+          }}
+        >
+          <Iconify icon="solar:import-bold" />
+          Download Template
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            handleOpenImportDialog();
           }}
         >
           <Iconify icon="solar:import-bold" />
@@ -95,12 +104,28 @@ export default function StaffTableToolbar({
         <MenuItem
           onClick={() => {
             popover.onClose();
+            onExport();
           }}
         >
           <Iconify icon="solar:export-bold" />
           Export
         </MenuItem>
       </CustomPopover>
+
+      <StaffDownloadDummyExcelModel
+        open={downloadTemplate.value}
+        onClose={() => {
+          downloadTemplate.onFalse();
+        }}
+      />
+
+      <StaffImportExcelModel
+        open={importTemplate.value}
+        onClose={() => {
+          importTemplate.onFalse();
+        }}
+        refreshStaffs={refreshStaffs}
+      />
     </>
   );
 }
@@ -109,4 +134,6 @@ StaffTableToolbar.propTypes = {
   filters: PropTypes.object,
   onFilters: PropTypes.func,
   roleOptions: PropTypes.array,
+  refreshStaffs: PropTypes.func,
+  onExport: PropTypes.func,
 };

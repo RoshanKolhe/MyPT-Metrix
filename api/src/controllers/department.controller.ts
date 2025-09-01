@@ -199,6 +199,8 @@ export class DepartmentController {
         PermissionKeys.SUPER_ADMIN,
         PermissionKeys.ADMIN,
         PermissionKeys.CGM,
+        PermissionKeys.HOD,
+        PermissionKeys.SUB_HOD,
       ],
     },
   })

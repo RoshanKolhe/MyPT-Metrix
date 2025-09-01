@@ -17,10 +17,9 @@ export class MembershipDetails extends Entity {
   membershipType: object[];
 
   @property({
-    type: 'string',
-    required: true,
+    type: 'date',
   })
-  purchaseDate: string;
+  purchaseDate?: Date;
 
   @property({
     type: 'number',
@@ -55,16 +54,23 @@ export class MembershipDetails extends Entity {
   freeSessions?: number | null;
 
   @property({
-    type: 'string',
-    required: true,
+    type: 'number',
+    required: false,
+    nullable: true,
   })
-  startDate: string;
+  noOfSessions?: number | null;
 
   @property({
-    type: 'string',
+    type: 'date',
     required: true,
   })
-  expiryDate: string;
+  startDate: Date;
+
+  @property({
+    type: 'date',
+    required: true,
+  })
+  expiryDate: Date;
 
   @property({
     type: 'number',

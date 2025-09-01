@@ -20,6 +20,7 @@ import { RouterLink } from 'src/routes/components';
 // hooks
 import { useBoolean } from 'src/hooks/use-boolean';
 // components
+import * as XLSX from 'xlsx';
 import Label from 'src/components/label';
 import Iconify from 'src/components/iconify';
 import Scrollbar from 'src/components/scrollbar';
@@ -50,6 +51,7 @@ import UserQuickEditForm from '../user-quick-edit-form';
 const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...USER_STATUS_OPTIONS];
 
 const TABLE_HEAD = [
+  { id: 'id', label: '#' },
   { id: 'name', label: 'Name' },
   { id: 'phoneNumber', label: 'Phone Number', width: 180 },
   { id: 'role', label: 'Role', width: 180 },
@@ -83,7 +85,9 @@ export default function UserListView() {
       : _roles;
 
   console.log(roleOptions);
-  const table = useTable();
+  const table = useTable({
+    defaultOrderBy: 'id',
+  });
 
   const settings = useSettingsContext();
 
@@ -99,7 +103,7 @@ export default function UserListView() {
 
   const [filters, setFilters] = useState(defaultFilters);
 
-  const { users, usersLoading, usersEmpty, refreshUsers } = useGetUsers();
+  const { users, refreshUsers } = useGetUsers();
 
   const dataFiltered = applyFilter({
     inputData: tableData,
@@ -183,6 +187,28 @@ export default function UserListView() {
     setFilters(defaultFilters);
   }, []);
 
+  const handleExport = useCallback(() => {
+    const fileName = 'User Report.xlsx';
+    const formatted = dataFiltered.map((item) => ({
+      ID: item?.id || '',
+      FirstName: item?.firstName || '',
+      LastName: item?.lastName || '',
+      DateOfBirth: item?.dob || '',
+      Country: item?.country || '',
+      FullAddress: item?.fullAddress || '',
+      City: item?.city || '',
+      State: item?.state || '',
+      Email: item?.email || '',
+      PhoneNumber: item?.phoneNumber || '',
+      IsActive: item?.isActive ? 'Yes' : 'No',
+      CreatedAt: item?.createdAt || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(formatted);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'User');
+    XLSX.writeFile(wb, fileName);
+  }, [dataFiltered]);
+
   useEffect(() => {
     if (users) {
       const updatedUsers = users.filter((obj) => !obj.permissions.includes('super_admin'));
@@ -256,6 +282,7 @@ export default function UserListView() {
             onFilters={handleFilters}
             //
             roleOptions={roleOptions}
+            onExport={handleExport}
           />
 
           {canReset && (

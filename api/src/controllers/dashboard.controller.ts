@@ -3,11 +3,19 @@
 import {repository} from '@loopback/repository';
 import {
   ConductionRepository,
+  MembershipDetailsRepository,
   SalesRepository,
   TargetRepository,
   UserRepository,
 } from '../repositories';
-import {get, param, post, requestBody, response} from '@loopback/rest';
+import {
+  get,
+  HttpErrors,
+  param,
+  post,
+  requestBody,
+  response,
+} from '@loopback/rest';
 import {Sales} from '../models';
 import {authenticate} from '@loopback/authentication';
 import {
@@ -27,6 +35,9 @@ export class DashboardController {
   constructor(
     @repository(SalesRepository)
     public salesRepository: SalesRepository,
+    @repository(MembershipDetailsRepository)
+    public membershipDetailsRepository: MembershipDetailsRepository,
+
     @repository(UserRepository)
     public userRepository: UserRepository,
     @repository(TargetRepository)
@@ -41,6 +52,11 @@ export class DashboardController {
   @get('/dashboard/summary')
   async getSummary(
     @param.query.string('kpiIds') kpiIdsStr?: string,
+    @param.query.number('branchId') branchId?: number,
+    @param.query.number('departmentId') departmentId?: number,
+    @param.query.string('startDate') startDateStr?: string,
+    @param.query.string('endDate') endDateStr?: string,
+    @param.query.string('country') country?: string,
   ): Promise<any> {
     const kpiIds = kpiIdsStr
       ? kpiIdsStr
@@ -64,17 +80,21 @@ export class DashboardController {
       },
     };
 
-    if (kpiIds.length > 0) {
-      filter.where.kpiId = {inq: kpiIds};
+    if (kpiIds.length > 0) filter.where.kpiId = {inq: kpiIds};
+    if (branchId) filter.where.branchId = branchId;
+    if (departmentId) filter.where.departmentId = departmentId;
+    if (country) filter.where.country = country;
+    if (startDateStr && endDateStr) {
+      filter.where.createdAt = {
+        gte: new Date(new Date(startDateStr).setHours(0, 0, 0, 0)),
+        lte: new Date(new Date(endDateStr).setHours(23, 59, 59, 999)),
+      };
     }
-
-    console.log('filter', JSON.stringify(filter));
 
     const allSales = await this.salesRepository.find({
       ...filter,
       include: ['membershipDetails'],
     });
-    console.log('All Sales:', allSales.length);
     // Calculate total revenue from all sales
     const totalRevenue = allSales.reduce(
       (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
@@ -118,7 +138,10 @@ export class DashboardController {
     const thisWeekSales = await this.salesRepository.find({
       where: {
         ...filter.where,
-        createdAt: {between: [startDate, today]},
+        createdAt: {
+          gte: new Date(startDate.setHours(0, 0, 0, 0)),
+          lte: new Date(today.setHours(23, 59, 59, 999)),
+        },
       },
       include: ['membershipDetails'],
     });
@@ -126,7 +149,10 @@ export class DashboardController {
     const lastWeekSales = await this.salesRepository.find({
       where: {
         ...filter.where,
-        createdAt: {between: [lastWeekStart, lastWeekEnd]},
+        createdAt: {
+          gte: new Date(lastWeekStart.setHours(0, 0, 0, 0)),
+          lte: new Date(lastWeekEnd.setHours(23, 59, 59, 999)),
+        },
       },
       include: ['membershipDetails'],
     });
@@ -200,12 +226,16 @@ export class DashboardController {
   @authenticate('jwt')
   @get('/clients/chart-data')
   @response(200, {
-    description: 'Chart data grouped by KPI',
+    description:
+      'Chart data grouped by KPI (filtered by membershipDetails.purchaseDate)',
   })
   async getClientChartData(
     @param.query.string('startDate') startDate: string,
     @param.query.string('endDate') endDate: string,
     @param.query.string('kpiIds') kpiIdsStr?: string,
+    @param.query.string('branchId') branchId?: string,
+    @param.query.string('departmentId') departmentId?: string,
+    @param.query.string('country') country?: string,
   ): Promise<object> {
     const kpiIds = kpiIdsStr
       ? kpiIdsStr
@@ -213,19 +243,60 @@ export class DashboardController {
           .map(id => Number(id.trim()))
           .filter(id => !isNaN(id))
       : [];
-    const sales: any = await this.salesRepository.find({
+
+    // Step 1: Fetch membershipDetails within the date range (includes full end day)
+    const membershipRecords = await this.membershipDetailsRepository.find({
       where: {
-        and: [
-          {createdAt: {gte: new Date(startDate)}},
-          {createdAt: {lte: new Date(endDate)}},
-          {isDeleted: false},
-          ...(kpiIds?.length ? [{kpiId: {inq: kpiIds}}] : []),
-        ],
+        purchaseDate: {
+          gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+          lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+        },
       },
-      include: [{relation: 'kpi', scope: {fields: ['id', 'name']}}],
+      include: [
+        {
+          relation: 'sales',
+          scope: {
+            where: {
+              isDeleted: false,
+              ...(kpiIds.length ? {kpiId: {inq: kpiIds}} : {}),
+              ...(branchId ? {branchId: Number(branchId)} : {}),
+              ...(departmentId ? {departmentId: Number(departmentId)} : {}),
+              ...(country ? {country: country} : {}),
+            },
+            include: [
+              {
+                relation: 'kpi',
+                scope: {
+                  fields: ['id', 'name'],
+                },
+              },
+            ],
+          },
+        },
+      ],
     });
 
-    // Initialize date range
+    // Step 2: Flatten sales from memberships
+    const filteredSales = membershipRecords
+      .map((m: any) => {
+        if (!m.sales) return null;
+        return {
+          sale: m.sales,
+          purchaseDate: m.purchaseDate,
+          discountedPrice: m.discountedPrice ?? 0,
+        };
+      })
+      .filter(
+        (
+          item,
+        ): item is {
+          sale: any;
+          purchaseDate: Date | string;
+          discountedPrice: number;
+        } => !!item,
+      );
+
+    // Step 3: Prepare categories (local date format)
     const categories: string[] = [];
     const dateMap: {[date: string]: {[kpiName: string]: number}} = {};
     const kpiSet = new Set<string>();
@@ -233,22 +304,39 @@ export class DashboardController {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
+    const formatLocalDate = (d: Date) =>
+      d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      });
+
+    for (
+      let d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      d <= end;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const dateStr = formatLocalDate(new Date(d));
       categories.push(dateStr);
       dateMap[dateStr] = {};
     }
 
-    for (const s of sales) {
-      const dateStr = s.createdAt?.toISOString().split('T')[0];
-      const kpiName = s.kpi?.name || 'Unknown KPI';
-      if (!dateStr || !dateMap[dateStr]) continue;
+    // Step 4: Sum discountedPrice per day per KPI
+    for (const {sale, purchaseDate, discountedPrice} of filteredSales) {
+      const d = new Date(purchaseDate);
+      const dateStr = formatLocalDate(d);
 
+      if (!dateMap[dateStr]) continue; // skip if out of range
+
+      const kpiName = sale.kpi?.name || 'Unknown KPI';
       kpiSet.add(kpiName);
+
       if (!dateMap[dateStr][kpiName]) dateMap[dateStr][kpiName] = 0;
-      dateMap[dateStr][kpiName]++;
+
+      dateMap[dateStr][kpiName] += discountedPrice;
     }
 
+    // Step 5: Construct series for chart
     const series = Array.from(kpiSet).map(kpiName => ({
       name: kpiName,
       data: categories.map(date => dateMap[date][kpiName] || 0),
@@ -280,7 +368,7 @@ export class DashboardController {
       endDate = new Date(today.getFullYear(), 11, 31);
     }
 
-    // Fetch targets and sales data
+    // Fetch targets and sales
     const targets = await this.targetRepository.find({
       where: {
         and: [
@@ -298,7 +386,7 @@ export class DashboardController {
       include: ['membershipDetails'],
     });
 
-    // Prepare time buckets (labels)
+    // Prepare time labels
     const labels: string[] = [];
     const days =
       Math.floor(
@@ -310,17 +398,23 @@ export class DashboardController {
       if (interval === 'weekly') {
         labels.push(d.toLocaleString('en-US', {weekday: 'short'}));
       } else {
-        labels.push(d.toISOString().slice(0, 10));
+        labels.push(this.formatDate(d));
       }
     }
 
+    // === Target Series (Cumulative) ===
     const targetTotal = targets.reduce(
       (sum, t) => sum + (t.targetValue || 0),
       0,
     );
-    const targetSeries = Array(days).fill(Math.round(targetTotal / days));
+    const dailyTarget = targetTotal / days;
+    const targetSeries: number[] = [];
+    for (let i = 0; i < days; i++) {
+      targetSeries[i] = Math.round(dailyTarget * (i + 1)); // cumulative
+    }
 
-    const actualSeries = Array(days).fill(0);
+    // === Actual Series (Cumulative) ===
+    const actualDaily = Array(days).fill(0);
     for (const sale of sales) {
       if (!sale.createdAt) continue;
       const d = new Date(sale.createdAt);
@@ -328,12 +422,20 @@ export class DashboardController {
         (d.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
       );
       if (idx >= 0 && idx < days) {
-        actualSeries[idx] += sale.membershipDetails?.discountedPrice || 0;
+        actualDaily[idx] += sale.membershipDetails?.discountedPrice || 0;
       }
     }
 
-    const actualToDate = actualSeries.reduce((sum, val) => sum + val, 0);
-    const daysWithData = actualSeries.filter(v => v > 0).length || 1;
+    const actualSeries: number[] = [];
+    let runningTotal = 0;
+    for (let i = 0; i < days; i++) {
+      runningTotal += actualDaily[i];
+      actualSeries.push(runningTotal);
+    }
+
+    // === Projection & Variance ===
+    const actualToDate = actualSeries[actualSeries.length - 1] || 0;
+    const daysWithData = actualDaily.filter(v => v > 0).length || 1;
     const projected = (actualToDate / daysWithData) * days;
     const varianceAmount = Math.round(projected - targetTotal);
     const variancePercent = parseFloat(
@@ -350,10 +452,11 @@ export class DashboardController {
       message = `Projected to miss target by $${Math.abs(varianceAmount).toLocaleString()} (${variancePercent}%)`;
     }
 
+    // === Response ===
     return {
       interval,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: this.formatDate(startDate),
+      endDate: this.formatDate(endDate),
       labels,
       targetSeries,
       actualSeries,
@@ -387,7 +490,7 @@ export class DashboardController {
     const lastEnd = new Date(startDate);
     lastEnd.setDate(lastEnd.getDate() - 1);
 
-    // Fetch all targets in date range
+    // Fetch targets
     const targets = await this.targetRepository.find({
       where: {
         branchId,
@@ -397,6 +500,9 @@ export class DashboardController {
       },
       include: [
         {
+          relation: 'branch',
+        },
+        {
           relation: 'departmentTargets',
           scope: {
             where: {
@@ -404,6 +510,9 @@ export class DashboardController {
               isDeleted: false,
             },
             include: [
+              {
+                relation: 'department',
+              },
               {
                 relation: 'trainerTargets',
                 scope: {
@@ -417,15 +526,18 @@ export class DashboardController {
       ],
     });
 
-    // Flatten all TrainerTargets
-    const trainerTargets = targets.flatMap(t =>
-      t.departmentTargets.flatMap((dt: any) =>
-        dt.trainerTargets.map((tt: any) => ({
+    // Flatten TrainerTargets
+    const trainerTargets = targets.flatMap((t: any) =>
+      (t.departmentTargets ?? []).flatMap((dt: any) =>
+        (dt.trainerTargets ?? []).map((tt: any) => ({
           trainerId: tt.trainerId,
           trainer: tt.trainer,
           kpiId: tt.kpiId,
           targetValue: tt.targetValue,
           departmentId: dt.departmentId,
+          department: dt.department,
+          branchId: t.branchId,
+          branch: t.branch,
         })),
       ),
     );
@@ -433,51 +545,72 @@ export class DashboardController {
     const result: any[] = [];
 
     for (const tt of trainerTargets) {
-      // Current period sales
+      // Current period actual value
       const sales = await this.salesRepository.find({
         where: {
           trainerId: tt.trainerId,
           createdAt: {between: [startDate, endDate]},
         },
+        include: ['membershipDetails'],
       });
 
-      const actual = sales.length;
+      const actual = sales.reduce((sum, sale) => {
+        return sum + (sale.membershipDetails?.discountedPrice || 0);
+      }, 0);
 
-      // Last period sales
+      // Last period actual value
       const lastSales = await this.salesRepository.find({
         where: {
           trainerId: tt.trainerId,
           createdAt: {between: [lastStart, lastEnd]},
         },
+        include: ['membershipDetails'],
       });
 
-      const previousActual = lastSales.length;
-      const achieved = tt.targetValue ? (actual / tt.targetValue) * 100 : 0;
-      const delta =
-        previousActual === 0
-          ? 100
-          : ((actual - previousActual) / previousActual) * 100;
+      const previousActual = lastSales.reduce((sum, sale) => {
+        return sum + (sale.membershipDetails?.discountedPrice || 0);
+      }, 0);
 
-      // Status
+      // Achievement % and delta
+      const achieved = tt.targetValue ? (actual / tt.targetValue) * 100 : 0;
+      let delta = 0;
+      if (previousActual === 0 && actual > 0) {
+        delta = 100;
+      } else if (previousActual === 0 && actual === 0) {
+        delta = 0;
+      } else {
+        delta = ((actual - previousActual) / previousActual) * 100;
+      }
+
+      // Performance Status
       let status = 'Under Performer';
       if (achieved >= 100 && achieved < 110) status = 'Achiever';
       else if (achieved >= 110) status = 'Over Achiever';
 
       result.push({
         trainerId: tt.trainerId,
-        name: tt.trainer?.name || 'Unknown',
+        name: tt.trainer?.firstName || 'Unknown',
         departmentId: tt.departmentId,
+        department: tt.department ?? null, // Include department details
+        branchId: tt.branchId,
+        branch: tt.branch ?? null, // Include branch details
         role: tt.trainer?.role,
         target: tt.targetValue,
-        actual,
+        actual: Math.round(actual),
         achieved: +achieved.toFixed(1),
         status,
         changeFromLastPeriod: {
           percent: +delta.toFixed(1),
-          previousActual,
+          previousActual: Math.round(previousActual),
         },
       });
     }
+
+    // Sort and rank
+    result.sort((a, b) => b.achieved - a.achieved);
+    result.forEach((item, index) => {
+      item.rank = index + 1;
+    });
 
     return result;
   }
@@ -502,8 +635,12 @@ export class DashboardController {
       : [];
 
     const whereConditions: any[] = [
-      {createdAt: {gte: new Date(startDate)}},
-      {createdAt: {lte: new Date(endDate)}},
+      {
+        conductionDate: {
+          gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+          lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+        },
+      },
       {isDeleted: false},
     ];
 
@@ -523,14 +660,28 @@ export class DashboardController {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
+    for (
+      let d = new Date(start.getTime());
+      d <= end;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const dateStr = d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      });
       categories.push(dateStr);
       dateMap[dateStr] = {};
     }
 
     for (const c of conductions) {
-      const dateStr = c.createdAt?.toISOString().split('T')[0];
+      const dateStr = c.createdAt
+        ? new Date(c.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+          })
+        : null;
       const kpiName = c.kpi?.name || 'Unknown KPI';
       if (!dateStr || !dateMap[dateStr]) continue;
 
@@ -542,9 +693,250 @@ export class DashboardController {
 
     const series = Array.from(kpiSet).map(kpiName => ({
       name: kpiName,
-      data: categories.map(date => dateMap[date][kpiName] || 0),
+      data: categories.map(date =>
+        Number((dateMap[date][kpiName] || 0).toFixed(2)),
+      ),
     }));
 
     return {categories, series};
+  }
+
+  @get('/gender-ratio', {
+    responses: {
+      '200': {
+        description: 'Male vs Female client ratio based on unique email',
+        content: {'application/json': {schema: {type: 'object'}}},
+      },
+    },
+  })
+  async getGenderRatio(
+    @param.query.string('startDate') startDate?: string,
+    @param.query.string('endDate') endDate?: string,
+    @param.query.string('departmentId') departmentId?: string,
+    @param.query.string('kpiIds') kpiIdsStr?: string,
+    @param.query.string('branchId') branchId?: string,
+    @param.query.string('country') country?: string,
+  ): Promise<object> {
+    const where: any = {};
+
+    if (startDate && endDate) {
+      where.createdAt = {
+        between: [new Date(startDate), new Date(endDate)],
+      };
+    }
+
+    if (departmentId) where.departmentId = departmentId;
+    if (branchId) where.branchId = branchId;
+    if (country) {
+      where.country = country;
+    }
+
+    if (kpiIdsStr) {
+      const kpiIds = kpiIdsStr
+        .split(',')
+        .map(id => parseInt(id.trim()))
+        .filter(id => !isNaN(id));
+      if (kpiIds.length > 0) {
+        where.kpiId = {inq: kpiIds};
+      }
+    }
+
+    const sales = await this.salesRepository.find({
+      where,
+      fields: {email: true, gender: true},
+    });
+
+    const uniqueClients = new Map<string, string>();
+
+    for (const sale of sales) {
+      const email = sale.email?.toLowerCase();
+      const gender = sale.gender?.toLowerCase();
+
+      if (email && gender && !uniqueClients.has(email)) {
+        uniqueClients.set(email, gender);
+      }
+    }
+
+    let maleCount = 0;
+    let femaleCount = 0;
+
+    for (const gender of uniqueClients.values()) {
+      if (gender === 'male') maleCount++;
+      else if (gender === 'female') femaleCount++;
+    }
+
+    const total = maleCount + femaleCount;
+    const maleRatio = total ? ((maleCount / total) * 100).toFixed(2) : '0.00';
+    const femaleRatio = total
+      ? ((femaleCount / total) * 100).toFixed(2)
+      : '0.00';
+
+    return {
+      maleCount,
+      femaleCount,
+      maleRatio: Number(maleRatio),
+      femaleRatio: Number(femaleRatio),
+      totalUniqueClients: total,
+    };
+  }
+
+  @get('/member-statistics')
+  async getMemberStats(
+    @param.query.string('startDate') startDateStr: string,
+    @param.query.string('endDate') endDateStr: string,
+    @param.query.string('branchId') branchId?: string,
+    @param.query.string('departmentId') departmentId?: string,
+    @param.query.string('kpiIds') kpiIdsStr?: string,
+    @param.query.string('country') country?: string,
+  ): Promise<object> {
+    if (!startDateStr || !endDateStr) {
+      throw new HttpErrors.BadRequest('startDate and endDate are required.');
+    }
+
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new HttpErrors.BadRequest('Invalid date format.');
+    }
+
+    const where: any = {
+      and: [{createdAt: {gte: startDate}}, {createdAt: {lte: endDate}}],
+    };
+
+    if (branchId) where.and.push({branchId: parseInt(branchId)});
+    if (departmentId) where.and.push({departmentId: parseInt(departmentId)});
+    if (country) {
+      where.and.push({country: country});
+    }
+    if (kpiIdsStr) {
+      const kpiIds = kpiIdsStr
+        .split(',')
+        .map(id => parseInt(id.trim()))
+        .filter(id => !isNaN(id));
+      if (kpiIds.length > 0) {
+        where.and.push({kpiId: {inq: kpiIds}});
+      }
+    }
+    const sales = await this.salesRepository.find({
+      where,
+      include: [{relation: 'membershipDetails'}], // Include expiryDate
+    });
+
+    const memberMap: {[email: string]: typeof sales} = {};
+    for (const sale of sales) {
+      if (!sale.email) continue;
+      if (!memberMap[sale.email]) memberMap[sale.email] = [];
+      memberMap[sale.email].push(sale);
+    }
+
+    let newMemberCount = 0;
+    let renewedMemberCount = 0;
+    let expiredMemberCount = 0;
+    let unclassifiedMemberCount = 0;
+
+    for (const email in memberMap) {
+      const records = memberMap[email];
+      const hasRenewal = records.some(
+        r => r.memberType?.toLowerCase() === 'rnl',
+      );
+      const hasNew = records.some(r => r.memberType?.toLowerCase() === 'new');
+      let classified = false;
+
+      if (hasRenewal) {
+        renewedMemberCount++;
+        classified = true;
+      } else if (records.length === 1 && hasNew) {
+        newMemberCount++;
+        classified = true;
+      } else if (records.length === 1) {
+        const record = records[0];
+        const expiryDate = record.membershipDetails?.expiryDate
+          ? new Date(record.membershipDetails.expiryDate)
+          : null;
+        if (expiryDate && expiryDate < new Date() && !hasRenewal) {
+          expiredMemberCount++;
+          classified = true;
+        }
+      }
+
+      if (!classified) {
+        unclassifiedMemberCount++;
+      }
+    }
+
+    const totalMemberCount = Object.keys(memberMap).length;
+    const classifiedTotal =
+      newMemberCount + renewedMemberCount + expiredMemberCount;
+
+    const percent = (count: number, base: number) =>
+      base > 0 ? parseFloat(((count / base) * 100).toFixed(2)) : 0;
+
+    return {
+      newMemberCount,
+      renewedMemberCount,
+      expiredMemberCount,
+      unclassifiedMemberCount,
+      totalMemberCount,
+      newMemberPercent: percent(newMemberCount, classifiedTotal),
+      renewedMemberPercent: percent(renewedMemberCount, classifiedTotal),
+      expiredMemberPercent: percent(expiredMemberCount, classifiedTotal),
+      unclassifiedPercent: percent(unclassifiedMemberCount, totalMemberCount),
+    };
+  }
+
+  formatDate = (date: Date) =>
+    date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+
+  @get('/member-conduction-stats')
+  @response(200, {
+    description: 'Overall members and conduction stats with filters',
+  })
+  async getStats(
+    @param.query.string('startDate') startDateStr: string,
+    @param.query.string('endDate') endDateStr: string,
+    @param.query.string('branchId') branchId?: string,
+    @param.query.string('departmentId') departmentId?: string,
+    @param.query.string('email') email?: string,
+  ): Promise<any> {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    // 1. Get distinct member emails from sales
+    let sales;
+    if (email) {
+      sales = await this.salesRepository.find({where: {email}});
+    } else {
+      sales = await this.salesRepository.find();
+    }
+    const uniqueEmails = [...new Set(sales.map(s => s.email))];
+    const totalMembers = uniqueEmails.length;
+
+    // 2. Get conductions with filters
+    const conductionFilter: any = {
+      where: {
+        conductionDate: {between: [startDate, endDate]},
+      },
+    };
+    if (branchId) conductionFilter.where.branchId = branchId;
+    if (departmentId) conductionFilter.where.departmentId = departmentId;
+    if (uniqueEmails.length > 0)
+      conductionFilter.where.email = {inq: uniqueEmails};
+
+    const conductions = await this.conductionRepository.find(conductionFilter);
+    const totalConductions = conductions.length;
+
+    // 3. Calculate average
+    const avgConductions =
+      totalMembers > 0 ? totalConductions / totalMembers : 0;
+
+    return {
+      totalMembers,
+      totalConductions,
+      avgConductions,
+    };
   }
 }

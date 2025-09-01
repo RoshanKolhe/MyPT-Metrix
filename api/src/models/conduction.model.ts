@@ -16,15 +16,18 @@ export class Conduction extends Entity {
 
   @property({
     type: 'number',
+    default: 0.0,
+    dataType: 'decimal',
+    precision: 30,
+    scale: 2,
     required: true,
   })
   conductions: number;
 
   @property({
-    type: 'string',
-    required: true,
+    type: 'date',
   })
-  conductionDate: string;
+  conductionDate?: Date;
 
   @property({
     type: 'date',
