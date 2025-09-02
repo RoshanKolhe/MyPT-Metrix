@@ -85,9 +85,12 @@ export class DashboardController {
     if (departmentId) filter.where.departmentId = departmentId;
     if (country) filter.where.country = country;
     if (startDateStr && endDateStr) {
+      const startDate = new Date(startDateStr + 'T00:00:00Z');
+      const endDate = new Date(endDateStr + 'T23:59:59Z');
+
       filter.where.createdAt = {
-        gte: new Date(new Date(startDateStr).setHours(0, 0, 0, 0)),
-        lte: new Date(new Date(endDateStr).setHours(23, 59, 59, 999)),
+        gte: startDate,
+        lte: endDate,
       };
     }
 
