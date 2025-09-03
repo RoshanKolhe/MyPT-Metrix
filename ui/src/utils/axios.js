@@ -94,6 +94,9 @@ export const endpoints = {
     filterList: (filter) => `/departments?${filter}`,
     details: (id) => `/departments/${id}`,
   },
+  salesmanLeaderboard: {
+    filterList: (filter) => `/leaderboard/trainer-performance?${filter}`,
+  },
   kpi: {
     list: '/kpis',
     filterList: (filter) => `/kpis?${filter}`,

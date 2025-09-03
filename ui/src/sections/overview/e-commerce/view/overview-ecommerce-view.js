@@ -22,6 +22,7 @@ import { useState } from 'react';
 import { useAuthContext } from 'src/auth/hooks';
 import { useGetBranchsWithFilter } from 'src/api/branch';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
+import { SalesmanLeaderboardListView } from 'src/sections/salesmanLeaderboard/view';
 import EcommerceYearlySales from '../ecommerce-yearly-sales';
 import EcommerceBestSalesman from '../ecommerce-best-salesman';
 import EcommerceSaleByGender from '../ecommerce-sale-by-gender';
@@ -243,17 +244,7 @@ export default function OverviewEcommerceView() {
             </Grid> */}
 
             <Grid xs={12} md={12} lg={12}>
-              <EcommerceBestSalesman
-                title="Best Salesman"
-                tableData={_ecommerceBestSalesman}
-                tableLabels={[
-                  { id: 'name', label: 'Seller' },
-                  { id: 'category', label: 'Product' },
-                  { id: 'country', label: 'Country', align: 'center' },
-                  { id: 'totalAmount', label: 'Total', align: 'right' },
-                  { id: 'rank', label: 'Rank', align: 'right' },
-                ]}
-              />
+              <SalesmanLeaderboardListView filter={queryString} />
             </Grid>
           </Grid>
         </>
