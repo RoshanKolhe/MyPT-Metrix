@@ -221,6 +221,28 @@ export function useGetDashboradMaleToFemaleRatio(filter) {
   };
 }
 
+export function useGetDashboradPtsVsMembershipRatio(filter) {
+  const URL = endpoints.user.getPtsVsMembershipRatio(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradPtsVsMembershipRatio = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredConductionsData(newFilter)
+      : endpoints.user.getConductionsData;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboradPtsVsMembershipRatioData: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradPtsVsMembershipRatio,
+  };
+}
+
 export function useGetDashboradMemberStatistics(filter) {
   const URL = endpoints.user.getMemberStatistics(filter);
 

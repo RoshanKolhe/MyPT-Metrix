@@ -74,30 +74,40 @@ export class DashboardController {
     const lastWeekEnd = new Date(today);
     lastWeekEnd.setDate(today.getDate() - 7);
 
+    // Step 1: If date filter is passed, fetch membership IDs first
+    let membershipIds: any = [];
+    if (startDateStr && endDateStr) {
+      const purchaseStartDate = new Date(startDateStr + 'T00:00:00Z');
+      const purchaseEndDate = new Date(endDateStr + 'T23:59:59Z');
+
+      const memberships = await this.membershipDetailsRepository.find({
+        where: {
+          purchaseDate: {gte: purchaseStartDate, lte: purchaseEndDate},
+        },
+        fields: {id: true},
+      });
+
+      membershipIds = memberships.map(m => m.id);
+    }
+    console.log(membershipIds);
+    // Step 2: Build Sales filter with Sales-level filters
     const filter: any = {
       where: {
         isDeleted: false,
+        ...(kpiIds.length > 0 && {kpiId: {inq: kpiIds}}),
+        ...(branchId && {branchId}),
+        ...(departmentId && {departmentId}),
+        ...(country && {country}),
+        ...(membershipIds.length > 0 && {
+          membershipDetailsId: {inq: membershipIds},
+        }),
       },
+      include: ['membershipDetails'],
     };
 
-    if (kpiIds.length > 0) filter.where.kpiId = {inq: kpiIds};
-    if (branchId) filter.where.branchId = branchId;
-    if (departmentId) filter.where.departmentId = departmentId;
-    if (country) filter.where.country = country;
-    if (startDateStr && endDateStr) {
-      const startDate = new Date(startDateStr + 'T00:00:00Z');
-      const endDate = new Date(endDateStr + 'T23:59:59Z');
+    // Step 3: Fetch all sales (filtered)
+    const allSales = await this.salesRepository.find(filter);
 
-      filter.where.createdAt = {
-        gte: startDate,
-        lte: endDate,
-      };
-    }
-
-    const allSales = await this.salesRepository.find({
-      ...filter,
-      include: ['membershipDetails'],
-    });
     // Calculate total revenue from all sales
     const totalRevenue = allSales.reduce(
       (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
@@ -110,8 +120,8 @@ export class DashboardController {
     const get7DaySeries = (sales: Sales[], start: Date): number[] => {
       const series = Array(7).fill(0);
       sales.forEach(s => {
-        if (!s.createdAt) return;
-        const d = new Date(s.createdAt);
+        if (!s.membershipDetails?.purchaseDate) return;
+        const d = new Date(s.membershipDetails.purchaseDate);
         const dayDiff = Math.floor(
           (d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
         );
@@ -126,8 +136,8 @@ export class DashboardController {
     const get7DayTicketsSeries = (sales: Sales[], start: Date): number[] => {
       const series = Array(7).fill(0);
       sales.forEach(s => {
-        if (!s.createdAt) return;
-        const d = new Date(s.createdAt);
+        if (!s.membershipDetails?.purchaseDate) return;
+        const d = new Date(s.membershipDetails.purchaseDate);
         const dayDiff = Math.floor(
           (d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
         );
@@ -138,26 +148,23 @@ export class DashboardController {
       return series;
     };
 
-    const thisWeekSales = await this.salesRepository.find({
-      where: {
-        ...filter.where,
-        createdAt: {
-          gte: new Date(startDate.setHours(0, 0, 0, 0)),
-          lte: new Date(today.setHours(23, 59, 59, 999)),
-        },
-      },
-      include: ['membershipDetails'],
+    // Step 4: Fetch this week’s and last week’s sales (using purchaseDate)
+    const thisWeekSales = allSales.filter(s => {
+      if (!s.membershipDetails?.purchaseDate) return false;
+      const d = new Date(s.membershipDetails.purchaseDate);
+      return (
+        d >= new Date(startDate.setHours(0, 0, 0, 0)) &&
+        d <= new Date(today.setHours(23, 59, 59, 999))
+      );
     });
 
-    const lastWeekSales = await this.salesRepository.find({
-      where: {
-        ...filter.where,
-        createdAt: {
-          gte: new Date(lastWeekStart.setHours(0, 0, 0, 0)),
-          lte: new Date(lastWeekEnd.setHours(23, 59, 59, 999)),
-        },
-      },
-      include: ['membershipDetails'],
+    const lastWeekSales = allSales.filter(s => {
+      if (!s.membershipDetails?.purchaseDate) return false;
+      const d = new Date(s.membershipDetails.purchaseDate);
+      return (
+        d >= new Date(lastWeekStart.setHours(0, 0, 0, 0)) &&
+        d <= new Date(lastWeekEnd.setHours(23, 59, 59, 999))
+      );
     });
 
     // Revenue for this week and last week
@@ -185,14 +192,7 @@ export class DashboardController {
       return ((current - prev) / prev) * 100;
     };
 
-    // Calculate lifetime revenue and tickets
-    // const lifetimeRevenue = totalRevenue;
-    // const lifetimeTickets = totalTickets;
-
-    // // Calculate lifetime average ticket price
-    // const lifetimeAvgTicket =
-    //   lifetimeTickets > 0 ? lifetimeRevenue / lifetimeTickets : 0;
-
+    // Step 5: Return structured response
     return {
       revenue: {
         value: Math.round(totalRevenue),
@@ -202,7 +202,7 @@ export class DashboardController {
         series: get7DaySeries(thisWeekSales, startDate),
       },
       tickets: {
-        value: totalTickets, // Change to lifetime tickets
+        value: totalTickets,
         percent: parseFloat(
           percentChange(thisWeekTickets, lastWeekTickets).toFixed(1),
         ),
@@ -887,6 +887,89 @@ export class DashboardController {
     };
   }
 
+  @get('/client-stats', {
+    responses: {
+      '200': {
+        description:
+          'PT and Membership client counts with gender breakdown (unique by email)',
+        content: {'application/json': {schema: {type: 'object'}}},
+      },
+    },
+  })
+  async getClientStats(
+    @param.query.string('startDate') startDate?: string,
+    @param.query.string('endDate') endDate?: string,
+    @param.query.string('departmentId') departmentId?: string,
+    @param.query.string('branchId') branchId?: string,
+    @param.query.string('country') country?: string,
+  ): Promise<object> {
+    const where: any = {};
+
+    if (startDate && endDate) {
+      where.createdAt = {
+        between: [new Date(startDate), new Date(endDate)],
+      };
+    }
+
+    if (departmentId) where.departmentId = departmentId;
+    if (branchId) where.branchId = branchId;
+    if (country) where.country = country;
+
+    // Get only relevant KPI IDs (16 for PT, 20/21 for Membership)
+    where.kpiId = {inq: [16, 20, 21]};
+
+    const sales = await this.salesRepository.find({
+      where,
+      fields: {email: true, gender: true, kpiId: true},
+    });
+
+    // Ensure uniqueness by email
+    const uniqueClients = new Map<string, {gender: string; kpiId: number}>();
+
+    for (const sale of sales) {
+      const email = sale.email?.toLowerCase();
+      const gender = sale.gender?.toLowerCase();
+      const kpiId = sale.kpiId;
+
+      if (email && gender && !uniqueClients.has(email)) {
+        uniqueClients.set(email, {gender, kpiId});
+      }
+    }
+
+    // Counters
+    let ptTotal = 0,
+      ptMale = 0,
+      ptFemale = 0,
+      membershipTotal = 0,
+      membershipMale = 0,
+      membershipFemale = 0;
+
+    for (const {gender, kpiId} of uniqueClients.values()) {
+      if (kpiId === 16) {
+        ptTotal++;
+        if (gender === 'male') ptMale++;
+        else if (gender === 'female') ptFemale++;
+      } else if ([20, 21].includes(kpiId)) {
+        membershipTotal++;
+        if (gender === 'male') membershipMale++;
+        else if (gender === 'female') membershipFemale++;
+      }
+    }
+
+    return {
+      pt: {
+        total: ptTotal,
+        male: ptMale,
+        female: ptFemale,
+      },
+      membership: {
+        total: membershipTotal,
+        male: membershipMale,
+        female: membershipFemale,
+      },
+    };
+  }
+
   formatDate = (date: Date) =>
     date.toLocaleDateString('en-GB', {
       day: 'numeric',
@@ -896,50 +979,53 @@ export class DashboardController {
 
   @get('/member-conduction-stats')
   @response(200, {
-    description: 'Overall members and conduction stats with filters',
+    description: 'Overall conduction stats with filters',
   })
   async getStats(
     @param.query.string('startDate') startDateStr: string,
     @param.query.string('endDate') endDateStr: string,
     @param.query.string('branchId') branchId?: string,
     @param.query.string('departmentId') departmentId?: string,
-    @param.query.string('email') email?: string,
   ): Promise<any> {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
 
-    // 1. Get distinct member emails from sales
-    let sales;
-    if (email) {
-      sales = await this.salesRepository.find({where: {email}});
-    } else {
-      sales = await this.salesRepository.find();
-    }
-    const uniqueEmails = [...new Set(sales.map(s => s.email))];
-    const totalMembers = uniqueEmails.length;
-
-    // 2. Get conductions with filters
+    // 1. Build conduction filter
     const conductionFilter: any = {
       where: {
         conductionDate: {between: [startDate, endDate]},
+        isDeleted: false,
       },
     };
     if (branchId) conductionFilter.where.branchId = branchId;
     if (departmentId) conductionFilter.where.departmentId = departmentId;
-    if (uniqueEmails.length > 0)
-      conductionFilter.where.email = {inq: uniqueEmails};
 
+    // 2. Fetch conductions
     const conductions = await this.conductionRepository.find(conductionFilter);
-    const totalConductions = conductions.length;
 
-    // 3. Calculate average
-    const avgConductions =
-      totalMembers > 0 ? totalConductions / totalMembers : 0;
+    // 3. Total conductions = sum of conductions column
+    const totalConductions = conductions.reduce(
+      (sum, c) => sum + Number(c.conductions ?? 0),
+      0,
+    );
+
+    // 4. Avg conduction per day
+    const daysDiff =
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+    const avgConductionsPerDay = daysDiff > 0 ? totalConductions / daysDiff : 0;
+
+    // 5. Avg conduction per trainer
+    const uniqueTrainerIds = [
+      ...new Set(conductions.map(c => c.trainerId).filter(Boolean)),
+    ];
+    const totalTrainers = uniqueTrainerIds.length;
+    const avgConductionsPerTrainer =
+      totalTrainers > 0 ? totalConductions / totalTrainers : 0;
 
     return {
-      totalMembers,
       totalConductions,
-      avgConductions,
+      avgConductionsPerDay,
+      avgConductionsPerTrainer,
     };
   }
 }

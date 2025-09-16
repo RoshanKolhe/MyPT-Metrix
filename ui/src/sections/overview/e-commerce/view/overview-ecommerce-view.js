@@ -14,6 +14,7 @@ import {
   useGetDashboradConductionSummary,
   useGetDashboradMaleToFemaleRatio,
   useGetDashboradMemberStatistics,
+  useGetDashboradPtsVsMembershipRatio,
   useGetDashboradSummary,
 } from 'src/api/user';
 import { fShortenNumber } from 'src/utils/format-number';
@@ -32,6 +33,7 @@ import EcommerceTargetForecasting from '../ecommerce-target-forecasting';
 import EcommerceFiltersForm from '../ecommerce-filters-form';
 import EcommerceMemberStatistics from '../ecommerce-member-statistics';
 import AnalyticsWidgetSummary from '../analytics-widget-summary';
+import EcommercePtsVsMembership from '../ecommerce-pts-vs-membership';
 
 // ----------------------------------------------------------------------
 
@@ -71,6 +73,9 @@ export default function OverviewEcommerceView() {
     useGetDashboradConductionsData(queryString);
   const { dashboradMaleToFemaleRatioData = {}, refreshDashboradMaleToFemaleRatio } =
     useGetDashboradMaleToFemaleRatio(queryString);
+  const { dashboradPtsVsMembershipRatioData = {}, refreshDashboradPtsVsMembershipRatio } =
+    useGetDashboradPtsVsMembershipRatio(queryString);
+  console.log(dashboradPtsVsMembershipRatioData);
   const { dashboardMemberStatistics = {}, refreshDashboradMemberStatistics } =
     useGetDashboradMemberStatistics(queryString);
 
@@ -179,14 +184,6 @@ export default function OverviewEcommerceView() {
 
             <Grid xs={12} sm={6} md={3}>
               <AnalyticsWidgetSummary
-                title="Total Members"
-                total={conductionDashboardCounts?.totalMembers || 0}
-                icon={<img alt="icon" src="/assets/icons/glass/ic_glass_users.png" />}
-              />
-            </Grid>
-
-            <Grid xs={12} sm={6} md={3}>
-              <AnalyticsWidgetSummary
                 title="Total Conductions"
                 total={conductionDashboardCounts?.totalConductions || 0}
                 color="info"
@@ -196,8 +193,16 @@ export default function OverviewEcommerceView() {
 
             <Grid xs={12} sm={6} md={3}>
               <AnalyticsWidgetSummary
-                title="Avg Conductions"
-                total={conductionDashboardCounts?.avgConductions || 0}
+                title="Avg conduction/Day "
+                total={conductionDashboardCounts?.avgConductionsPerDay || 0}
+                icon={<img alt="icon" src="/assets/icons/glass/ic_glass_users.png" />}
+              />
+            </Grid>
+
+            <Grid xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Avg Codncution/Trainer"
+                total={conductionDashboardCounts?.avgConductionsPerTrainer || 0}
                 color="warning"
                 icon={<img alt="icon" src="/assets/icons/glass/ic_glass_buy.png" />}
               />
@@ -222,6 +227,12 @@ export default function OverviewEcommerceView() {
               <EcommerceMemberStatistics
                 title="Member Statistics"
                 dashboardMemberStatistics={dashboardMemberStatistics}
+              />
+            </Grid>
+            <Grid xs={12} md={6} lg={4}>
+              <EcommercePtsVsMembership
+                title="PTS Vs Membership"
+                dashboradPtsVsMembershipRatioData={dashboradPtsVsMembershipRatioData}
               />
             </Grid>
 
