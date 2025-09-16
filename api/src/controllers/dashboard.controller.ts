@@ -1032,8 +1032,6 @@ export class DashboardController {
   @get('/sales-by-country')
   async getSalesByCountry(
     @param.query.string('kpiIds') kpiIdsStr?: string,
-    @param.query.number('branchId') branchId?: number,
-    @param.query.number('departmentId') departmentId?: number,
     @param.query.string('startDate') startDateStr?: string,
     @param.query.string('endDate') endDateStr?: string,
   ): Promise<any> {
@@ -1066,14 +1064,6 @@ export class DashboardController {
     if (kpiIds.length > 0) {
       whereClauses.push(`s.kpiId IN (${kpiIds.map(() => '?').join(',')})`);
       params.push(...kpiIds);
-    }
-    if (branchId) {
-      whereClauses.push('s.branchId = ?');
-      params.push(branchId);
-    }
-    if (departmentId) {
-      whereClauses.push('s.departmentId = ?');
-      params.push(departmentId);
     }
     if (membershipIds.length > 0) {
       whereClauses.push(
