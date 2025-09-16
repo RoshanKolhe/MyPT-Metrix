@@ -12,7 +12,10 @@ import {
   MembershipDetails,
   Trainer,
   Branch,
-  Department, User, Kpi} from '../models';
+  Department,
+  User,
+  Kpi,
+} from '../models';
 import {TimeStampRepositoryMixin} from '../mixins/timestamp-repository-mixin';
 import {MembershipDetailsRepository} from './membership-details.repository';
 import {TrainerRepository} from './trainer.repository';
@@ -50,7 +53,10 @@ export class SalesRepository extends TimeStampRepositoryMixin<
     typeof Sales.prototype.id
   >;
 
-  public readonly deletedByUser: BelongsToAccessor<User, typeof Sales.prototype.id>;
+  public readonly deletedByUser: BelongsToAccessor<
+    User,
+    typeof Sales.prototype.id
+  >;
 
   public readonly kpi: BelongsToAccessor<Kpi, typeof Sales.prototype.id>;
 
@@ -63,13 +69,23 @@ export class SalesRepository extends TimeStampRepositoryMixin<
     @repository.getter('BranchRepository')
     protected branchRepositoryGetter: Getter<BranchRepository>,
     @repository.getter('DepartmentRepository')
-    protected departmentRepositoryGetter: Getter<DepartmentRepository>, @repository.getter('UserRepository') protected userRepositoryGetter: Getter<UserRepository>, @repository.getter('KpiRepository') protected kpiRepositoryGetter: Getter<KpiRepository>,
+    protected departmentRepositoryGetter: Getter<DepartmentRepository>,
+    @repository.getter('UserRepository')
+    protected userRepositoryGetter: Getter<UserRepository>,
+    @repository.getter('KpiRepository')
+    protected kpiRepositoryGetter: Getter<KpiRepository>,
   ) {
     super(Sales, dataSource);
-    this.kpi = this.createBelongsToAccessorFor('kpi', kpiRepositoryGetter,);
+    this.kpi = this.createBelongsToAccessorFor('kpi', kpiRepositoryGetter);
     this.registerInclusionResolver('kpi', this.kpi.inclusionResolver);
-    this.deletedByUser = this.createBelongsToAccessorFor('deletedByUser', userRepositoryGetter,);
-    this.registerInclusionResolver('deletedByUser', this.deletedByUser.inclusionResolver);
+    this.deletedByUser = this.createBelongsToAccessorFor(
+      'deletedByUser',
+      userRepositoryGetter,
+    );
+    this.registerInclusionResolver(
+      'deletedByUser',
+      this.deletedByUser.inclusionResolver,
+    );
     this.department = this.createBelongsToAccessorFor(
       'department',
       departmentRepositoryGetter,
@@ -104,5 +120,19 @@ export class SalesRepository extends TimeStampRepositoryMixin<
       'membershipDetails',
       this.membershipDetails.inclusionResolver,
     );
+  }
+
+  async getSalesByCountry(): Promise<any[]> {
+    const ds = this.dataSource;
+    const query = `
+      SELECT 
+        country, 
+        COUNT(*) AS totalSales
+      FROM sales
+      WHERE isDeleted = false
+      GROUP BY country
+      ORDER BY totalSales DESC
+    `;
+    return ds.execute(query);
   }
 }

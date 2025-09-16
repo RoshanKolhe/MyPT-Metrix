@@ -98,6 +98,9 @@ export const endpoints = {
   salesmanLeaderboard: {
     filterList: (filter) => `/leaderboard/trainer-performance?${filter}`,
   },
+  countrySalesLeaderboard: {
+    filterList: (filter) => `/sales-by-country?${filter}`,
+  },
   kpi: {
     list: '/kpis',
     filterList: (filter) => `/kpis?${filter}`,

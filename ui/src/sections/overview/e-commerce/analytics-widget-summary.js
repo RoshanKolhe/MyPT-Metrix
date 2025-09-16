@@ -36,6 +36,7 @@ export default function AnalyticsWidgetSummary({
         textAlign: 'center',
         color: `${color}.darker`,
         backgroundColor: 'common.white',
+        width: '100%',
         ...sx,
       }}
       {...other}

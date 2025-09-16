@@ -1028,4 +1028,84 @@ export class DashboardController {
       avgConductionsPerTrainer,
     };
   }
+
+  @get('/sales-by-country')
+  async getSalesByCountry(
+    @param.query.string('kpiIds') kpiIdsStr?: string,
+    @param.query.number('branchId') branchId?: number,
+    @param.query.number('departmentId') departmentId?: number,
+    @param.query.string('startDate') startDateStr?: string,
+    @param.query.string('endDate') endDateStr?: string,
+  ): Promise<any> {
+    // Parse KPI IDs
+    const kpiIds = kpiIdsStr
+      ? kpiIdsStr
+          .split(',')
+          .map(id => parseInt(id.trim(), 10))
+          .filter(Boolean)
+      : [];
+
+    // Step 1: Filter MembershipDetails by purchaseDate if dates are provided
+    let membershipIds: number[] = [];
+    if (startDateStr && endDateStr) {
+      const purchaseStartDate = new Date(startDateStr + 'T00:00:00Z');
+      const purchaseEndDate = new Date(endDateStr + 'T23:59:59Z');
+
+      const memberships = await this.salesRepository.dataSource.execute(
+        `SELECT id FROM MembershipDetails WHERE purchaseDate BETWEEN ? AND ?`,
+        [purchaseStartDate, purchaseEndDate],
+      );
+
+      membershipIds = memberships.map((m: any) => m.id);
+    }
+
+    // Step 2: Build Sales filter dynamically
+    const whereClauses: string[] = ['s.isDeleted = false'];
+    const params: any[] = [];
+
+    if (kpiIds.length > 0) {
+      whereClauses.push(`s.kpiId IN (${kpiIds.map(() => '?').join(',')})`);
+      params.push(...kpiIds);
+    }
+    if (branchId) {
+      whereClauses.push('s.branchId = ?');
+      params.push(branchId);
+    }
+    if (departmentId) {
+      whereClauses.push('s.departmentId = ?');
+      params.push(departmentId);
+    }
+    if (membershipIds.length > 0) {
+      whereClauses.push(
+        `s.id IN (SELECT salesId FROM MembershipDetails WHERE id IN (${membershipIds.map(() => '?').join(',')}))`,
+      );
+      params.push(...membershipIds);
+    }
+
+    const whereSQL = whereClauses.join(' AND ');
+
+    // Step 3: Aggregate total sales per country
+    const sql = `
+      SELECT 
+        s.country,
+        SUM(m.discountedPrice) as totalSales
+      FROM Sales s
+      JOIN MembershipDetails m ON s.id = m.salesId
+      WHERE ${whereSQL}
+      GROUP BY s.country
+      ORDER BY totalSales DESC
+    `;
+
+    const result = await this.salesRepository.dataSource.execute(sql, params);
+
+    // Step 4: Add ranking
+    let rank = 1;
+    const rankedResult = result.map((row: any) => ({
+      country: row.country,
+      totalSales: parseFloat(row.totalSales),
+      rank: rank++,
+    }));
+
+    return rankedResult;
+  }
 }

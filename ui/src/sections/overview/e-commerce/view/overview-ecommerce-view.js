@@ -24,6 +24,7 @@ import { useAuthContext } from 'src/auth/hooks';
 import { useGetBranchsWithFilter } from 'src/api/branch';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
 import { SalesmanLeaderboardListView } from 'src/sections/salesmanLeaderboard/view';
+import { CountrySalesLeaderboardListView } from 'src/sections/countrySalesLeaderboard/view';
 import EcommerceYearlySales from '../ecommerce-yearly-sales';
 import EcommerceBestSalesman from '../ecommerce-best-salesman';
 import EcommerceSaleByGender from '../ecommerce-sale-by-gender';
@@ -234,6 +235,9 @@ export default function OverviewEcommerceView() {
                 title="PTS Vs Membership"
                 dashboradPtsVsMembershipRatioData={dashboradPtsVsMembershipRatioData}
               />
+            </Grid>
+            <Grid xs={12} md={12} lg={12}>
+              <CountrySalesLeaderboardListView filter={queryString} />
             </Grid>
 
             <Grid xs={12} md={12} lg={12}>
