@@ -38,7 +38,7 @@ import {
 //
 // eslint-disable-next-line import/no-extraneous-dependencies
 import * as XLSX from 'xlsx';
-import { useGetSales, useGetSalesWithFilter } from 'src/api/sale';
+import { useGetSalesWithFilter } from 'src/api/sale';
 import { _roles } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'notistack';
@@ -75,8 +75,10 @@ const TABLE_HEAD = [
 ];
 
 const defaultFilters = {
-  name: '',
-  role: [],
+  saleId: '',
+  memberName: '',
+  plan: '',
+  searchText: '', // ✅ added for searching
   status: 'all',
   startDate: null,
   endDate: null,
@@ -103,75 +105,122 @@ export default function SaleListView() {
 
   const [filters, setFilters] = useState(defaultFilters);
 
-  const rawFilter = {
-    where: {
-      isDeleted: false,
-    },
-  };
+  const [page, setPage] = useState(0); // current page
 
+  const [rowsPerPage, setRowsPerPage] = useState(10); // rows per page
+
+  const [order, setOrder] = useState('asc'); // ✅ backend sorting
+
+  const [orderBy, setOrderBy] = useState('id'); // ✅ backend sorting
+
+  // ✅ Backend filter (exclude deleted)
+  const rawFilter = { where: { isDeleted: false } };
   const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
 
+  // ✅ Correctly use hook with refresh
   const {
     filteredSales: sales,
-    salesLoading,
-    salesEmpty,
-    refreshFilterSales: refreshSales,
-  } = useGetSalesWithFilter(encodedFilter);
+    totalFilteredSales: totalCount,
+    filteredSalesLoading: salesLoading,
+    refreshFilteredSales, // ✅ added
+  } = useGetSalesWithFilter({
+    page,
+    rowsPerPage,
+    order,
+    orderBy,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    searchTextValue: filters.searchText,
+    extraFilter: { isDeleted: false },
+  });
 
+  // ✅ Flatten API response
+  useEffect(() => {
+    console.log('Sales API raw response:', sales);
+
+    if (sales) {
+      const rows = Array.isArray(sales) ? sales : sales.data || [];
+
+      const flattened = rows.map((s) => ({
+        ...s,
+        memberName: s.memberName || '',
+        gender: s.gender || '',
+        trainingAt: s.trainingAt || '',
+        memberType: s.memberType || '',
+        salesPerson: s.salesTrainer
+          ? `${s.salesTrainer.firstName} ${s.salesTrainer.lastName || ''}`
+          : '',
+        trainerName: s.trainer
+          ? `${s.trainer.firstName} ${s.trainer.lastName || ''}`
+          : '',
+        branch: s.branch || '',
+        department: s.department || '',
+        kpi: s.kpi?.name || '',
+        contactNumber: s.contactNumber || '',
+        purchaseDate: s.membershipDetails?.purchaseDate || '',
+        membershipType:
+          s.membershipDetails?.membershipType?.map((m) => m.label).join(', ') ||
+          '',
+        actualPrice: s.membershipDetails?.actualPrice || '',
+        discountedPrice: s.membershipDetails?.discountedPrice || '',
+        validityDays: s.membershipDetails?.validityDays || '',
+        expiryDate: s.membershipDetails?.expiryDate || '',
+        freezingDays: s.membershipDetails?.freezingDays || '',
+        createdAt: s.createdAt || '',
+      }));
+
+      setTableData(flattened);
+    }
+  }, [sales]);
+
+  // ✅ Only keep frontend filters (plan/date etc.)
   const dataFiltered = applyFilter({
     inputData: tableData,
-    comparator: getComparator(table.order, table.orderBy),
+    comparator: getComparator('asc', 'id'), // frontend comparator dummy
     filters,
   });
 
-  const dataInPage = dataFiltered.slice(
-    table.page * table.rowsPerPage,
-    table.page * table.rowsPerPage + table.rowsPerPage
-  );
+  const dataInPage = dataFiltered; // backend already paginated
 
   const denseHeight = table.dense ? 52 : 72;
 
   const canReset = !isEqual(defaultFilters, filters);
 
-  const notFound = (!dataFiltered.length && canReset) || !dataFiltered.length;
+  const notFound = !salesLoading && dataFiltered.length === 0;
+
+  // ----------------------------------------------------------------------
+  // Handlers
+  // ----------------------------------------------------------------------
 
   const handleFilters = useCallback(
     (name, value) => {
       table.onResetPage();
-      setFilters((prevState) => ({
-        ...prevState,
-        [name]: value,
-      }));
+      setFilters((prev) => ({ ...prev, [name]: value }));
     },
     [table]
   );
 
   const handleExport = useCallback(() => {
     const fileName = 'Sales Report.xlsx';
-
     const formatted = dataFiltered.map((item) => ({
-      MemberName: item.memberName || '',
-      Gender: item.gender || '',
-      TrainingAt: item.trainingAt || '',
-      MemberType: item.memberType || '',
-      SalesTrainer: item.salesTrainer
-        ? `${item.salesTrainer.firstName} ${item.salesTrainer.lastName || ''}`
-        : '',
-      SalesTrainerEmail: item.salesTrainer?.email || '',
-      Trainer: item.trainer ? `${item.trainer.firstName} ${item.trainer.lastName || ''}` : '',
-      TrainerEmail: item.trainer?.email || '',
-      Branch: item.branch?.name || '',
-      Department: item.department?.name || '',
-      Kpi: item.kpi?.name || '',
-      ContactNumber: item.contactNumber || '',
-      PurchaseDate: fDate(item.membershipDetails?.purchaseDate) || '',
-      MembershipType: item.membershipDetails?.membershipType?.map((m) => m.label).join(', ') || '',
-      ActualPrice: item.membershipDetails?.actualPrice || '',
-      DiscountedPrice: item.membershipDetails?.discountedPrice || '',
-      ValidityDays: item.membershipDetails?.validityDays || '',
-      ExpiryDate: fDate(item.membershipDetails?.expiryDate) || '',
-      FreezingDays: item.membershipDetails?.freezingDays || '',
-      CreatedAt: item.createdAt || '',
+      MemberName: item.memberName,
+      Gender: item.gender,
+      TrainingAt: item.trainingAt,
+      MemberType: item.memberType,
+      SalesPerson: item.salesPerson,
+      Trainer: item.trainerName,
+      Branch: item.branch,
+      Department: item.department,
+      Kpi: item.kpi,
+      ContactNumber: item.contactNumber,
+      PurchaseDate: fDate(item.purchaseDate),
+      MembershipType: item.membershipType,
+      ActualPrice: item.actualPrice,
+      DiscountedPrice: item.discountedPrice,
+      ValidityDays: item.validityDays,
+      ExpiryDate: fDate(item.expiryDate),
+      FreezingDays: item.freezingDays,
+      CreatedAt: fDate(item.createdAt),
     }));
     const ws = XLSX.utils.json_to_sheet(formatted);
     const wb = XLSX.utils.book_new();
@@ -182,45 +231,30 @@ export default function SaleListView() {
   const handleDeleteRow = useCallback(
     async (id) => {
       try {
-        // Make API call to delete the customer
         const response = await axiosInstance.delete(`/sales/${id}`);
         if (response.status === 204) {
           enqueueSnackbar('Sale Deleted Successfully');
           confirm.onFalse();
-          refreshSales();
+          refreshFilteredSales(); // ✅ fixed
         }
       } catch (error) {
-        console.error('Error deleting Sale:', error.response?.data || error.message);
-        enqueueSnackbar(typeof error === 'string' ? error : error.error.message, {
-          variant: 'error',
-        });
+        console.error(
+          'Error deleting Sale:',
+          error.response?.data || error.message
+        );
+        enqueueSnackbar('Error deleting sale', { variant: 'error' });
       }
     },
-    [confirm, enqueueSnackbar, refreshSales]
+    [confirm, enqueueSnackbar, refreshFilteredSales]
   );
 
-  const handleDeleteRows = useCallback(() => {
-    const deleteRows = tableData.filter((row) => !table.selected.includes(row.id));
-    setTableData(deleteRows);
-
-    table.onUpdatePageDeleteRows({
-      totalRows: tableData.length,
-      totalRowsInPage: dataInPage.length,
-      totalRowsFiltered: dataFiltered.length,
-    });
-  }, [dataFiltered.length, dataInPage.length, table, tableData]);
-
   const handleEditRow = useCallback(
-    (id) => {
-      router.push(paths.dashboard.sale.edit(id));
-    },
+    (id) => router.push(paths.dashboard.sale.edit(id)),
     [router]
   );
 
   const handleViewRow = useCallback(
-    (id) => {
-      router.push(paths.dashboard.sale.view(id));
-    },
+    (id) => router.push(paths.dashboard.sale.view(id)),
     [router]
   );
 
@@ -244,10 +278,15 @@ export default function SaleListView() {
   }, []);
 
   useEffect(() => {
-    if (sales) {
-      setTableData(sales);
-    }
-  }, [sales]);
+    setPage(table.page);
+    setRowsPerPage(table.rowsPerPage);
+  }, [table.page, table.rowsPerPage]);
+
+  // useEffect(() => {
+  //   console.log('Sales API raw response:', sales);
+  // }, [sales]);
+
+  // ----------------------------------------------------------------------
 
   return (
     <>
@@ -269,9 +308,7 @@ export default function SaleListView() {
               New Sale
             </Button>
           }
-          sx={{
-            mb: { xs: 3, md: 5 },
-          }}
+          sx={{ mb: { xs: 3, md: 5 } }}
         />
 
         <Card>
@@ -280,7 +317,8 @@ export default function SaleListView() {
             onChange={handleFilterStatus}
             sx={{
               px: 2.5,
-              boxShadow: (theme) => `inset 0 -2px 0 0 ${alpha(theme.palette.grey[500], 0.08)}`,
+              boxShadow: (theme) =>
+                `inset 0 -2px 0 0 ${alpha(theme.palette.grey[500], 0.08)}`,
             }}
           >
             {STATUS_OPTIONS.map((tab) => (
@@ -292,18 +330,12 @@ export default function SaleListView() {
                 icon={
                   <Label
                     variant={
-                      ((tab.value === 'all' || tab.value === filters.status) && 'filled') || 'soft'
-                    }
-                    color={
-                      (tab.value === '1' && 'success') ||
-                      (tab.value === '0' && 'error') ||
-                      'default'
+                      ((tab.value === 'all' || tab.value === filters.status) &&
+                        'filled') ||
+                      'soft'
                     }
                   >
-                    {tab.value === 'all' && tableData.length}
-                    {tab.value === '1' && tableData.filter((sale) => sale.isActive).length}
-
-                    {tab.value === '0' && tableData.filter((sale) => !sale.isActive).length}
+                    {tab.value === 'all' && (totalCount || 0)}
                   </Label>
                 }
               />
@@ -313,88 +345,68 @@ export default function SaleListView() {
           <SaleTableToolbar
             filters={filters}
             onFilters={handleFilters}
-            //
             roleOptions={_roles}
             onExport={handleExport}
-            refreshSales={refreshSales}
-          />
+            refreshSales={refreshFilteredSales} // ✅ fixed
+            onSearch={(value) => {
+              if (value.length >= 3 || value.length === 0) {
+                // Only update filters if search has 3+ chars, or user cleared it
+                handleFilters('searchText', value);
+              }
+            }} />
 
           {canReset && (
             <SaleTableFiltersResult
               filters={filters}
               onFilters={handleFilters}
-              //
               onResetFilters={handleResetFilters}
-              //
               results={dataFiltered.length}
               sx={{ p: 2.5, pt: 0 }}
             />
           )}
 
           <TableContainer sx={{ position: 'relative', overflow: 'unset' }}>
-            <TableSelectedAction
-              dense={table.dense}
-              numSelected={table.selected.length}
-              rowCount={tableData.length}
-              onSelectAllRows={(checked) =>
-                table.onSelectAllRows(
-                  checked,
-                  tableData.map((row) => row.id)
-                )
-              }
-              action={
-                <Tooltip title="Delete">
-                  <IconButton color="primary" onClick={confirm.onTrue}>
-                    <Iconify icon="solar:trash-bin-trash-bold" />
-                  </IconButton>
-                </Tooltip>
-              }
-            />
-
             <Scrollbar>
-              <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 960 }}>
+              <Table
+                size={table.dense ? 'small' : 'medium'}
+                sx={{ minWidth: 960 }}
+              >
                 <TableHeadCustom
-                  order={table.order}
-                  orderBy={table.orderBy}
+                  order={order}
+                  orderBy={orderBy}
                   headLabel={TABLE_HEAD}
                   rowCount={tableData.length}
                   numSelected={table.selected.length}
-                  onSort={table.onSort}
-                  onSelectAllRows={(checked) =>
-                    table.onSelectAllRows(
-                      checked,
-                      tableData.map((row) => row.id)
-                    )
-                  }
+                  onSort={(id) => setOrderBy(id)} // ✅ backend sorting
+                  onSelectAllRows={() => { }}
                   showCheckbox={false}
                 />
 
                 <TableBody>
-                  {dataFiltered
-                    .slice(
-                      table.page * table.rowsPerPage,
-                      table.page * table.rowsPerPage + table.rowsPerPage
-                    )
-                    .map((row) => (
-                      <SaleTableRow
-                        key={row.id}
-                        row={row}
-                        selected={table.selected.includes(row.id)}
-                        onSelectRow={() => table.onSelectRow(row.id)}
-                        onDeleteRow={() => handleDeleteRow(row.id)}
-                        onEditRow={() => handleEditRow(row.id)}
-                        onViewRow={() => handleViewRow(row.id)}
-                        handleQuickEditRow={(sale) => {
-                          handleQuickEditRow(sale);
-                        }}
-                        quickEdit={quickEdit}
-                      />
-                    ))}
+                  {dataInPage.map((row) => (
+                    <SaleTableRow
+                      key={row.id}
+                      row={row}
+                      selected={table.selected.includes(row.id)}
+                      onSelectRow={() => table.onSelectRow(row.id)}
+                      onDeleteRow={() => handleDeleteRow(row.id)}
+                      onEditRow={() => handleEditRow(row.id)}
+                      onViewRow={() => handleViewRow(row.id)}
+                      handleQuickEditRow={handleQuickEditRow}
+                      quickEdit={quickEdit}
+                    />
+                  ))}
 
-                  <TableEmptyRows
-                    height={denseHeight}
-                    emptyRows={emptyRows(table.page, table.rowsPerPage, tableData.length)}
-                  />
+                  {false && (
+                    <TableEmptyRows
+                      height={denseHeight}
+                      emptyRows={emptyRows(
+                        table.page,
+                        table.rowsPerPage,
+                        tableData.length
+                      )}
+                    />
+                  )}
 
                   <TableNoData notFound={notFound} />
                 </TableBody>
@@ -403,12 +415,11 @@ export default function SaleListView() {
           </TableContainer>
 
           <TablePaginationCustom
-            count={dataFiltered.length}
+            count={totalCount || 0}
             page={table.page}
             rowsPerPage={table.rowsPerPage}
             onPageChange={table.onChangePage}
             onRowsPerPageChange={table.onChangeRowsPerPage}
-            //
             dense={table.dense}
             onChangeDense={table.onChangeDense}
           />
@@ -421,18 +432,12 @@ export default function SaleListView() {
         title="Delete"
         content={
           <>
-            Are you sure want to delete <strong> {table.selected.length} </strong> items?
+            Are you sure want to delete{' '}
+            <strong>{table.selected.length}</strong> items?
           </>
         }
         action={
-          <Button
-            variant="contained"
-            color="error"
-            onClick={() => {
-              handleDeleteRows();
-              confirm.onFalse();
-            }}
-          >
+          <Button variant="contained" color="error" onClick={confirm.onFalse}>
             Delete
           </Button>
         }
@@ -446,7 +451,7 @@ export default function SaleListView() {
             setQuickEditRow(null);
             quickEdit.onFalse();
           }}
-          refreshSales={refreshSales}
+          refreshSales={refreshFilteredSales} // ✅ fixed
         />
       )}
     </>
@@ -454,61 +459,52 @@ export default function SaleListView() {
 }
 
 // ----------------------------------------------------------------------
-
-function applyFilter({ inputData, comparator, filters }) {
-  const { name, status, role } = filters;
+// Filtering logic (frontend-only for plan/date)
+// ----------------------------------------------------------------------
+const applyFilter = ({ inputData, comparator, filters }) => {
+  // Sorting
   const stabilizedThis = inputData.map((el, index) => [el, index]);
-  const roleMapping = {
-    super_admin: 'Super Admin',
-    admin: 'Admin',
-    cgm: 'CGM',
-    hod: 'Hod',
-    sub_hod: 'Sub Hod',
-  };
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
     return a[1] - b[1];
   });
+  let filtered = stabilizedThis.map((el) => el[0]);
 
-  inputData = stabilizedThis.map((el) => el[0]);
-
-  if (name) {
-    inputData = inputData.filter((sale) =>
-      Object.values(sale).some((value) => String(value).toLowerCase().includes(name.toLowerCase()))
+  // 🔎 Sale ID filter
+  if (filters.saleId) {
+    filtered = filtered.filter((sale) =>
+      sale.id?.toString().toLowerCase().includes(filters.saleId.toLowerCase())
     );
   }
 
-  if (status !== 'all') {
-    inputData = inputData.filter((sale) => (status === '1' ? sale.isActive : !sale.isActive));
-  }
-
-  if (role.length) {
-    inputData = inputData.filter(
-      (sale) =>
-        sale.permissions &&
-        sale.permissions.some((saleRole) => {
-          console.log(saleRole);
-          const mappedRole = roleMapping[saleRole];
-          console.log('Mapped Role:', mappedRole); // Check the mapped role
-          return mappedRole && role.includes(mappedRole);
-        })
+  // 🔎 Plan filter
+  if (filters.plan) {
+    filtered = filtered.filter((sale) =>
+      sale.membershipDetails?.plan
+        ?.toLowerCase()
+        .includes(filters.plan.toLowerCase())
     );
   }
 
-  if (filters.startDate && filters.endDate) {
-    console.log('here');
-    const start = new Date(filters.startDate).toISOString().split('T')[0];
-    const end = new Date(filters.endDate).toISOString().split('T')[0];
+  // 📅 Date range filter
+  // if (filters.startDate || filters.endDate) {
+  //   const start = filters.startDate
+  //     ? new Date(filters.startDate).setHours(0, 0, 0, 0)
+  //     : null;
+  //   const end = filters.endDate
+  //     ? new Date(filters.endDate).setHours(23, 59, 59, 999)
+  //     : null;
 
-    inputData = inputData.filter((sale) => {
-      const purchaseDate = sale.membershipDetails?.purchaseDate;
-      if (!purchaseDate) return false;
+  //   filtered = filtered.filter((sale) => {
+  //     if (!sale.purchaseDate) return false;
+  //     const saleDate = new Date(sale.purchaseDate).getTime();
+  //     if (Number.isNaN(saleDate)) return false;
+  //     if (start && saleDate < start) return false;
+  //     if (end && saleDate > end) return false;
+  //     return true;
+  //   });
+  // }
 
-      const dateOnly = new Date(purchaseDate).toISOString().split('T')[0];
-      return dateOnly >= start && dateOnly <= end;
-    });
-  }
-
-  return inputData;
-}
+  return filtered;
+};

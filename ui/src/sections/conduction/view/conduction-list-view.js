@@ -117,10 +117,11 @@ export default function ConductionListView() {
 
   const canReset = !isEqual(defaultFilters, filters);
 
-  const notFound = (!conductions.length && canReset) || !conductions.length;
+  const notFound = !conductions.length;
 
   const handleFilters = useCallback(
     (name, value) => {
+      console.log('Applying filter:', name, value);
       table.onResetPage();
       setFilters((prevState) => ({
         ...prevState,
@@ -220,6 +221,16 @@ export default function ConductionListView() {
     }
   }, [conductions]);
 
+  useEffect(() => {
+    console.log('Filters updated:', filters);  // ✅ log entire filters object
+  }, [filters]);
+
+  useEffect(() => {
+    console.log('Conductions updated:', conductions);  // ✅ log API response
+  }, [conductions]);
+
+
+
   return (
     <>
       <Container maxWidth={settings.themeStretch ? false : 'lg'}>
@@ -263,20 +274,12 @@ export default function ConductionListView() {
                 icon={
                   <Label
                     variant={
-                      ((tab.value === 'all' || tab.value === filters.status) && 'filled') || 'soft'
-                    }
-                    color={
-                      (tab.value === '1' && 'success') ||
-                      (tab.value === '0' && 'error') ||
-                      'default'
+                      ((tab.value === 'all' || tab.value === filters.status) &&
+                        'filled') ||
+                      'soft'
                     }
                   >
-                    {tab.value === 'all' && tableData.length}
-                    {tab.value === '1' &&
-                      tableData.filter((conduction) => conduction.isActive).length}
-
-                    {tab.value === '0' &&
-                      tableData.filter((conduction) => !conduction.isActive).length}
+                    {tab.value === 'all' && (totalCount || 0)}
                   </Label>
                 }
               />

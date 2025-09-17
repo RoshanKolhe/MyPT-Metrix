@@ -6,6 +6,7 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
+
 // components
 import Iconify from 'src/components/iconify';
 import CustomPopover, { usePopover } from 'src/components/custom-popover';
@@ -29,17 +30,20 @@ export default function SaleTableToolbar({
   const downloadTemplate = useBoolean();
   const importTemplate = useBoolean();
 
+  // Open download template dialog
   const handleOpenDialog = useCallback(() => {
     downloadTemplate.onTrue();
   }, [downloadTemplate]);
 
+  // Open import template dialog
   const handleOpenImportDialog = useCallback(() => {
     importTemplate.onTrue();
   }, [importTemplate]);
 
-  const handleFilterName = useCallback(
+  // Handle search text change
+  const handleFilterSearch = useCallback(
     (event) => {
-      onFilters('name', event.target.value);
+      onFilters('searchText', event.target.value);
     },
     [onFilters]
   );
@@ -84,8 +88,8 @@ export default function SaleTableToolbar({
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <TextField
               fullWidth
-              value={filters.name}
-              onChange={handleFilterName}
+              value={filters.searchText}
+              onChange={handleFilterSearch}
               placeholder="Search..."
               InputProps={{
                 startAdornment: (
@@ -95,6 +99,7 @@ export default function SaleTableToolbar({
                 ),
               }}
             />
+
             <IconButton onClick={popover.onOpen} sx={{ ml: 1 }}>
               <Iconify icon="eva:more-vertical-fill" />
             </IconButton>
@@ -116,6 +121,7 @@ export default function SaleTableToolbar({
           <Iconify icon="solar:import-bold" />
           Download Template
         </MenuItem>
+
         <MenuItem
           onClick={() => {
             handleOpenImportDialog();
@@ -142,7 +148,7 @@ export default function SaleTableToolbar({
           downloadTemplate.onFalse();
         }}
       />
-      
+
       <SaleImportExcelModel
         open={importTemplate.value}
         onClose={() => {
@@ -155,9 +161,13 @@ export default function SaleTableToolbar({
 }
 
 SaleTableToolbar.propTypes = {
-  filters: PropTypes.object,
-  onFilters: PropTypes.func,
+  filters: PropTypes.shape({
+    startDate: PropTypes.any,
+    endDate: PropTypes.any,
+    searchText: PropTypes.string,
+  }),
+  onFilters: PropTypes.func.isRequired,
   roleOptions: PropTypes.array,
-  onExport: PropTypes.func,
-  refreshSales: PropTypes.func,
+  onExport: PropTypes.func.isRequired,
+  refreshSales: PropTypes.func.isRequired,
 };

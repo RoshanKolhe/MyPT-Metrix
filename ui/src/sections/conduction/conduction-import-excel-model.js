@@ -53,7 +53,12 @@ export default function ConductionImportExcelModel({ open, onClose, refreshCondu
     setValue,
     formState: { isSubmitting, errors },
   } = methods;
-  console.log('errors', errors);
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log('Form errors:', errors);
+    }
+  }, [errors]);
+
 
   const watchedFile = watch('file');
 
@@ -73,8 +78,10 @@ export default function ConductionImportExcelModel({ open, onClose, refreshCondu
   );
 
   const handleRemoveFile = useCallback(() => {
+    if (watchedFile?.preview) URL.revokeObjectURL(watchedFile.preview);
     setValue('file', null);
-  }, [setValue]);
+  }, [setValue, watchedFile]);
+
 
   const onSubmit = handleSubmit(async (data) => {
     try {
@@ -93,7 +100,10 @@ export default function ConductionImportExcelModel({ open, onClose, refreshCondu
       });
     } catch (error) {
       console.error('Error importing sales template:', error);
-      enqueueSnackbar('Failed to import sales template.', { variant: 'error' });
+      enqueueSnackbar(
+        error.response?.data?.message || 'Failed to import sales template.',
+        { variant: 'error' }
+      );
     }
   });
 
@@ -188,7 +198,7 @@ export default function ConductionImportExcelModel({ open, onClose, refreshCondu
             Cancel
           </Button>
 
-          <LoadingButton type="submit" variant="contained" loading={isSubmitting}>
+          <LoadingButton type="submit" variant="contained" loading={isSubmitting} disabled={!watchedFile}>
             Import
           </LoadingButton>
         </DialogActions>
@@ -196,9 +206,9 @@ export default function ConductionImportExcelModel({ open, onClose, refreshCondu
     </Dialog>
   );
 }
-
 ConductionImportExcelModel.propTypes = {
-  onClose: PropTypes.func,
-  open: PropTypes.bool,
-  refreshConductions: PropTypes.func,
+  onClose: PropTypes.func.isRequired,
+  open: PropTypes.bool.isRequired,
+  refreshConductions: PropTypes.func.isRequired,
 };
+

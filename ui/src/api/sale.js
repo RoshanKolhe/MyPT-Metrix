@@ -1,38 +1,93 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import useSWR from 'swr';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 // utils
 import { fetcher, endpoints } from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
+// Valid sort fields for sales (optional, can be used for sorting UI)
+export const saleSortFields = [
+  'id',
+  'memberName',
+  'gender',
+  'trainingAt',
+  'memberType',
+  'salesPerson',
+  'trainer',
+  'branch',
+  'department',
+  'kpi',
+  'contactNo',
+  'purchaseDate',
+  'membershipTypes',
+  'actualPrice',
+  'discountPrice',
+  'createdAt',
+  'updatedAt',
+  'deletedAt',
+  'isDeleted',
+];
 
-export function useGetSales() {
-  const URL = endpoints.sale.list;
+// ----------------------------------------------------------------------
+// Hook: Get paginated sales without advanced filters
+export function useGetSales({
+  page = 0,          // frontend 0-based
+  rowsPerPage = 25,
+  order = 'ASC',
+  orderBy = 'id',
+  searchTextValue = '',
+  extraFilter = {},
+}) {
+  const backendPage = page + 1; // backend expects 1-based
 
-  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+  // Base filter
+  const rawFilter = {
+    where: { isDeleted: false, ...extraFilter },
+    order: orderBy ? [`${orderBy} ${order}`] : undefined,
+  };
 
-  const refreshSales = () => {
-    // Use the `mutate` function to trigger a revalidation
+  if (searchTextValue) {
+    const search = `%${searchTextValue}%`;
+    rawFilter.where.or = [
+      { memberName: { like: search } },
+      { salesPerson: { like: search } },
+      { trainer: { like: search } },
+      { branch: { like: search } },
+      { department: { like: search } },
+    ];
+  }
+
+  const queryString = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}&page=${backendPage}&rowsPerPage=${rowsPerPage}`;
+
+  const URL = `${endpoints.sale.list}?${queryString}`;
+  const { data, error, isLoading, mutate } = useSWR(URL, fetcher);
+
+  const refreshSales = useCallback(() => {
     mutate();
-  };
+  }, [mutate]);
 
-  return {
-    sales: data || [],
-    salesLoading: isLoading,
-    salesError: error,
-    salesValidating: isValidating,
-    salesEmpty: !isLoading && !data?.length,
-    refreshSales, // Include the refresh function separately
-  };
+  return useMemo(() => {
+    const sales = data?.data || data?.items || (Array.isArray(data) ? data : []);
+    const totalCount = data?.total ?? (Array.isArray(data) ? data.length : 0);
+
+    return {
+      sales,
+      totalCount,
+      salesLoading: isLoading,
+      salesError: error,
+      salesEmpty: !isLoading && sales.length === 0,
+      refreshSales,
+    };
+  }, [data, isLoading, error, refreshSales]);
 }
 
 // ----------------------------------------------------------------------
-
+// Hook: Get single sale by ID
 export function useGetSale(saleId) {
   const URL = saleId ? [endpoints.sale.details(saleId)] : null;
-  const { data, isLoading, error, isValidating } = useSWR(URL, fetcher);
+  const { data, error, isLoading, isValidating } = useSWR(URL, fetcher);
 
-  const memoizedValue = useMemo(
+  return useMemo(
     () => ({
       sale: data,
       saleLoading: isLoading,
@@ -41,33 +96,64 @@ export function useGetSale(saleId) {
     }),
     [data, error, isLoading, isValidating]
   );
-
-  return memoizedValue;
 }
 
 // ----------------------------------------------------------------------
+// Hook: Get sales with advanced filtering (including date range)
+export function useGetSalesWithFilter({
+  page = 0,
+  rowsPerPage = 25,
+  order = 'ASC',
+  orderBy = 'id',
+  startDate,
+  endDate,
+  searchTextValue = '',
+  extraFilter = {},
+}) {
+  const backendPage = page + 1;
 
-export function useGetSalesWithFilter(filter) {
-  let URL;
-  if (filter) {
-    URL = endpoints.sale.filterList(filter);
-  } else {
-    URL = endpoints.sale.list;
+  const startDateISO = startDate ? new Date(startDate).toISOString() : undefined;
+  const endDateISO = endDate ? new Date(endDate).toISOString() : undefined;
+
+  const rawFilter = {
+    where: { isDeleted: false, ...extraFilter },
+    order: orderBy ? [`${orderBy} ${order}`] : undefined,
+  };
+
+  if (searchTextValue) {
+    const search = `%${searchTextValue}%`;
+    rawFilter.where.or = [
+      { memberName: { like: search } },
+      { salesPerson: { like: search } },
+      { trainer: { like: search } },
+      { branch: { like: search } },
+      { department: { like: search } },
+    ];
   }
 
-  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+  // Build query string with date filters
+  let queryString = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}&page=${backendPage}&rowsPerPage=${rowsPerPage}`;
+  if (startDateISO) queryString += `&startDate=${encodeURIComponent(startDateISO)}`;
+  if (endDateISO) queryString += `&endDate=${encodeURIComponent(endDateISO)}`;
 
-  const refreshFilterSales = () => {
-    // Use the `mutate` function to trigger a revalidation
+  const URL = `${endpoints.sale.list}?${queryString}`;
+  const { data, error, isLoading, mutate } = useSWR(URL, fetcher);
+
+  const refreshFilteredSales = useCallback(() => {
     mutate();
-  };
+  }, [mutate]);
 
-  return {
-    filteredSales: data || [],
-    filteredSalesLoading: isLoading,
-    filteredSalesError: error,
-    filteredSalesValidating: isValidating,
-    filteredSalesEmpty: !isLoading && !data?.length,
-    refreshFilterSales, // Include the refresh function separately
-  };
+  return useMemo(() => {
+    const filteredSales = data?.data || data?.items || (Array.isArray(data) ? data : []);
+    const totalFilteredSales = data?.total ?? (Array.isArray(data) ? data.length : 0);
+
+    return {
+      filteredSales,
+      totalFilteredSales,
+      filteredSalesLoading: isLoading,
+      filteredSalesError: error,
+      filteredSalesEmpty: !isLoading && filteredSales.length === 0,
+      refreshFilteredSales,
+    };
+  }, [data, isLoading, error, refreshFilteredSales]);
 }

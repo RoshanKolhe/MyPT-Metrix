@@ -96,26 +96,31 @@ export default function ConductionTableToolbar({
           />
         </Grid>
 
-        <Grid item xs={12} md={8} spacing={2}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <TextField
-              fullWidth
-              value={filters.name}
-              onChange={handleFilterName}
-              placeholder="Search..."
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <IconButton onClick={popover.onOpen} sx={{ ml: 1 }}>
-              <Iconify icon="eva:more-vertical-fill" />
-            </IconButton>
-          </Box>
+        <Grid item xs={12} md={8}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs>
+              <TextField
+                fullWidth
+                value={filters.name}
+                onChange={handleFilterName}
+                placeholder="Search..."
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid item>
+              <IconButton onClick={popover.onOpen}>
+                <Iconify icon="eva:more-vertical-fill" />
+              </IconButton>
+            </Grid>
+          </Grid>
         </Grid>
+
       </Grid>
       <CustomPopover
         open={popover.open}
@@ -170,9 +175,14 @@ export default function ConductionTableToolbar({
 }
 
 ConductionTableToolbar.propTypes = {
-  filters: PropTypes.object,
+  filters: PropTypes.shape({
+    startDate: PropTypes.any,
+    endDate: PropTypes.any,
+    name: PropTypes.string, // match actual usage
+  }),
   onFilters: PropTypes.func,
   onExport: PropTypes.func,
   refreshConductions: PropTypes.func,
   roleOptions: PropTypes.array,
 };
+

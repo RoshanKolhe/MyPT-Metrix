@@ -1,24 +1,22 @@
 import PropTypes from 'prop-types';
 import * as Yup from 'yup';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 // @mui
 import LoadingButton from '@mui/lab/LoadingButton';
 import Box from '@mui/material/Box';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import MenuItem from '@mui/material/MenuItem';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import { alpha, IconButton, Stack, Tooltip } from '@mui/material';
 // components
 import { useSnackbar } from 'src/components/snackbar';
 import FormProvider, { RHFUploadBox } from 'src/components/hook-form';
 import axiosInstance from 'src/utils/axios';
-import { alpha, IconButton, Stack, Tooltip } from '@mui/material';
 import Iconify from 'src/components/iconify';
 import FileThumbnail from 'src/components/file-thumbnail';
 import { varFade } from 'src/components/animate';
@@ -29,10 +27,12 @@ import { m } from 'framer-motion';
 export default function SaleImportExcelModel({ open, onClose, refreshSales }) {
   const { enqueueSnackbar } = useSnackbar();
 
+  // ✅ Yup schema
   const NewSaleImportSchema = Yup.object().shape({
     file: Yup.mixed().nullable().required('File is required'),
   });
 
+  // ✅ Default values
   const defaultValues = useMemo(
     () => ({
       file: null,
@@ -48,15 +48,21 @@ export default function SaleImportExcelModel({ open, onClose, refreshSales }) {
   const {
     reset,
     handleSubmit,
-    control,
     watch,
     setValue,
     formState: { isSubmitting, errors },
   } = methods;
-  console.log('errors', errors);
+
+  // ✅ Log only when errors exist
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log('Form validation errors:', errors);
+    }
+  }, [errors]);
 
   const watchedFile = watch('file');
 
+  // ✅ Handle file drop
   const handleDrop = useCallback(
     (acceptedFiles) => {
       const file = acceptedFiles[0];
@@ -72,10 +78,12 @@ export default function SaleImportExcelModel({ open, onClose, refreshSales }) {
     [setValue]
   );
 
+  // ✅ Remove file
   const handleRemoveFile = useCallback(() => {
     setValue('file', null);
   }, [setValue]);
 
+  // ✅ Submit form
   const onSubmit = handleSubmit(async (data) => {
     try {
       const formData = new FormData();
@@ -121,6 +129,7 @@ export default function SaleImportExcelModel({ open, onClose, refreshSales }) {
               sm: 'repeat(1, 1fr)',
             }}
           >
+            {/* Upload Box */}
             <RHFUploadBox
               name="file"
               maxSize={3145728}
@@ -133,6 +142,14 @@ export default function SaleImportExcelModel({ open, onClose, refreshSales }) {
               onDelete={handleRemoveFile}
             />
 
+            {/* ✅ Show validation error */}
+            {errors.file && (
+              <Alert severity="error" sx={{ mt: 1 }}>
+                {errors.file.message}
+              </Alert>
+            )}
+
+            {/* Show file preview if file selected */}
             {watchedFile && (
               <Tooltip title={watchedFile.name} arrow>
                 <Stack
@@ -162,7 +179,7 @@ export default function SaleImportExcelModel({ open, onClose, refreshSales }) {
 
                   <IconButton
                     size="small"
-                    onClick={() => setValue('file', null)} // remove file
+                    onClick={() => setValue('file', null)}
                     sx={{
                       p: 0.5,
                       top: 4,

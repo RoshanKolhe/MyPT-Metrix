@@ -1,93 +1,178 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import useSWR from 'swr';
 import { useCallback, useMemo } from 'react';
+
 // utils
 import { fetcher, endpoints } from 'src/utils/axios';
-import { buildFilter, formatDate } from 'src/utils/constants';
 
 // ----------------------------------------------------------------------
-const conductionSortFields = [
+// Valid sort fields for conductions
+export const conductionSortFields = [
   'id',
   'conductions',
   'conductionDate',
+  'trainer',
+  'branch',
+  'department',
+  'kpi',
   'createdAt',
   'updatedAt',
   'deletedAt',
   'isDeleted',
 ];
 
+// ----------------------------------------------------------------------
+// Utility: format Date into 'YYYY-MM-DD HH:mm:ss' local string
+function formatLocalDateTime(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
 
-export function useGetConductions({ page, rowsPerPage, order, orderBy, startDate, endDate, searchTextValue, }) {
-  const filter = buildFilter({ page, rowsPerPage, order, orderBy, startDate, endDate , validSortFields: conductionSortFields, searchTextValue, });
+// Normalize frontend date into [startOfDay, endOfDay] local strings
+function normalizeDateRange(startDate, endDate) {
+  const startDateStr = startDate
+    ? formatLocalDateTime(new Date(new Date(startDate).setHours(0, 0, 0, 0)))
+    : undefined;
 
-  const queryString = `filter=${encodeURIComponent(JSON.stringify(filter))}`;
-  const URL = `${endpoints.conduction.list}?${queryString}`;
-  console.log('Filter being sent:', filter);
-  console.log('Search text:', searchTextValue);
+  const endDateStr = endDate
+    ? formatLocalDateTime(new Date(new Date(endDate).setHours(23, 59, 59, 999)))
+    : undefined;
 
-  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
-
-  const refreshConductions = useCallback(() => {
-    mutate();
-  }, [mutate]);
-  const memoizedValue = useMemo(
-    () => ({
-      conductions: data?.data || [],
-      totalCount: data?.total || 0,
-      conductionsLoading: isLoading,
-      conductionsError: error,
-      conductionsValidating: isValidating,
-      conductionsEmpty: !isLoading && (!data?.data || data.data.length === 0),
-      refreshConductions,
-    }),
-    [data?.data, data?.total, error, isLoading, isValidating, refreshConductions]
-  );
-
-  return memoizedValue;
+  return { startDateStr, endDateStr };
 }
 
 // ----------------------------------------------------------------------
+// Hook: Get paginated conductions (basic query params)
+
+export function useGetConductions({
+  page = 0,
+  rowsPerPage = 25,
+  order = 'ASC',
+  orderBy = 'id',
+  searchTextValue = '',
+  startDate,
+  endDate,
+  extraFilter = {},
+}) {
+  const backendPage = page + 1;
+  const { startDateStr, endDateStr } = normalizeDateRange(startDate, endDate);
+
+  // Build query params
+  let query = `page=${backendPage}&rowsPerPage=${rowsPerPage}`;
+  if (orderBy) query += `&orderBy=${encodeURIComponent(orderBy)}`;
+  if (order) query += `&order=${encodeURIComponent(order)}`;
+  if (searchTextValue?.trim()) {
+    query += `&search=${encodeURIComponent(searchTextValue.trim())}`;
+  }
+  if (startDateStr) query += `&startDate=${encodeURIComponent(startDateStr)}`;
+  if (endDateStr) query += `&endDate=${encodeURIComponent(endDateStr)}`;
+
+  // Additional filters (like branchId, etc.)
+  Object.entries(extraFilter).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query += `&${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+    }
+  });
+
+  const URL = `${endpoints.conduction.list}?${query}`;
+  const { data, error, isLoading, mutate } = useSWR(URL, fetcher);
+
+  const refreshConductions = useCallback(() => mutate(), [mutate]);
+
+  return useMemo(() => {
+    const conductions = data?.data || [];
+    const totalCount = data?.total ?? 0;
+
+    return {
+      conductions,
+      totalCount,
+      conductionsLoading: isLoading,
+      conductionsError: error,
+      conductionsEmpty: !isLoading && conductions.length === 0,
+      refreshConductions,
+    };
+  }, [data, isLoading, error, refreshConductions]);
+}
+
+// ----------------------------------------------------------------------
+// Hook: Get single conduction by ID
 
 export function useGetConduction(conductionId) {
   const URL = conductionId ? [endpoints.conduction.details(conductionId)] : null;
-  const { data, isLoading, error, isValidating } = useSWR(URL, fetcher);
+  const { data, error, isLoading, isValidating } = useSWR(URL, fetcher);
 
-  const memoizedValue = useMemo(
+  return useMemo(
     () => ({
       conduction: data,
       conductionLoading: isLoading,
       conductionError: error,
       conductionValidating: isValidating,
     }),
-    [data, error, isLoading, isValidating]
+    [data, isLoading, error, isValidating],
   );
-
-  return memoizedValue;
 }
 
 // ----------------------------------------------------------------------
+// Hook: Get conductions with advanced filtering (LoopBack filter style)
 
-export function useGetConductionsWithFilter(filter) {
-  let URL;
-  if (filter) {
-    URL = endpoints.conduction.filterList(filter);
-  } else {
-    URL = endpoints.conduction.list;
+export function useGetConductionsWithFilter({
+  page = 0,
+  rowsPerPage = 25,
+  order = 'ASC',
+  orderBy = 'id',
+  searchTextValue = '',
+  startDate,
+  endDate,
+  extraFilter = {},
+}) {
+  const backendPage = page + 1;
+  const { startDateStr, endDateStr } = normalizeDateRange(startDate, endDate);
+
+  const rawFilter = {
+    where: { isDeleted: false, ...extraFilter },
+    order: orderBy ? [`${orderBy} ${order}`] : undefined,
+  };
+
+  if (searchTextValue?.trim()) {
+    const search = `%${searchTextValue.trim()}%`;
+    rawFilter.where.or = [
+      { trainer: { like: search } },
+      { branch: { like: search } },
+      { department: { like: search } },
+      { kpi: { like: search } },
+    ];
   }
 
-  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+  if (startDateStr || endDateStr) {
+    rawFilter.where.conductionDate = {};
+    if (startDateStr) rawFilter.where.conductionDate.gte = startDateStr;
+    if (endDateStr) rawFilter.where.conductionDate.lte = endDateStr;
+  }
 
-  const refreshFilterConductions = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
-  };
+  const queryString = `filter=${encodeURIComponent(
+    JSON.stringify(rawFilter)
+  )}&page=${backendPage}&rowsPerPage=${rowsPerPage}`;
 
-  return {
-    filteredConductions: data || [],
-    filteredConductionsLoading: isLoading,
-    filteredConductionsError: error,
-    filteredConductionsValidating: isValidating,
-    filteredConductionsEmpty: !isLoading && !data?.length,
-    refreshFilterConductions, // Include the refresh function separately
-  };
+  const URL = `${endpoints.conduction.list}?${queryString}`;
+  const { data, error, isLoading, mutate } = useSWR(URL, fetcher);
+
+  const refreshFilteredConductions = useCallback(() => mutate(), [mutate]);
+
+  return useMemo(() => {
+    const filteredConductions =
+      data?.data || data?.items || (Array.isArray(data) ? data : []);
+    const totalFilteredConductions =
+      data?.total ?? (Array.isArray(data) ? data.length : 0);
+
+    return {
+      filteredConductions,
+      totalFilteredConductions,
+      filteredConductionsLoading: isLoading,
+      filteredConductionsError: error,
+      filteredConductionsEmpty: !isLoading && filteredConductions.length === 0,
+      refreshFilteredConductions,
+    };
+  }, [data, isLoading, error, refreshFilteredConductions]);
 }

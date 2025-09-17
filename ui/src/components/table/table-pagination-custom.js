@@ -13,20 +13,24 @@ export default function TablePaginationCustom({
   rowsPerPageOptions = [5, 10, 25],
   sx,
   count,
-  page, 
-  rowsPerPage, 
+  page,
+  rowsPerPage,
   onPageChange,
   onRowsPerPageChange,
   loading = false,
   ...other
 }) {
+  // Calculate the last valid page index
+  const lastPage = Math.max(0, Math.ceil(count / rowsPerPage) - 1);
+  const safePage = Math.min(page, lastPage); // clamp the page
+
   return (
     <Box sx={{ position: 'relative', ...sx }}>
       <TablePagination
         rowsPerPageOptions={rowsPerPageOptions}
         component="div"
         count={count}
-        page={page}
+        page={safePage}      // use clamped page
         rowsPerPage={rowsPerPage}
         onPageChange={onPageChange}
         onRowsPerPageChange={onRowsPerPageChange}
@@ -57,6 +61,7 @@ export default function TablePaginationCustom({
   );
 }
 
+
 TablePaginationCustom.propTypes = {
   dense: PropTypes.bool,
   onChangeDense: PropTypes.func,
@@ -64,8 +69,8 @@ TablePaginationCustom.propTypes = {
   sx: PropTypes.object,
   count: PropTypes.number.isRequired,
   page: PropTypes.number.isRequired,
-  rowsPerPage: PropTypes.number.isRequired, 
-  onPageChange: PropTypes.func.isRequired, 
+  rowsPerPage: PropTypes.number.isRequired,
+  onPageChange: PropTypes.func.isRequired,
   onRowsPerPageChange: PropTypes.func.isRequired,
   loading: PropTypes.bool,
 };

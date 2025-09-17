@@ -14,39 +14,46 @@ import Iconify from 'src/components/iconify';
 export default function SaleTableFiltersResult({
   filters,
   onFilters,
-  //
   onResetFilters,
-  //
   results,
   ...other
 }) {
+  // Handler to remove Status filter
   const handleRemoveStatus = () => {
     onFilters('status', 'all');
   };
 
+  // Handler to remove a Role from role array filter
   const handleRemoveRole = (inputValue) => {
-    const newValue = filters.role.filter((item) => item !== inputValue);
+    // Ensure filters.role is always an array
+    const roles = Array.isArray(filters.role) ? filters.role : [];
+    const newValue = roles.filter((item) => item !== inputValue);
     onFilters('role', newValue);
   };
 
+  // Handler to remove Start Date filter
   const handleRemoveStartDate = () => {
     onFilters('startDate', null);
   };
 
+  // Handler to remove End Date filter
   const handleRemoveEndDate = () => {
     onFilters('endDate', null);
   };
 
   return (
     <Stack spacing={1.5} {...other}>
+      {/* Display total results */}
       <Box sx={{ typography: 'body2' }}>
-        <strong>{results}</strong>
+        <strong>{results ?? 0}</strong>
         <Box component="span" sx={{ color: 'text.secondary', ml: 0.25 }}>
           results found
         </Box>
       </Box>
 
+      {/* Display active filter chips */}
       <Stack flexGrow={1} spacing={1} direction="row" flexWrap="wrap" alignItems="center">
+        {/* Status Filter */}
         {filters.status !== 'all' && (
           <Block label="Status:">
             <Chip
@@ -57,14 +64,21 @@ export default function SaleTableFiltersResult({
           </Block>
         )}
 
-        {!!filters.role.length && (
+        {/* Role Filter */}
+        {Array.isArray(filters.role) && filters.role.length > 0 && (
           <Block label="Role:">
             {filters.role.map((item) => (
-              <Chip key={item} label={item} size="small" onDelete={() => handleRemoveRole(item)} />
+              <Chip
+                key={item}
+                label={item}
+                size="small"
+                onDelete={() => handleRemoveRole(item)}
+              />
             ))}
           </Block>
         )}
 
+        {/* Start Date Filter */}
         {filters.startDate && (
           <Block label="Start Date:">
             <Chip
@@ -75,6 +89,7 @@ export default function SaleTableFiltersResult({
           </Block>
         )}
 
+        {/* End Date Filter */}
         {filters.endDate && (
           <Block label="End Date:">
             <Chip
@@ -85,6 +100,7 @@ export default function SaleTableFiltersResult({
           </Block>
         )}
 
+        {/* Clear All Filters Button */}
         <Button
           color="error"
           onClick={onResetFilters}
@@ -97,6 +113,10 @@ export default function SaleTableFiltersResult({
   );
 }
 
+// ----------------------------------------------------------------------
+// PropTypes
+// ----------------------------------------------------------------------
+
 SaleTableFiltersResult.propTypes = {
   filters: PropTypes.object,
   onFilters: PropTypes.func,
@@ -104,6 +124,8 @@ SaleTableFiltersResult.propTypes = {
   results: PropTypes.number,
 };
 
+// ----------------------------------------------------------------------
+// Helper Block Component
 // ----------------------------------------------------------------------
 
 function Block({ label, children, sx, ...other }) {
@@ -122,16 +144,22 @@ function Block({ label, children, sx, ...other }) {
       }}
       {...other}
     >
+      {/* Label */}
       <Box component="span" sx={{ typography: 'subtitle2' }}>
         {label}
       </Box>
 
+      {/* Child Chips */}
       <Stack spacing={1} direction="row" flexWrap="wrap">
         {children}
       </Stack>
     </Stack>
   );
 }
+
+// ----------------------------------------------------------------------
+// PropTypes for Block
+// ----------------------------------------------------------------------
 
 Block.propTypes = {
   children: PropTypes.node,
