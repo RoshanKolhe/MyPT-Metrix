@@ -71,7 +71,11 @@ export class Conduction extends Entity {
 }
 
 export interface ConductionRelations {
-  // describe navigational properties here
+   trainer?: Trainer;
+  kpi?: Kpi;
+  branch?: Branch;
+  department?: Department;
+  deletedByUser?: User;
 }
 
 export type ConductionWithRelations = Conduction & ConductionRelations;
