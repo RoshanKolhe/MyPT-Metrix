@@ -23,6 +23,7 @@ export default function SalesmanLeaderboardTableToolbar({
   //
   roleOptions,
   onExport,
+  branches,
 }) {
   const popover = usePopover();
 
@@ -43,6 +44,24 @@ export default function SalesmanLeaderboardTableToolbar({
     [onFilters]
   );
 
+  const handleFilterBranch = useCallback(
+    (event) => {
+      onFilters('branch', event.target.value);
+      onFilters('department', ''); // reset department when branch changes
+    },
+    [onFilters]
+  );
+
+  const handleFilterDepartment = useCallback(
+    (event) => {
+      onFilters('department', event.target.value);
+    },
+    [onFilters]
+  );
+
+  const selectedBranch = branches.find((b) => b.id === filters.branch); 
+  const departmentOptions = selectedBranch?.departments || [];
+
   return (
     <>
       <Stack
@@ -57,6 +76,37 @@ export default function SalesmanLeaderboardTableToolbar({
           pr: { xs: 2.5, md: 1 },
         }}
       >
+        <FormControl sx={{ width: { xs: 1, md: 200 } }}>
+          <InputLabel>Branch</InputLabel>
+          <Select
+            value={filters.branch}
+            onChange={handleFilterBranch}
+            input={<OutlinedInput label="Branch" />}
+          >
+            <MenuItem value="">All</MenuItem>
+            {branches.map((branch) => (
+              <MenuItem key={branch.id} value={branch.id}>
+                {branch.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl sx={{ width: { xs: 1, md: 200 } }} disabled={!filters.branch}>
+          <InputLabel>Department</InputLabel>
+          <Select
+            value={filters.department}
+            onChange={handleFilterDepartment}
+            input={<OutlinedInput label="Department" />}
+          >
+            <MenuItem value="">All</MenuItem>
+            {departmentOptions.map((dept) => (
+              <MenuItem key={dept.id} value={dept.id}>
+                {dept.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <Stack direction="row" alignItems="center" spacing={2} flexGrow={1} sx={{ width: 1 }}>
           <TextField
             fullWidth
@@ -117,4 +167,5 @@ SalesmanLeaderboardTableToolbar.propTypes = {
   onFilters: PropTypes.func,
   roleOptions: PropTypes.array,
   onExport: PropTypes.func,
+  branches: PropTypes.array,
 };

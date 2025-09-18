@@ -41,7 +41,7 @@ import {
 import { useGetSalesmanLeaderboardsWithFilter } from 'src/api/salesmanLeaderboard';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'notistack';
-import { _roles, COMMON_STATUS_OPTIONS } from 'src/utils/constants';
+import { _roles, TRAINER_LEADERBOARD_STATUS_OPTIONS } from 'src/utils/constants';
 import { useAuthContext } from 'src/auth/hooks';
 import PropTypes from 'prop-types';
 import SalesmanLeaderboardTableToolbar from '../salesmanLeaderboard-table-toolbar';
@@ -50,7 +50,7 @@ import SalesmanLeaderboardTableRow from '../salesmanLeaderboard-table-row';
 
 // ----------------------------------------------------------------------
 
-const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...COMMON_STATUS_OPTIONS];
+const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...TRAINER_LEADERBOARD_STATUS_OPTIONS];
 
 const TABLE_HEAD = [
   { id: 'trainerId', label: 'Trainer Id' },
@@ -68,15 +68,17 @@ const defaultFilters = {
   name: '',
   role: [],
   status: 'all',
+  branch: '',
+  department: '',
 };
 
 // ----------------------------------------------------------------------
 
-export default function SalesmanLeaderboardListView({ filter }) {
-  console.log(filter);
+export default function SalesmanLeaderboardListView({ filter, branches }) {
+  console.log(branches);
   const { user } = useAuthContext();
   const isSuperAdmin = user?.permissions?.includes('super_admin');
-  
+
   const table = useTable({ defaultOrderBy: 'rank' });
 
   const settings = useSettingsContext();
@@ -223,12 +225,52 @@ export default function SalesmanLeaderboardListView({ filter }) {
     <>
       <Container maxWidth={settings.themeStretch ? false : 'lg'}>
         <Card>
+          <Tabs
+            value={filters.status}
+            onChange={handleFilterStatus}
+            sx={{
+              px: 2.5,
+              boxShadow: (theme) => `inset 0 -2px 0 0 ${alpha(theme.palette.grey[500], 0.08)}`,
+            }}
+          >
+            {STATUS_OPTIONS.map((tab) => (
+              <Tab
+                key={tab.value}
+                iconPosition="end"
+                value={tab.value}
+                label={tab.label}
+                icon={
+                  <Label
+                    variant={
+                      ((tab.value === 'all' || tab.value === filters.status) && 'filled') || 'soft'
+                    }
+                    color={
+                      (tab.value === 'Over Achiever' && 'success') ||
+                      (tab.value === 'Under Performer' && 'error') ||
+                      (tab.value === 'Achiever' && 'warning') ||
+                      'default'
+                    }
+                  >
+                    {tab.value === 'all' && tableData.length}
+                    {tab.value === 'Over Achiever' &&
+                      tableData.filter((s) => s.status === 'Over Achiever').length}
+                    {tab.value === 'Under Performer' &&
+                      tableData.filter((s) => s.status === 'Under Performer').length}
+                    {tab.value === 'Achiever' &&
+                      tableData.filter((s) => s.status === 'Achiever').length}
+                  </Label>
+                }
+              />
+            ))}
+          </Tabs>
+
           <SalesmanLeaderboardTableToolbar
             filters={filters}
             onFilters={handleFilters}
             //
             roleOptions={_roles}
             onExport={handleExport}
+            branches={branches || []}
           />
 
           {canReset && (
@@ -355,12 +397,14 @@ export default function SalesmanLeaderboardListView({ filter }) {
 
 SalesmanLeaderboardListView.propTypes = {
   filter: PropTypes.any,
+  branches: PropTypes.array,
 };
 
 // ----------------------------------------------------------------------
 
 function applyFilter({ inputData, comparator, filters }) {
-  const { name, status, role } = filters;
+  console.log(filters);
+  const { name, status, role, branch, department } = filters;
   const stabilizedThis = inputData.map((el, index) => [el, index]);
   const roleMapping = {
     production_head: 'Production Head',
@@ -376,26 +420,31 @@ function applyFilter({ inputData, comparator, filters }) {
   inputData = stabilizedThis.map((el) => el[0]);
 
   if (name) {
-    inputData = inputData.filter((storageLocation) =>
-      Object.values(storageLocation).some((value) =>
+    inputData = inputData.filter((trainer) =>
+      Object.values(trainer).some((value) =>
         String(value).toLowerCase().includes(name.toLowerCase())
       )
     );
   }
 
   if (status !== 'all') {
-    inputData = inputData.filter((storageLocation) =>
-      status === '1' ? storageLocation.isActive : !storageLocation.isActive
-    );
+    inputData = inputData.filter((trainer) => trainer.status === status);
+  }
+  if (branch) {
+    inputData = inputData.filter((trainer) => trainer.branchId === branch); // updated to use branchId
+  }
+
+  if (department) {
+    inputData = inputData.filter((trainer) => trainer.departmentId === department); // updated to use departmentId
   }
 
   if (role.length) {
     inputData = inputData.filter(
-      (storageLocation) =>
-        storageLocation.permissions &&
-        storageLocation.permissions.some((storageLocationRole) => {
-          console.log(storageLocationRole);
-          const mappedRole = roleMapping[storageLocationRole];
+      (trainer) =>
+        trainer.permissions &&
+        trainer.permissions.some((trainerRole) => {
+          console.log(trainerRole);
+          const mappedRole = roleMapping[trainerRole];
           console.log('Mapped Role:', mappedRole); // Check the mapped role
           return mappedRole && role.includes(mappedRole);
         })

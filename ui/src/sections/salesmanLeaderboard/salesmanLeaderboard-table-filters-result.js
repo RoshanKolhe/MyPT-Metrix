@@ -43,7 +43,7 @@ export default function SalesmanLeaderboardTableFiltersResult({
           <Block label="Status:">
             <Chip
               size="small"
-              label={filters.status === 1 ? 'Active' : 'In-Active'}
+              label={filters.status === 'all' ? 'All' : filters.status}
               onDelete={handleRemoveStatus}
             />
           </Block>

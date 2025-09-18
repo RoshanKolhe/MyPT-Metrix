@@ -259,7 +259,7 @@ export default function OverviewEcommerceView() {
             </Grid> */}
 
             <Grid xs={12} md={12} lg={12}>
-              <SalesmanLeaderboardListView filter={queryString} />
+              <SalesmanLeaderboardListView filter={queryString} branches={branches} />
             </Grid>
           </Grid>
         </>
