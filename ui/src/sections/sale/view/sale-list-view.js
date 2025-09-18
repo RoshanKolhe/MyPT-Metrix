@@ -497,16 +497,18 @@ function applyFilter({ inputData, comparator, filters }) {
   }
 
   if (filters.startDate && filters.endDate) {
-    console.log('here');
-    const start = new Date(filters.startDate).toISOString().split('T')[0];
-    const end = new Date(filters.endDate).toISOString().split('T')[0];
+    const start = new Date(filters.startDate);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(filters.endDate);
+    end.setHours(23, 59, 59, 999);
 
     inputData = inputData.filter((sale) => {
       const purchaseDate = sale.membershipDetails?.purchaseDate;
       if (!purchaseDate) return false;
 
-      const dateOnly = new Date(purchaseDate).toISOString().split('T')[0];
-      return dateOnly >= start && dateOnly <= end;
+      const date = new Date(purchaseDate);
+      return date >= start && date <= end;
     });
   }
 

@@ -58,6 +58,7 @@ export class DashboardController {
     @param.query.string('endDate') endDateStr?: string,
     @param.query.string('country') country?: string,
   ): Promise<any> {
+    // parse kpi ids
     const kpiIds = kpiIdsStr
       ? kpiIdsStr
           .split(',')
@@ -65,6 +66,7 @@ export class DashboardController {
           .filter(Boolean)
       : [];
 
+    // prepare default date ranges (7-day window)
     const today = new Date(new Date().toDateString());
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - 6);
@@ -74,23 +76,26 @@ export class DashboardController {
     const lastWeekEnd = new Date(today);
     lastWeekEnd.setDate(today.getDate() - 7);
 
-    // Step 1: If date filter is passed, fetch membership IDs first
-    let membershipIds: any = [];
+    // Step 1: If date filter is passed, fetch membershipDetails in that date range
+    // and extract the linked sale ids (the FK is on membershipDetails).
+    let saleIds: number[] = [];
     if (startDateStr && endDateStr) {
-      const purchaseStartDate = new Date(startDateStr + 'T00:00:00Z');
-      const purchaseEndDate = new Date(endDateStr + 'T23:59:59Z');
+      const start = new Date(startDateStr);
+      start.setUTCHours(0, 0, 0, 0); // midnight UTC
+
+      const end = new Date(endDateStr);
+      end.setUTCHours(23, 59, 59, 999); // end of day UTC
 
       const memberships = await this.membershipDetailsRepository.find({
         where: {
-          purchaseDate: {gte: purchaseStartDate, lte: purchaseEndDate},
+          purchaseDate: {gte: start, lte: end},
         },
-        fields: {id: true},
       });
 
-      membershipIds = memberships.map(m => m.id);
+      saleIds = memberships.map(m => m.salesId).filter(Boolean) as number[];
     }
-    console.log(membershipIds);
-    // Step 2: Build Sales filter with Sales-level filters
+
+    // Step 2: Build Sales filter but filter by sales.id (not membershipDetailsId)
     const filter: any = {
       where: {
         isDeleted: false,
@@ -98,17 +103,19 @@ export class DashboardController {
         ...(branchId && {branchId}),
         ...(departmentId && {departmentId}),
         ...(country && {country}),
-        ...(membershipIds.length > 0 && {
-          membershipDetailsId: {inq: membershipIds},
-        }),
+        // use sale ids if provided by membership lookup
+        ...(saleIds.length > 0 && {id: {inq: saleIds}}),
       },
-      include: ['membershipDetails'],
+      include: ['membershipDetails'], // still include membershipDetails for calculations
     };
 
-    // Step 3: Fetch all sales (filtered)
+    // Step 3: Fetch filtered sales
     const allSales = await this.salesRepository.find(filter);
+    return allSales;
+    console.log('allSales length ->', allSales.length);
+    console.log('allSales length ->', JSON.stringify(allSales));
 
-    // Calculate total revenue from all sales
+    // The rest of your calculations remain the same (but use membershipDetails.purchaseDate)
     const totalRevenue = allSales.reduce(
       (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
       0,
@@ -116,12 +123,12 @@ export class DashboardController {
     const totalTickets = allSales.length;
     const avgTicket = totalTickets > 0 ? totalRevenue / totalTickets : 0;
 
-    // Get 7-day series for revenue
-    const get7DaySeries = (sales: Sales[], start: Date): number[] => {
+    const get7DaySeries = (sales: any[], start: Date): number[] => {
       const series = Array(7).fill(0);
       sales.forEach(s => {
-        if (!s.membershipDetails?.purchaseDate) return;
-        const d = new Date(s.membershipDetails.purchaseDate);
+        const pd = s.membershipDetails?.purchaseDate;
+        if (!pd) return;
+        const d = new Date(pd);
         const dayDiff = Math.floor(
           (d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
         );
@@ -132,12 +139,12 @@ export class DashboardController {
       return series;
     };
 
-    // Get 7-day series for tickets count
-    const get7DayTicketsSeries = (sales: Sales[], start: Date): number[] => {
+    const get7DayTicketsSeries = (sales: any[], start: Date): number[] => {
       const series = Array(7).fill(0);
       sales.forEach(s => {
-        if (!s.membershipDetails?.purchaseDate) return;
-        const d = new Date(s.membershipDetails.purchaseDate);
+        const pd = s.membershipDetails?.purchaseDate;
+        if (!pd) return;
+        const d = new Date(pd);
         const dayDiff = Math.floor(
           (d.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
         );
@@ -148,10 +155,11 @@ export class DashboardController {
       return series;
     };
 
-    // Step 4: Fetch this week’s and last week’s sales (using purchaseDate)
+    // Select thisWeekSales / lastWeekSales using membershipDetails.purchaseDate
     const thisWeekSales = allSales.filter(s => {
-      if (!s.membershipDetails?.purchaseDate) return false;
-      const d = new Date(s.membershipDetails.purchaseDate);
+      const pd = s.membershipDetails?.purchaseDate;
+      if (!pd) return false;
+      const d = new Date(pd);
       return (
         d >= new Date(startDate.setHours(0, 0, 0, 0)) &&
         d <= new Date(today.setHours(23, 59, 59, 999))
@@ -159,15 +167,15 @@ export class DashboardController {
     });
 
     const lastWeekSales = allSales.filter(s => {
-      if (!s.membershipDetails?.purchaseDate) return false;
-      const d = new Date(s.membershipDetails.purchaseDate);
+      const pd = s.membershipDetails?.purchaseDate;
+      if (!pd) return false;
+      const d = new Date(pd);
       return (
         d >= new Date(lastWeekStart.setHours(0, 0, 0, 0)) &&
         d <= new Date(lastWeekEnd.setHours(23, 59, 59, 999))
       );
     });
 
-    // Revenue for this week and last week
     const thisWeekRevenue = thisWeekSales.reduce(
       (s, v) => s + (v.membershipDetails?.discountedPrice || 0),
       0,
@@ -185,14 +193,12 @@ export class DashboardController {
     const lastWeekAvgTicket =
       lastWeekTickets > 0 ? lastWeekRevenue / lastWeekTickets : 0;
 
-    // Calculate percent change
     const percentChange = (current: number, prev: number): number => {
       if (prev === 0 && current === 0) return 0;
       if (prev === 0) return 100;
       return ((current - prev) / prev) * 100;
     };
 
-    // Step 5: Return structured response
     return {
       revenue: {
         value: Math.round(totalRevenue),
