@@ -145,7 +145,7 @@ export default function SaleListView() {
     },
     [table]
   );
-
+  console.log(dataFiltered);
   const handleExport = useCallback(() => {
     const fileName = 'Sales Report.xlsx';
 
@@ -498,16 +498,16 @@ function applyFilter({ inputData, comparator, filters }) {
 
   if (filters.startDate && filters.endDate) {
     const start = new Date(filters.startDate);
-    start.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0); // midnight UTC
 
     const end = new Date(filters.endDate);
-    end.setHours(23, 59, 59, 999);
+    end.setHours(23, 59, 59, 999); // end of day UTC
 
     inputData = inputData.filter((sale) => {
       const purchaseDate = sale.membershipDetails?.purchaseDate;
       if (!purchaseDate) return false;
 
-      const date = new Date(purchaseDate);
+      const date = new Date(purchaseDate); // purchaseDate already UTC from DB
       return date >= start && date <= end;
     });
   }

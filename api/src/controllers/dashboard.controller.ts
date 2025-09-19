@@ -81,17 +81,18 @@ export class DashboardController {
     let saleIds: number[] = [];
     if (startDateStr && endDateStr) {
       const start = new Date(startDateStr);
-      start.setUTCHours(0, 0, 0, 0); // midnight UTC
-
+      start.setHours(0, 0, 0, 0); // midnight UTC
+      console.log('Start', start);
       const end = new Date(endDateStr);
-      end.setUTCHours(23, 59, 59, 999); // end of day UTC
+      end.setHours(23, 59, 59, 999); // end of day UTC
+      console.log('End', end);
 
       const memberships = await this.membershipDetailsRepository.find({
         where: {
-          purchaseDate: {gte: start, lte: end},
+          purchaseDate: {between: [start, end]},
         },
       });
-
+      console.log(memberships.length, 'memberships found');
       saleIds = memberships.map(m => m.salesId).filter(Boolean) as number[];
     }
 
@@ -111,9 +112,7 @@ export class DashboardController {
 
     // Step 3: Fetch filtered sales
     const allSales = await this.salesRepository.find(filter);
-    return allSales;
     console.log('allSales length ->', allSales.length);
-    console.log('allSales length ->', JSON.stringify(allSales));
 
     // The rest of your calculations remain the same (but use membershipDetails.purchaseDate)
     const totalRevenue = allSales.reduce(
