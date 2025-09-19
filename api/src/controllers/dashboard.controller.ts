@@ -993,8 +993,9 @@ export class DashboardController {
     @param.query.string('departmentId') departmentId?: string,
   ): Promise<any> {
     const startDate = new Date(startDateStr);
+    startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(endDateStr);
-
+    endDate.setHours(23, 59, 59, 999);
     // 1. Build conduction filter
     const conductionFilter: any = {
       where: {
@@ -1007,6 +1008,8 @@ export class DashboardController {
 
     // 2. Fetch conductions
     const conductions = await this.conductionRepository.find(conductionFilter);
+    // return conductions;
+    console.log('Conductions fetched:', conductions.length);
 
     // 3. Total conductions = sum of conductions column
     const totalConductions = conductions.reduce(
