@@ -71,7 +71,7 @@ export default function CountrySalesLeaderboardListView({ filter }) {
   const { user } = useAuthContext();
   const isSuperAdmin = user?.permissions?.includes('super_admin');
 
-  const table = useTable({ defaultOrderBy: 'rank', defaultRowsPerPage: 10 });
+  const table = useTable({ defaultOrderBy: 'rank', defaultRowsPerPage: 10, defaultDense: true });
 
   const settings = useSettingsContext();
 
@@ -218,7 +218,10 @@ export default function CountrySalesLeaderboardListView({ filter }) {
 
   return (
     <>
-      <Container maxWidth={settings.themeStretch ? false : 'lg'}>
+      <Container
+        maxWidth={settings.themeStretch ? false : 'lg'}
+        style={{ padding: 0, maxWidth: 'initial' }}
+      >
         <Card>
           <CountrySalesLeaderboardTableToolbar
             filters={filters}

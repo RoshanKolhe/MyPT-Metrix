@@ -249,6 +249,10 @@ export default function OverviewEcommerceView() {
               <CountrySalesLeaderboardListView filter={queryString} />
             </Grid>
 
+            <Grid xs={12} md={12} lg={6}>
+              <EcommerceTargetForecasting title="12-Month Sales Performance" />
+            </Grid>
+
             <Grid xs={12} md={12} lg={12}>
               <EcommerceYearlyConductions
                 title="Daily Conductions"
@@ -257,10 +261,6 @@ export default function OverviewEcommerceView() {
                 filterValues={filters}
                 dashboradConductionsData={dashboradConductionsData}
               />
-            </Grid>
-
-            <Grid xs={12} md={12} lg={12}>
-              <EcommerceTargetForecasting title="Forecasting" subheader="Target forecasting" />
             </Grid>
 
             {/* <Grid xs={12} md={6} lg={8}>

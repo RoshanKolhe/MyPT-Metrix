@@ -1015,7 +1015,7 @@ export class DashboardController {
         male: membershipMale,
         female: membershipFemale,
       },
-      ratio: ptMembershipRatio, 
+      ratio: ptMembershipRatio,
     };
   }
 
@@ -1149,5 +1149,82 @@ export class DashboardController {
     }));
 
     return rankedResult;
+  }
+
+  @get('/dashboard/forecast/monthly-series')
+  async monthlyForecastSeries(): Promise<any> {
+    const today = new Date(new Date().toDateString());
+
+    const result: {
+      labels: string[];
+      targetSeries: number[];
+      actualSeries: number[];
+      deficitPercentSeries: number[];
+    } = {
+      labels: [],
+      targetSeries: [],
+      actualSeries: [],
+      deficitPercentSeries: [],
+    };
+
+    // Loop over last 12 months (including current month)
+    for (let i = 11; i >= 0; i--) {
+      const startDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const endDate = new Date(
+        today.getFullYear(),
+        today.getMonth() - i + 1,
+        0,
+      );
+
+      // Label like "Sep 2025"
+      const label = startDate.toLocaleString('en-US', {
+        month: 'short',
+        year: 'numeric',
+      });
+
+      // Fetch targets for this month
+      const targets = await this.targetRepository.find({
+        where: {
+          and: [
+            {startDate: {lte: endDate.toISOString()}},
+            {endDate: {gte: startDate.toISOString()}},
+          ],
+          isDeleted: false,
+        },
+      });
+
+      const targetTotal = targets.reduce(
+        (sum, t) => sum + (t.targetValue || 0),
+        0,
+      );
+
+      // Fetch actual sales for this month
+      const sales = await this.salesRepository.find({
+        where: {
+          createdAt: {between: [startDate, endDate]},
+        },
+        include: ['membershipDetails'],
+      });
+
+      const actualTotal = sales.reduce(
+        (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
+        0,
+      );
+
+      // Calculate deficit percentage
+      const deficitPercent = targetTotal
+        ? parseFloat(
+            (((actualTotal - targetTotal) / targetTotal) * 100).toFixed(1),
+          )
+        : 0;
+
+      // Push data into arrays
+      result.labels.push(label);
+      result.targetSeries.push(targetTotal);
+      result.actualSeries.push(actualTotal);
+      result.deficitPercentSeries.push(deficitPercent);
+    }
+
+    return result;
   }
 }
