@@ -53,9 +53,9 @@ import CountrySalesLeaderboardTableRow from '../countrySalesLeaderboard-table-ro
 const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...COMMON_STATUS_OPTIONS];
 
 const TABLE_HEAD = [
-  { id: 'country', label: 'Country' },
-  { id: 'totalSales', label: 'Sale' },
-  { id: 'rank', label: 'Rank', width: 180 },
+  { id: 'rank', label: 'Rank', width: 0 },
+  { id: 'country', label: 'Country', width: 0 },
+  { id: 'totalSales', label: 'Sale', width: 0 },
 ];
 
 const defaultFilters = {
@@ -71,7 +71,7 @@ export default function CountrySalesLeaderboardListView({ filter }) {
   const { user } = useAuthContext();
   const isSuperAdmin = user?.permissions?.includes('super_admin');
 
-  const table = useTable({ defaultOrderBy: 'rank' });
+  const table = useTable({ defaultOrderBy: 'rank', defaultRowsPerPage: 10 });
 
   const settings = useSettingsContext();
 

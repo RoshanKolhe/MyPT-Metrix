@@ -45,9 +45,9 @@ export default function CountrySalesLeaderboardTableRow({
           <Checkbox checked={selected} onClick={onSelectRow} />
         </TableCell> */}
 
+        <TableCell sx={{ whiteSpace: 'nowrap' }}>{rank}</TableCell>
         <TableCell sx={{ whiteSpace: 'nowrap' }}>{country}</TableCell>
         <TableCell sx={{ whiteSpace: 'nowrap' }}>{totalSales}</TableCell>
-        <TableCell sx={{ whiteSpace: 'nowrap' }}>{rank}</TableCell>
       </TableRow>
 
       <ConfirmDialog

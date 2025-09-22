@@ -209,6 +209,15 @@ export default function OverviewEcommerceView() {
               />
             </Grid>
 
+            <Grid xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Avg Revenue/Trainer"
+                total={dashboardCounts?.avgRevenuePerTrainer || 0}
+                color="warning"
+                icon={<img alt="icon" src="/assets/icons/glass/ic_glass_message.png" />}
+              />
+            </Grid>
+
             <Grid xs={12} md={12} lg={12}>
               <EcommerceYearlySales
                 title="Daily KPI Sales"
@@ -236,7 +245,7 @@ export default function OverviewEcommerceView() {
                 dashboradPtsVsMembershipRatioData={dashboradPtsVsMembershipRatioData}
               />
             </Grid>
-            <Grid xs={12} md={12} lg={12}>
+            <Grid xs={12} md={6} lg={6}>
               <CountrySalesLeaderboardListView filter={queryString} />
             </Grid>
 

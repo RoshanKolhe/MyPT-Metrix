@@ -10,6 +10,7 @@ import Chart, { useChart } from 'src/components/chart';
 import { useGetDashboradMaleToFemaleRatio } from 'src/api/user';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
+import { Box, Divider } from '@mui/material';
 
 // ----------------------------------------------------------------------
 
@@ -40,7 +41,7 @@ export default function EcommercePtsVsMembership({
   const theme = useTheme();
 
   // Extract API data
-  const { membership, pt } = dashboradPtsVsMembershipRatioData;
+  const { membership, pt, ratio } = dashboradPtsVsMembershipRatioData;
   const totalUniqueClients = (membership?.total ?? 0) + (pt?.total ?? 0);
 
   // Chart data
@@ -159,6 +160,12 @@ export default function EcommercePtsVsMembership({
         height={300}
         key={totalUniqueClients}
       />
+
+      <Divider />
+
+      <Box sx={{ textAlign: 'center', py: 1, color: 'text.secondary' }}>
+        PTS : membership = {ratio}
+      </Box>
     </Card>
   );
 }

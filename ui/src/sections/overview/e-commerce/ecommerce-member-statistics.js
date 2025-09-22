@@ -10,6 +10,7 @@ import Chart, { useChart } from 'src/components/chart';
 import { useGetDashboradMemberStatistics } from 'src/api/user';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
 import { useMemo, useState } from 'react';
+import { Box, Divider } from '@mui/material';
 
 // ----------------------------------------------------------------------
 
@@ -44,6 +45,7 @@ export default function EcommerceMemberStatistics({
     expiredMemberPercent,
     unclassifiedMemberCount,
     totalMemberCount,
+    memberRatio,
   } = dashboardMemberStatistics;
 
   // Build chart data dynamically
@@ -115,6 +117,12 @@ export default function EcommerceMemberStatistics({
         height={300}
         key={totalMemberCount}
       />
+
+      <Divider />
+
+      <Box sx={{ textAlign: 'center', py: 1, color: 'text.secondary' }}>
+        New : Renewed : Expired  = {memberRatio}
+      </Box>
     </Card>
   );
 }

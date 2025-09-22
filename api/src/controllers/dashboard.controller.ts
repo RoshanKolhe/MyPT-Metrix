@@ -6,6 +6,7 @@ import {
   MembershipDetailsRepository,
   SalesRepository,
   TargetRepository,
+  TrainerRepository,
   UserRepository,
 } from '../repositories';
 import {
@@ -35,6 +36,8 @@ export class DashboardController {
   constructor(
     @repository(SalesRepository)
     public salesRepository: SalesRepository,
+    @repository(TrainerRepository)
+    public trainerRepository: TrainerRepository,
     @repository(MembershipDetailsRepository)
     public membershipDetailsRepository: MembershipDetailsRepository,
 
@@ -112,13 +115,21 @@ export class DashboardController {
 
     // Step 3: Fetch filtered sales
     const allSales = await this.salesRepository.find(filter);
-    console.log('allSales length ->', allSales.length);
+    const totalTrainers = await this.trainerRepository.count({
+      isDeleted: false,
+      isActive: true,
+    });
+    console.log('totalTrainers ->', totalTrainers);
 
     // The rest of your calculations remain the same (but use membershipDetails.purchaseDate)
     const totalRevenue = allSales.reduce(
       (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
       0,
     );
+    const avgRevenuePerTrainer =
+      totalTrainers.count > 0 ? totalRevenue / totalTrainers.count : 0;
+    console.log('avgRevenuePerTrainer ->', avgRevenuePerTrainer);
+
     const totalTickets = allSales.length;
     const avgTicket = totalTickets > 0 ? totalRevenue / totalTickets : 0;
 
@@ -228,6 +239,7 @@ export class DashboardController {
           );
         })(),
       },
+      avgRevenuePerTrainer,
     };
   }
 
@@ -779,12 +791,27 @@ export class DashboardController {
       ? ((femaleCount / total) * 100).toFixed(2)
       : '0.00';
 
+    // --- NEW: Calculate Male:Female ratio ---
+    let ratioString = 'N/A';
+    if (maleCount > 0 && femaleCount > 0) {
+      // reduce to simplest form (e.g., 10:20 => 1:2)
+      const gcd = (a: number, b: number): number =>
+        b === 0 ? a : gcd(b, a % b);
+      const divisor = gcd(maleCount, femaleCount);
+      ratioString = `${maleCount / divisor}:${femaleCount / divisor}`;
+    } else if (maleCount > 0) {
+      ratioString = `${maleCount}:0`;
+    } else if (femaleCount > 0) {
+      ratioString = `0:${femaleCount}`;
+    }
+
     return {
       maleCount,
       femaleCount,
       maleRatio: Number(maleRatio),
       femaleRatio: Number(femaleRatio),
       totalUniqueClients: total,
+      maleToFemaleRatio: ratioString,
     };
   }
 
@@ -825,9 +852,10 @@ export class DashboardController {
         where.and.push({kpiId: {inq: kpiIds}});
       }
     }
+
     const sales = await this.salesRepository.find({
       where,
-      include: [{relation: 'membershipDetails'}], // Include expiryDate
+      include: [{relation: 'membershipDetails'}],
     });
 
     const memberMap: {[email: string]: typeof sales} = {};
@@ -840,7 +868,6 @@ export class DashboardController {
     let newMemberCount = 0;
     let renewedMemberCount = 0;
     let expiredMemberCount = 0;
-    let unclassifiedMemberCount = 0;
 
     for (const email in memberMap) {
       const records = memberMap[email];
@@ -848,14 +875,11 @@ export class DashboardController {
         r => r.memberType?.toLowerCase() === 'rnl',
       );
       const hasNew = records.some(r => r.memberType?.toLowerCase() === 'new');
-      let classified = false;
 
       if (hasRenewal) {
         renewedMemberCount++;
-        classified = true;
       } else if (records.length === 1 && hasNew) {
         newMemberCount++;
-        classified = true;
       } else if (records.length === 1) {
         const record = records[0];
         const expiryDate = record.membershipDetails?.expiryDate
@@ -863,12 +887,7 @@ export class DashboardController {
           : null;
         if (expiryDate && expiryDate < new Date() && !hasRenewal) {
           expiredMemberCount++;
-          classified = true;
         }
-      }
-
-      if (!classified) {
-        unclassifiedMemberCount++;
       }
     }
 
@@ -879,16 +898,27 @@ export class DashboardController {
     const percent = (count: number, base: number) =>
       base > 0 ? parseFloat(((count / base) * 100).toFixed(2)) : 0;
 
+    // ✅ Calculate simplified ratio (only for classified members)
+    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+    const gcdAll = (nums: number[]): number =>
+      nums.reduce((acc, num) => gcd(acc, num), nums[0] || 1);
+
+    const ratioNums = [newMemberCount, renewedMemberCount, expiredMemberCount];
+    const divisor = gcdAll(ratioNums.filter(n => n > 0));
+
+    const ratioStr = `${ratioNums
+      .map(n => (divisor > 0 ? n / divisor : n))
+      .join(':')}`;
+
     return {
       newMemberCount,
       renewedMemberCount,
       expiredMemberCount,
-      unclassifiedMemberCount,
       totalMemberCount,
       newMemberPercent: percent(newMemberCount, classifiedTotal),
       renewedMemberPercent: percent(renewedMemberCount, classifiedTotal),
       expiredMemberPercent: percent(expiredMemberCount, classifiedTotal),
-      unclassifiedPercent: percent(unclassifiedMemberCount, totalMemberCount),
+      memberRatio: ratioStr, // ✅ no unclassified here
     };
   }
 
@@ -961,6 +991,19 @@ export class DashboardController {
       }
     }
 
+    // ✅ Ratio calculation helper
+    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+    const simplifyRatio = (a: number, b: number): string => {
+      if (a === 0 && b === 0) return '0:0';
+      if (a === 0) return `0:1`;
+      if (b === 0) return `1:0`;
+      const divisor = gcd(a, b);
+      return `${a / divisor}:${b / divisor}`;
+    };
+
+    // ✅ PT : Membership ratio
+    const ptMembershipRatio = simplifyRatio(ptTotal, membershipTotal);
+
     return {
       pt: {
         total: ptTotal,
@@ -972,6 +1015,7 @@ export class DashboardController {
         male: membershipMale,
         female: membershipFemale,
       },
+      ratio: ptMembershipRatio, 
     };
   }
 

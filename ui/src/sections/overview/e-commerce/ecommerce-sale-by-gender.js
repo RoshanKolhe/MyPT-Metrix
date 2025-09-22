@@ -10,6 +10,7 @@ import Chart, { useChart } from 'src/components/chart';
 import { useGetDashboradMaleToFemaleRatio } from 'src/api/user';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
+import { Box, Divider } from '@mui/material';
 
 // ----------------------------------------------------------------------
 
@@ -40,7 +41,7 @@ export default function EcommerceSaleByGender({
   const theme = useTheme();
 
   // Fetch chart data from API
-  const { maleCount, femaleCount, maleRatio, femaleRatio, totalUniqueClients } =
+  const { maleToFemaleRatio, maleRatio, femaleRatio, totalUniqueClients } =
     dashboradMaleToFemaleRatioData;
 
   console.log('totalUniqueClients', totalUniqueClients);
@@ -114,6 +115,11 @@ export default function EcommerceSaleByGender({
         height={300}
         key={totalUniqueClients}
       />
+      <Divider />
+
+      <Box sx={{ textAlign: 'center', py: 1, color: 'text.secondary' }}>
+        Male : Female = {maleToFemaleRatio}
+      </Box>
     </Card>
   );
 }
