@@ -44,6 +44,7 @@ import { useSnackbar } from 'notistack';
 import { _roles, COMMON_STATUS_OPTIONS } from 'src/utils/constants';
 import { useAuthContext } from 'src/auth/hooks';
 import PropTypes from 'prop-types';
+import { CardHeader } from '@mui/material';
 import CountrySalesLeaderboardTableToolbar from '../countrySalesLeaderboard-table-toolbar';
 import CountrySalesLeaderboardTableFiltersResult from '../countrySalesLeaderboard-table-filters-result';
 import CountrySalesLeaderboardTableRow from '../countrySalesLeaderboard-table-row';
@@ -53,11 +54,10 @@ import CountrySalesLeaderboardTableRow from '../countrySalesLeaderboard-table-ro
 const STATUS_OPTIONS = [{ value: 'all', label: 'All' }, ...COMMON_STATUS_OPTIONS];
 
 const TABLE_HEAD = [
-  { id: 'rank', label: 'Rank', width: 0 },
-  { id: 'country', label: 'Country', width: 0 },
-  { id: 'totalSales', label: 'Sale', width: 0 },
+  { id: 'rank', label: 'Rank'},
+  { id: 'country', label: 'Country' },
+  { id: 'totalSales', label: 'Total Sales' },
 ];
-
 const defaultFilters = {
   name: '',
   role: [],
@@ -223,13 +223,14 @@ export default function CountrySalesLeaderboardListView({ filter }) {
         style={{ padding: 0, maxWidth: 'initial' }}
       >
         <Card>
-          <CountrySalesLeaderboardTableToolbar
+          <CardHeader title="Country Sales Performance" sx={{ padding: '10px 13px 10px 10px' }} />
+          {/* <CountrySalesLeaderboardTableToolbar
             filters={filters}
             onFilters={handleFilters}
             //
             roleOptions={_roles}
             onExport={handleExport}
-          />
+          /> */}
 
           {canReset && (
             <CountrySalesLeaderboardTableFiltersResult
@@ -264,7 +265,7 @@ export default function CountrySalesLeaderboardListView({ filter }) {
             />
 
             <Scrollbar>
-              <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 960 }}>
+              <Table size={table.dense ? 'small' : 'medium'}>
                 <TableHeadCustom
                   order={table.order}
                   orderBy={table.orderBy}
