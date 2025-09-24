@@ -48,6 +48,7 @@ export default function OverviewEcommerceView() {
     startDate: startOfMonth(new Date()),
     endDate: endOfMonth(new Date()),
     country: null,
+    day: 1,
   });
 
   const [showFilters, setShowFilters] = useState(false);
@@ -59,6 +60,7 @@ export default function OverviewEcommerceView() {
     filters.startDate ? `startDate=${format(new Date(filters.startDate), 'yyyy-MM-dd')}` : '',
     filters.endDate ? `endDate=${format(new Date(filters.endDate), 'yyyy-MM-dd')}` : '',
     filters.country ? `country=${filters.country}` : '',
+    filters.day ? `day=${filters.day}` : '',
   ]
     .filter(Boolean)
     .join('&');
@@ -223,6 +225,9 @@ export default function OverviewEcommerceView() {
               <EcommerceMonthlySales
                 title="Revenue (Month-on-Month, Last 13 Months)"
                 dashboradChartData={dashboradMonthlyData}
+                filters={filters}
+                setFilters={setFilters}
+                refreshDashboradMonthlyData={refreshDashboradMonthlyData}
               />
             </Grid>
 

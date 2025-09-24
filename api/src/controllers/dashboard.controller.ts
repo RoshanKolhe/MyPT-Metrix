@@ -327,7 +327,7 @@ export class DashboardController {
     const formatLocalDate = (d: Date) =>
       d.toLocaleDateString('en-GB', {
         day: '2-digit',
-        month: 'long',
+        month: 'short',
         year: 'numeric',
       });
 
