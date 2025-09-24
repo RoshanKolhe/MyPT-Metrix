@@ -91,25 +91,33 @@ export default function ConductionListView() {
 
   const [filters, setFilters] = useState(defaultFilters);
 
-  const { conductions, conductionsLoading, conductionsEmpty, refreshConductions } =
-    useGetConductions();
+  const { conductions, totalCount, conductionsLoading, conductionsEmpty, refreshConductions } =
+    useGetConductions({
+      page: table.page,
+      rowsPerPage: table.rowsPerPage,
+      order: table.order,
+      orderBy: table.orderBy,
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      searchTextValue: filters.name,
+    });
 
-  const dataFiltered = applyFilter({
-    inputData: tableData,
-    comparator: getComparator(table.order, table.orderBy),
-    filters,
-  });
+  // const dataFiltered = applyFilter({
+  //   inputData: tableData,
+  //   comparator: getComparator(table.order, table.orderBy),
+  //   filters,
+  // });
 
-  const dataInPage = dataFiltered.slice(
-    table.page * table.rowsPerPage,
-    table.page * table.rowsPerPage + table.rowsPerPage
-  );
+  // const dataInPage = dataFiltered.slice(
+  //   table.page * table.rowsPerPage,
+  //   table.page * table.rowsPerPage + table.rowsPerPage
+  // );
 
   const denseHeight = table.dense ? 52 : 72;
 
   const canReset = !isEqual(defaultFilters, filters);
 
-  const notFound = (!dataFiltered.length && canReset) || !dataFiltered.length;
+  const notFound = (!conductions.length && canReset) || !conductions.length;
 
   const handleFilters = useCallback(
     (name, value) => {
@@ -125,7 +133,7 @@ export default function ConductionListView() {
   const handleExport = useCallback(() => {
     const fileName = 'Conduction Report.xlsx';
 
-    const formatted = dataFiltered.map((item) => ({
+    const formatted = conductions.map((item) => ({
       ID: item.id,
       Date: item.conductionDate,
       Trainer: `${item.trainer?.firstName} ${item.trainer?.lastName || ''}`,
@@ -140,7 +148,7 @@ export default function ConductionListView() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Conductions');
     XLSX.writeFile(wb, fileName);
-  }, [dataFiltered]);
+  }, [conductions]);
 
   const handleDeleteRow = useCallback(
     async (id) => {
@@ -168,10 +176,10 @@ export default function ConductionListView() {
 
     table.onUpdatePageDeleteRows({
       totalRows: tableData.length,
-      totalRowsInPage: dataInPage.length,
-      totalRowsFiltered: dataFiltered.length,
+      totalRowsInPage: conductions.length,
+      totalRowsFiltered: conductions.length,
     });
-  }, [dataFiltered.length, dataInPage.length, table, tableData]);
+  }, [conductions.length, table, tableData]);
 
   const handleEditRow = useCallback(
     (id) => {
@@ -291,7 +299,7 @@ export default function ConductionListView() {
               //
               onResetFilters={handleResetFilters}
               //
-              results={dataFiltered.length}
+              results={conductions.length}
               sx={{ p: 2.5, pt: 0 }}
             />
           )}
@@ -335,31 +343,27 @@ export default function ConductionListView() {
                 />
 
                 <TableBody>
-                  {dataFiltered
-                    .slice(
-                      table.page * table.rowsPerPage,
-                      table.page * table.rowsPerPage + table.rowsPerPage
-                    )
-                    .map((row) => (
-                      <ConductionTableRow
-                        key={row.id}
-                        row={row}
-                        selected={table.selected.includes(row.id)}
-                        onSelectRow={() => table.onSelectRow(row.id)}
-                        onDeleteRow={() => handleDeleteRow(row.id)}
-                        onEditRow={() => handleEditRow(row.id)}
-                        onViewRow={() => handleViewRow(row.id)}
-                        handleQuickEditRow={(conduction) => {
-                          handleQuickEditRow(conduction);
-                        }}
-                        quickEdit={quickEdit}
-                      />
-                    ))}
-
-                  <TableEmptyRows
-                    height={denseHeight}
-                    emptyRows={emptyRows(table.page, table.rowsPerPage, tableData.length)}
-                  />
+                  {conductions.map((row) => (
+                    <ConductionTableRow
+                      key={row.id}
+                      row={row}
+                      selected={table.selected.includes(row.id)}
+                      onSelectRow={() => table.onSelectRow(row.id)}
+                      onDeleteRow={() => handleDeleteRow(row.id)}
+                      onEditRow={() => handleEditRow(row.id)}
+                      onViewRow={() => handleViewRow(row.id)}
+                      handleQuickEditRow={(conduction) => {
+                        handleQuickEditRow(conduction);
+                      }}
+                      quickEdit={quickEdit}
+                    />
+                  ))}
+                  {false && (
+                    <TableEmptyRows
+                      height={denseHeight}
+                      emptyRows={emptyRows(table.page, table.rowsPerPage, tableData.length)}
+                    />
+                  )}
 
                   <TableNoData notFound={notFound} />
                 </TableBody>
@@ -368,7 +372,7 @@ export default function ConductionListView() {
           </TableContainer>
 
           <TablePaginationCustom
-            count={dataFiltered.length}
+            count={totalCount}
             page={table.page}
             rowsPerPage={table.rowsPerPage}
             onPageChange={table.onChangePage}
@@ -420,69 +424,69 @@ export default function ConductionListView() {
 
 // ----------------------------------------------------------------------
 
-function applyFilter({ inputData, comparator, filters }) {
-  const { name, status, role } = filters;
-  const stabilizedThis = inputData.map((el, index) => [el, index]);
-  const roleMapping = {
-    super_admin: 'Super Admin',
-    admin: 'Admin',
-    cgm: 'CGM',
-    hod: 'Hod',
-    sub_hod: 'Sub Hod',
-  };
-  stabilizedThis.sort((a, b) => {
-    const order = comparator(a[0], b[0]);
-    if (order !== 0) return order;
-    return a[1] - b[1];
-  });
+// function applyFilter({ inputData, comparator, filters }) {
+//   const { name, status, role } = filters;
+//   const stabilizedThis = inputData.map((el, index) => [el, index]);
+//   const roleMapping = {
+//     super_admin: 'Super Admin',
+//     admin: 'Admin',
+//     cgm: 'CGM',
+//     hod: 'Hod',
+//     sub_hod: 'Sub Hod',
+//   };
+//   stabilizedThis.sort((a, b) => {
+//     const order = comparator(a[0], b[0]);
+//     if (order !== 0) return order;
+//     return a[1] - b[1];
+//   });
 
-  inputData = stabilizedThis.map((el) => el[0]);
+//   inputData = stabilizedThis.map((el) => el[0]);
 
-  if (name) {
-    const keyword = name.toLowerCase();
+//   if (name) {
+//     const keyword = name.toLowerCase();
 
-    inputData = inputData.filter((conduction) =>
-      Object.values(conduction).some((value) => {
-        if (value === null || value === undefined) return false;
+//     inputData = inputData.filter((conduction) =>
+//       Object.values(conduction).some((value) => {
+//         if (value === null || value === undefined) return false;
 
-        if (typeof value === 'object') {
-          return Object.values(value).some((nested) =>
-            String(nested).toLowerCase().includes(keyword)
-          );
-        }
+//         if (typeof value === 'object') {
+//           return Object.values(value).some((nested) =>
+//             String(nested).toLowerCase().includes(keyword)
+//           );
+//         }
 
-        return String(value).toLowerCase().includes(keyword);
-      })
-    );
-  }
+//         return String(value).toLowerCase().includes(keyword);
+//       })
+//     );
+//   }
 
-  if (status !== 'all') {
-    inputData = inputData.filter((conduction) =>
-      status === '1' ? conduction.isActive : !conduction.isActive
-    );
-  }
+//   if (status !== 'all') {
+//     inputData = inputData.filter((conduction) =>
+//       status === '1' ? conduction.isActive : !conduction.isActive
+//     );
+//   }
 
-  if (role.length) {
-    inputData = inputData.filter(
-      (conduction) =>
-        conduction.permissions &&
-        conduction.permissions.some((conductionRole) => {
-          console.log(conductionRole);
-          const mappedRole = roleMapping[conductionRole];
-          console.log('Mapped Role:', mappedRole); // Check the mapped role
-          return mappedRole && role.includes(mappedRole);
-        })
-    );
-  }
+//   if (role.length) {
+//     inputData = inputData.filter(
+//       (conduction) =>
+//         conduction.permissions &&
+//         conduction.permissions.some((conductionRole) => {
+//           console.log(conductionRole);
+//           const mappedRole = roleMapping[conductionRole];
+//           console.log('Mapped Role:', mappedRole); // Check the mapped role
+//           return mappedRole && role.includes(mappedRole);
+//         })
+//     );
+//   }
 
-  if (filters.startDate && filters.endDate) {
-    inputData = inputData.filter((conduction) => {
-      const conductionDate = new Date(conduction.conductionDate);
-      return (
-        conductionDate >= new Date(filters.startDate) && conductionDate <= new Date(filters.endDate)
-      );
-    });
-  }
+//   if (filters.startDate && filters.endDate) {
+//     inputData = inputData.filter((conduction) => {
+//       const conductionDate = new Date(conduction.conductionDate);
+//       return (
+//         conductionDate >= new Date(filters.startDate) && conductionDate <= new Date(filters.endDate)
+//       );
+//     });
+//   }
 
-  return inputData;
-}
+//   return inputData;
+// }

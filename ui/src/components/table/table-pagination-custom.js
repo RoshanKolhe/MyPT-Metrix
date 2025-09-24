@@ -12,6 +12,12 @@ export default function TablePaginationCustom({
   onChangeDense,
   rowsPerPageOptions = [5, 10, 25],
   sx,
+  count,
+  page, 
+  rowsPerPage, 
+  onPageChange,
+  onRowsPerPageChange,
+  loading = false,
   ...other
 }) {
   return (
@@ -19,6 +25,14 @@ export default function TablePaginationCustom({
       <TablePagination
         rowsPerPageOptions={rowsPerPageOptions}
         component="div"
+        count={count}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        onPageChange={onPageChange}
+        onRowsPerPageChange={onRowsPerPageChange}
+        SelectProps={{
+          disabled: loading,
+        }}
         {...other}
         sx={{
           borderTopColor: 'transparent',
@@ -48,4 +62,10 @@ TablePaginationCustom.propTypes = {
   onChangeDense: PropTypes.func,
   rowsPerPageOptions: PropTypes.arrayOf(PropTypes.number),
   sx: PropTypes.object,
+  count: PropTypes.number.isRequired,
+  page: PropTypes.number.isRequired,
+  rowsPerPage: PropTypes.number.isRequired, 
+  onPageChange: PropTypes.func.isRequired, 
+  onRowsPerPageChange: PropTypes.func.isRequired,
+  loading: PropTypes.bool,
 };

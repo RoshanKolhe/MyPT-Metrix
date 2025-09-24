@@ -400,3 +400,65 @@ export function useUserRoles() {
 
   return permissions;
 }
+
+export function formatDate(date) {
+  return date instanceof Date ? date.toISOString().split('T')[0] : date;
+}
+
+export function buildFilter({
+  page,
+  rowsPerPage,
+  order,
+  orderBy,
+  startDate,
+  endDate,
+  validSortFields,
+  searchTextValue,
+}) {
+  const skip = page * rowsPerPage;
+  const limit = rowsPerPage;
+  const query = {
+    where: {},
+    order: [],
+  };
+
+  const orderFilter = validSortFields.includes(orderBy)
+    ? [`${orderBy} ${order === 'desc' ? 'DESC' : 'ASC'}`]
+    : undefined;
+  const where = {
+    isDeleted: false,
+    searchText: searchTextValue,
+  };
+  if (startDate && endDate) {
+    where.conductionDate = {
+      between: [formatDate(startDate), formatDate(endDate)],
+    };
+  } else if (startDate) {
+    where.conductionDate = { gte: formatDate(startDate) };
+  } else if (endDate) {
+    where.conductionDate = { lte: formatDate(endDate) };
+  }
+
+  // if (searchText?.trim()) {
+  //   where.trainer.or = [
+  //     { conductions: { ilike: `%${searchText}%` } },
+  //     { 'trainer.firstName': { ilike: `%${searchText}%` } },
+  //     { 'trainer.lastName': { ilike: `%${searchText}%` } },
+  //     { 'branch.name': { ilike: `%${searchText}%` } },
+  //     { 'department.name': { ilike: `%${searchText}%` } },
+  //     { 'kpi.name': { ilike: `%${searchText}%` } },
+  //     { conductionDate: { ilike: `%${searchText}%` } },
+  //   ];
+  // }
+  if (searchTextValue) {
+  where.searchText = searchTextValue;
+}
+
+  return {
+    skip,
+    limit,
+    order: orderFilter,
+    where,
+    // include: ['trainer', 'kpi', 'branch', 'department'],
+  };
+}
