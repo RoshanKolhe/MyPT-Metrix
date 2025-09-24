@@ -721,6 +721,9 @@ export class DashboardController {
     return {categories, series};
   }
 
+  @authenticate({
+    strategy: 'jwt',
+  })
   @get('/gender-ratio', {
     responses: {
       '200': {
@@ -815,6 +818,9 @@ export class DashboardController {
     };
   }
 
+  @authenticate({
+    strategy: 'jwt',
+  })
   @get('/member-statistics')
   async getMemberStats(
     @param.query.string('startDate') startDateStr: string,
@@ -922,6 +928,9 @@ export class DashboardController {
     };
   }
 
+  @authenticate({
+    strategy: 'jwt',
+  })
   @get('/client-stats', {
     responses: {
       '200': {
@@ -1026,6 +1035,9 @@ export class DashboardController {
       year: 'numeric',
     });
 
+  @authenticate({
+    strategy: 'jwt',
+  })
   @get('/member-conduction-stats')
   @response(200, {
     description: 'Overall conduction stats with filters',
@@ -1081,6 +1093,9 @@ export class DashboardController {
     };
   }
 
+  @authenticate({
+    strategy: 'jwt',
+  })
   @get('/sales-by-country')
   async getSalesByCountry(
     @param.query.string('kpiIds') kpiIdsStr?: string,
@@ -1151,6 +1166,9 @@ export class DashboardController {
     return rankedResult;
   }
 
+  @authenticate({
+    strategy: 'jwt',
+  })
   @get('/dashboard/forecast/monthly-series')
   async monthlyForecastSeries(): Promise<any> {
     const today = new Date(new Date().toDateString());
@@ -1226,5 +1244,98 @@ export class DashboardController {
     }
 
     return result;
+  }
+
+  @authenticate({
+    strategy: 'jwt',
+  })
+  @get('/dashboard/monthly-revenue')
+  async getMonthlyRevenue(
+    @param.query.string('kpiIds') kpiIdsStr?: string,
+    @param.query.number('branchId') branchId?: number,
+    @param.query.number('departmentId') departmentId?: number,
+    @param.query.string('country') country?: string,
+    @param.query.number('day') day: number = 1, // dropdown (default 1)
+  ): Promise<any> {
+    // parse kpi ids
+    const kpiIds = kpiIdsStr
+      ? kpiIdsStr
+          .split(',')
+          .map(id => parseInt(id.trim(), 10))
+          .filter(Boolean)
+      : [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const labels: string[] = [];
+    const revenueSeries: number[] = [];
+
+    for (let i = 12; i >= 0; i--) {
+      const start = new Date(today);
+      start.setMonth(start.getMonth() - i);
+      start.setDate(day);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + 1);
+      end.setHours(23, 59, 59, 999);
+
+      // Step 1: Get membershipDetails in this window
+      const memberships = await this.membershipDetailsRepository.find({
+        where: {
+          purchaseDate: {between: [start, end]},
+        },
+      });
+
+      const saleIds = memberships
+        .map(m => m.salesId)
+        .filter(Boolean) as number[];
+
+      if (saleIds.length === 0) {
+        labels.push(
+          start.toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }),
+        );
+        revenueSeries.push(0);
+        continue;
+      }
+
+      // Step 2: Get sales linked to those membershipDetails
+      const sales = await this.salesRepository.find({
+        where: {
+          isDeleted: false,
+          ...(kpiIds.length > 0 && {kpiId: {inq: kpiIds}}),
+          ...(branchId && {branchId}),
+          ...(departmentId && {departmentId}),
+          ...(country && {country}),
+          id: {inq: saleIds},
+        },
+        include: ['membershipDetails'],
+      });
+
+      // Step 3: Revenue calculation
+      const totalRevenue = sales.reduce(
+        (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
+        0,
+      );
+
+      labels.push(
+        start.toLocaleDateString('en-US', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        }),
+      );
+      revenueSeries.push(totalRevenue);
+    }
+
+    return {
+      labels,
+      series: [{name: 'revenue', data: revenueSeries}],
+    };
   }
 }

@@ -75,7 +75,6 @@ const defaultFilters = {
 // ----------------------------------------------------------------------
 
 export default function SalesmanLeaderboardListView({ filter, branches }) {
-  console.log(branches);
   const { user } = useAuthContext();
   const isSuperAdmin = user?.permissions?.includes('super_admin');
 
@@ -403,7 +402,6 @@ SalesmanLeaderboardListView.propTypes = {
 // ----------------------------------------------------------------------
 
 function applyFilter({ inputData, comparator, filters }) {
-  console.log(filters);
   const { name, status, role, branch, department } = filters;
   const stabilizedThis = inputData.map((el, index) => [el, index]);
   const roleMapping = {

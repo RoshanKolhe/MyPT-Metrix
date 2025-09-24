@@ -153,6 +153,33 @@ export function useGetDashboradChartData(filter) {
   };
 }
 
+export function useGetDashboradMonthlyData(filter) {
+  let URL;
+  if (filter) {
+    URL = endpoints.user.getFilteredMonthlyData(filter);
+  } else {
+    URL = endpoints.user.getMonthlyData;
+  }
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradMonthlyData = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredMonthlyData(newFilter)
+      : endpoints.user.getMonthlyData;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboradMonthlyData: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradMonthlyData,
+  };
+}
+
 export function useGetDashboradConductionsData(filter) {
   let URL;
   if (filter) {

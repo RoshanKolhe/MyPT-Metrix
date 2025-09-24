@@ -1,10 +1,7 @@
 // @mui
 import { useTheme } from '@mui/material/styles';
-import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Unstable_Grid2';
-// _mock
-import { _ecommerceBestSalesman } from 'src/_mock';
 // components
 import { useSettingsContext } from 'src/components/settings';
 //
@@ -14,6 +11,7 @@ import {
   useGetDashboradConductionSummary,
   useGetDashboradMaleToFemaleRatio,
   useGetDashboradMemberStatistics,
+  useGetDashboradMonthlyData,
   useGetDashboradPtsVsMembershipRatio,
   useGetDashboradSummary,
 } from 'src/api/user';
@@ -26,7 +24,6 @@ import { endOfMonth, format, startOfMonth } from 'date-fns';
 import { SalesmanLeaderboardListView } from 'src/sections/salesmanLeaderboard/view';
 import { CountrySalesLeaderboardListView } from 'src/sections/countrySalesLeaderboard/view';
 import EcommerceYearlySales from '../ecommerce-yearly-sales';
-import EcommerceBestSalesman from '../ecommerce-best-salesman';
 import EcommerceSaleByGender from '../ecommerce-sale-by-gender';
 import EcommerceWidgetSummary from '../ecommerce-widget-summary';
 import EcommerceYearlyConductions from '../ecommerce-yearly-conductions';
@@ -35,6 +32,7 @@ import EcommerceFiltersForm from '../ecommerce-filters-form';
 import EcommerceMemberStatistics from '../ecommerce-member-statistics';
 import AnalyticsWidgetSummary from '../analytics-widget-summary';
 import EcommercePtsVsMembership from '../ecommerce-pts-vs-membership';
+import EcommerceMonthlySales from '../ecommerce-month-wise-sales';
 
 // ----------------------------------------------------------------------
 
@@ -60,7 +58,7 @@ export default function OverviewEcommerceView() {
     filters.department?.id ? `departmentId=${filters.department.id}` : '',
     filters.startDate ? `startDate=${format(new Date(filters.startDate), 'yyyy-MM-dd')}` : '',
     filters.endDate ? `endDate=${format(new Date(filters.endDate), 'yyyy-MM-dd')}` : '',
-    filters.country ? `country=${filters.country}` : '', // <-- NEW line
+    filters.country ? `country=${filters.country}` : '',
   ]
     .filter(Boolean)
     .join('&');
@@ -70,6 +68,8 @@ export default function OverviewEcommerceView() {
     useGetDashboradConductionSummary(queryString);
   const { dashboradChartData = {}, refreshDashboradChartData } =
     useGetDashboradChartData(queryString);
+  const { dashboradMonthlyData = {}, refreshDashboradMonthlyData } =
+    useGetDashboradMonthlyData(queryString);
   const { dashboradConductionsData = {}, refreshDashboradConductionsData } =
     useGetDashboradConductionsData(queryString);
   const { dashboradMaleToFemaleRatioData = {}, refreshDashboradMaleToFemaleRatio } =
@@ -124,6 +124,7 @@ export default function OverviewEcommerceView() {
     // Call with latest query string
     refreshDashboardSummary(updatedQueryString);
     refreshDashboradChartData(updatedQueryString);
+    refreshDashboradMonthlyData(updatedQueryString);
     refreshDashboradMaleToFemaleRatio(updatedQueryString);
     refreshDashboradConductionsData(updatedQueryString);
     refreshDashboradMemberStatistics(updatedQueryString);
@@ -215,6 +216,13 @@ export default function OverviewEcommerceView() {
                 total={dashboardCounts?.avgRevenuePerTrainer || 0}
                 color="warning"
                 icon={<img alt="icon" src="/assets/icons/glass/ic_glass_message.png" />}
+              />
+            </Grid>
+
+            <Grid xs={12} md={12} lg={12}>
+              <EcommerceMonthlySales
+                title="Revenue (Month-on-Month, Last 13 Months)"
+                dashboradChartData={dashboradMonthlyData}
               />
             </Grid>
 
