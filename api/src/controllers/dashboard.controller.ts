@@ -1255,7 +1255,7 @@ export class DashboardController {
     @param.query.number('branchId') branchId?: number,
     @param.query.number('departmentId') departmentId?: number,
     @param.query.string('country') country?: string,
-    @param.query.number('day') day: number = 1, // dropdown (default 1)
+    @param.query.number('day') day?: number, 
   ): Promise<any> {
     // parse kpi ids
     const kpiIds = kpiIdsStr
@@ -1264,6 +1264,24 @@ export class DashboardController {
           .map(id => parseInt(id.trim(), 10))
           .filter(Boolean)
       : [];
+
+    const now = new Date();
+    const nowInIST = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+    const todayDateInIST = nowInIST.getDate();
+
+    // Determine effectiveDay
+    const isDayProvided =
+      typeof day === 'number' &&
+      !Number.isNaN(day) &&
+      day >= 1 &&
+      day <= 31 &&
+      !(day === 1); // ignore if day=1, fallback to today-1
+
+    const effectiveDay = isDayProvided
+      ? day!
+      : todayDateInIST > 1
+        ? todayDateInIST - 1
+        : 1;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1274,11 +1292,12 @@ export class DashboardController {
     for (let i = 12; i >= 0; i--) {
       const start = new Date(today);
       start.setMonth(start.getMonth() - i);
-      start.setDate(day);
+      start.setDate(effectiveDay);
       start.setHours(0, 0, 0, 0);
 
       const end = new Date(start);
       end.setMonth(end.getMonth() + 1);
+      end.setDate(end.getDate());
       end.setHours(23, 59, 59, 999);
 
       // Step 1: Get membershipDetails in this window
@@ -1294,7 +1313,7 @@ export class DashboardController {
 
       if (saleIds.length === 0) {
         labels.push(
-          start.toLocaleDateString('en-US', {
+          end.toLocaleDateString('en-US', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
@@ -1324,7 +1343,7 @@ export class DashboardController {
       );
 
       labels.push(
-        start.toLocaleDateString('en-US', {
+        end.toLocaleDateString('en-US', {
           day: 'numeric',
           month: 'short',
           year: 'numeric',

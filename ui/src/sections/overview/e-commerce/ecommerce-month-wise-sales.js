@@ -13,7 +13,10 @@ export default function EcommerceMonthlySales({
   refreshDashboradMonthlyData,
   ...other
 }) {
-  const [day, setDay] = useState(filters.day || 1);
+  const today = new Date().getDate();
+  const defaultDay = today > 1 ? today - 1 : 1;
+  console.log('defaultDay',defaultDay);
+  const [day, setDay] = useState(defaultDay);
 
   const handleDayChange = (event) => {
     const value = event.target.value;
@@ -63,8 +66,8 @@ export default function EcommerceMonthlySales({
               MenuProps={{
                 PaperProps: {
                   style: {
-                    maxHeight: 200, 
-                    width: 80, 
+                    maxHeight: 200,
+                    width: 80,
                   },
                 },
               }}
