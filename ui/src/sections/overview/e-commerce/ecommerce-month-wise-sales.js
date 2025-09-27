@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { Box, CardHeader, Card, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import Chart, { useChart } from 'src/components/chart';
 import { useState } from 'react';
+import { fShortenNumber } from 'src/utils/format-number';
 
 export default function EcommerceMonthlySales({
   title,
@@ -15,7 +16,7 @@ export default function EcommerceMonthlySales({
 }) {
   const today = new Date().getDate();
   const defaultDay = today > 1 ? today - 1 : 1;
-  console.log('defaultDay',defaultDay);
+  console.log('defaultDay', defaultDay);
   const [day, setDay] = useState(defaultDay);
 
   const handleDayChange = (event) => {
@@ -29,6 +30,30 @@ export default function EcommerceMonthlySales({
 
   const chartOptions = useChart({
     colors,
+    stroke: {
+      curve: 'smooth', // 🔥 makes the line smooth
+      width: 3,
+    },
+    markers: {
+      size: 5, // show markers always
+      strokeColors: '#fff',
+      strokeWidth: 2,
+      hover: {
+        size: 7, // enlarge on hover
+      },
+    },
+    dataLabels: {
+      enabled: true, // show values always
+      formatter: (val) => fShortenNumber(val || 0), // optional: format numbers like in your screenshot
+      style: {
+        fontSize: '12px',
+        fontWeight: 600,
+      },
+      background: {
+        enabled: false, // transparent background (like your screenshot)
+      },
+      offsetY: -10, // position labels above markers
+    },
     legend: {
       position: 'top',
       horizontalAlign: 'left',
