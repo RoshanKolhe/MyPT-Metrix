@@ -318,3 +318,52 @@ export function useGetDashboradConductionSummary(filter) {
     refreshDashboardConductionSummary,
   };
 }
+
+// export function useGetPtSalesRank(filter) {
+//   let URL;
+//   if (filter) {
+//     URL = endpoints.user.getFilterPtSales(filter);
+//   } else {
+//     URL = endpoints.user.getPtSales;
+//   }
+
+//   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+//   const refreshDashboardPtSalesRank = (newFilter = filter) => {
+//     const newURL = newFilter
+//       ? endpoints.user.getFilterPtSales(newFilter)
+//       : endpoints.user.getPtSales;
+
+//     mutate(newURL); // trigger re-fetch for new URL
+//   };
+
+//   return {
+//     dashboardPtSalesRank: data || [],
+//     isLoading,
+//     error,
+//     isValidating,
+//     refreshDashboardPtSalesRank,
+//   };
+// }
+
+export function useGetPtSalesRank(filter) {
+  const URL = endpoints.user.getFilterPtSales(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboardPtSalesRank = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilterPtSales(newFilter)
+      : endpoints.user.getPtSales;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboardPtSalesRank: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboardPtSalesRank,
+  };
+}

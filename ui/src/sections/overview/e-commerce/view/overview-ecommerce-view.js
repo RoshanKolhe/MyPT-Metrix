@@ -14,6 +14,7 @@ import {
   useGetDashboradMonthlyData,
   useGetDashboradPtsVsMembershipRatio,
   useGetDashboradSummary,
+  useGetPtSalesRank,
 } from 'src/api/user';
 import { fShortenNumber } from 'src/utils/format-number';
 import { Box } from '@mui/material';
@@ -33,6 +34,7 @@ import EcommerceMemberStatistics from '../ecommerce-member-statistics';
 import AnalyticsWidgetSummary from '../analytics-widget-summary';
 import EcommercePtsVsMembership from '../ecommerce-pts-vs-membership';
 import EcommerceMonthlySales from '../ecommerce-month-wise-sales';
+import { TrainerPerformanceView } from '../../trainer-performance/view';
 
 // ----------------------------------------------------------------------
 
@@ -81,6 +83,7 @@ export default function OverviewEcommerceView() {
   console.log(dashboradPtsVsMembershipRatioData);
   const { dashboardMemberStatistics = {}, refreshDashboradMemberStatistics } =
     useGetDashboradMemberStatistics(queryString);
+  const { dashboardPtSalesRank, isLoading } = useGetPtSalesRank(queryString);
 
   const rawFilter = {
     where: {
@@ -280,8 +283,14 @@ export default function OverviewEcommerceView() {
               <EcommerceSalesOverview title="Sales Overview" data={_ecommerceSalesOverview} />
             </Grid> */}
 
-            <Grid xs={12} md={12} lg={12}>
+            {/* <Grid xs={12} md={12} lg={12}>
               <SalesmanLeaderboardListView filter={queryString} branches={branches} />
+            </Grid> */}
+            <Grid xs={12} md={12} lg={12}>
+              <TrainerPerformanceView
+                filters={filters}
+                dashboardPtSalesRank={dashboardPtSalesRank}
+              />
             </Grid>
           </Grid>
         </>

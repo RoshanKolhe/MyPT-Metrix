@@ -1255,7 +1255,7 @@ export class DashboardController {
     @param.query.number('branchId') branchId?: number,
     @param.query.number('departmentId') departmentId?: number,
     @param.query.string('country') country?: string,
-    @param.query.number('day') day?: number, 
+    @param.query.number('day') day?: number,
   ): Promise<any> {
     // parse kpi ids
     const kpiIds = kpiIdsStr
@@ -1496,5 +1496,227 @@ export class DashboardController {
     result.forEach((item, index) => (item.rank = index + 1));
 
     return result;
+  }
+
+  // @get('/leaderboard/top-sales')
+  // async getTopSalesLeaderboard(
+  //   @param.query.string('startDate') startDateStr: string,
+  //   @param.query.string('endDate') endDateStr: string,
+  //   @param.query.number('branchId') branchId?: number,
+  //   @param.query.number('departmentId') departmentId?: number,
+  // ): Promise<any[]> {
+  //   const startDate = new Date(startDateStr);
+  //   const endDate = new Date(endDateStr);
+
+  //   // Fetch targets
+  //   const targets = await this.targetRepository.find({
+  //     where: {
+  //       branchId,
+  //       startDate: {lte: endDate.toISOString().split('T')[0]},
+  //       endDate: {gte: startDate.toISOString().split('T')[0]},
+  //       isDeleted: false,
+  //     },
+  //     include: [
+  //       {
+  //         relation: 'departmentTargets',
+  //         scope: {
+  //           where: {
+  //             ...(departmentId ? {departmentId} : {}),
+  //             isDeleted: false,
+  //           },
+  //           include: [
+  //             {
+  //               relation: 'trainerTargets',
+  //               scope: {
+  //                 where: {isDeleted: false},
+  //                 include: ['trainer', 'kpi'],
+  //               },
+  //             },
+  //           ],
+  //         },
+  //       },
+  //     ],
+  //   });
+
+  //   // Flatten TrainerTargets
+  //   const trainerTargets = targets.flatMap((t: any) =>
+  //     (t.departmentTargets ?? []).flatMap((dt: any) =>
+  //       (dt.trainerTargets ?? []).map((tt: any) => ({
+  //         trainerId: tt.trainerId,
+  //         trainer: tt.trainer,
+  //         kpiId: tt.kpiId,
+  //         targetValue: tt.targetValue,
+  //         departmentId: dt.departmentId,
+  //         branchId: t.branchId,
+  //       })),
+  //     ),
+  //   );
+
+  //   const result: any[] = [];
+
+  //   for (const tt of trainerTargets) {
+  //     console.log('trainerTargets', trainerTargets);
+  //     // Actual sales for current period
+  //     const sales = await this.salesRepository.find({
+  //       where: {
+  //         trainerId: tt.trainerId,
+  //         createdAt: {between: [startDate, endDate]},
+  //       },
+  //       include: ['membershipDetails'],
+  //     });
+  //     console.log('sales', sales);
+
+  //     const actual = sales.reduce(
+  //       (sum, sale) => sum + (sale.membershipDetails?.discountedPrice || 0),
+  //       0,
+  //     );
+  //     console.log('actual', actual);
+
+  //     const achieved = tt.targetValue ? (actual / tt.targetValue) * 100 : 0;
+
+  //     // Only push those who are near target (>= 0%) or have crossed it
+  //     if (achieved >= 0) {
+  //       result.push({
+  //         trainerId: tt.trainerId,
+  //         name: `${tt.trainer?.firstName} ${tt.trainer?.lastName}` || 'Unknown',
+  //         target: tt.targetValue,
+  //         actual: Math.round(actual),
+  //         achieved: +achieved.toFixed(1),
+  //       });
+  //     }
+  //   }
+
+  //   // Sort by achieved % in desc order and take top 10
+  //   result.sort((a, b) => b.achieved - a.achieved);
+  //   const top10 = result.slice(0, 10);
+
+  //   // Add ranks
+  //   top10.forEach((item, index) => {
+  //     item.rank = index + 1;
+  //   });
+
+  //   return top10;
+  // }
+  @get('/leaderboard/top-sales')
+  async getTopSalesLeaderboard(
+    @param.query.string('startDate') startDateStr: string,
+    @param.query.string('endDate') endDateStr: string,
+    @param.query.number('branchId') branchId?: number,
+    @param.query.number('departmentId') departmentId?: number,
+  ): Promise<any[]> {
+    if (!startDateStr || !endDateStr) {
+      throw new HttpErrors.BadRequest('startDate and endDate are required.');
+    }
+
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new HttpErrors.BadRequest('Invalid date format.');
+    }
+    // Fetch targets
+    const targets = await this.targetRepository.find({
+      where: {
+        branchId,
+        startDate: {lte: endDate.toISOString().split('T')[0]},
+        endDate: {gte: startDate.toISOString().split('T')[0]},
+        isDeleted: false,
+      },
+      include: [
+        {
+          relation: 'departmentTargets',
+          scope: {
+            where: {
+              ...(departmentId ? {departmentId} : {}),
+              isDeleted: false,
+            },
+            include: [
+              {
+                relation: 'trainerTargets',
+                scope: {
+                  where: {isDeleted: false},
+                  include: ['trainer', 'kpi'],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    // Flatten TrainerTargets
+    const trainerTargets = targets.flatMap((t: any) =>
+      (t.departmentTargets ?? []).flatMap((dt: any) =>
+        (dt.trainerTargets ?? []).map((tt: any) => ({
+          trainerId: tt.trainerId,
+          trainer: tt.trainer,
+          kpiId: tt.kpiId,
+          targetValue: tt.targetValue,
+          departmentId: dt.departmentId,
+          branchId: t.branchId,
+        })),
+      ),
+    );
+
+    // Group by trainerId -> sum target values
+    const trainerMap = new Map<number, any>();
+
+    for (const tt of trainerTargets) {
+      if (!trainerMap.has(tt.trainerId)) {
+        trainerMap.set(tt.trainerId, {
+          trainerId: tt.trainerId,
+          name:
+            `${tt.trainer?.firstName ?? ''} ${tt.trainer?.lastName ?? ''}`.trim() ||
+            'Unknown',
+          totalTarget: 0,
+        });
+      }
+
+      const trainerData = trainerMap.get(tt.trainerId);
+      trainerData.totalTarget += tt.targetValue || 0;
+    }
+
+    // Prepare results
+    const result: any[] = [];
+
+    for (const [trainerId, trainerData] of trainerMap) {
+      // Fetch actual sales for this trainer in the period
+      const sales = await this.salesRepository.find({
+        where: {
+          trainerId,
+          createdAt: {between: [startDate, endDate]},
+        },
+        include: ['membershipDetails'],
+      });
+
+      const actual = sales.reduce(
+        (sum, sale) => sum + (sale.membershipDetails?.discountedPrice || 0),
+        0,
+      );
+
+      const achieved = trainerData.totalTarget
+        ? (actual / trainerData.totalTarget) * 100
+        : 0;
+
+      if (achieved >= 0) {
+        result.push({
+          trainerId,
+          name: trainerData.name,
+          target: trainerData.totalTarget,
+          actual: Math.round(actual),
+          achieved: +achieved.toFixed(1),
+        });
+      }
+    }
+
+    // Sort by achieved % in desc order and take top 10
+    result.sort((a, b) => b.achieved - a.achieved);
+    const top10 = result.slice(0, 10);
+
+    // Add ranks
+    top10.forEach((item, index) => {
+      item.rank = index + 1;
+    });
+
+    return top10;
   }
 }

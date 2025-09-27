@@ -68,6 +68,8 @@ export const endpoints = {
     getPtsVsMembershipRatio: (filter) => `client-stats?${filter}`,
     getMemberStatistics: (filter) => `member-statistics?${filter}`,
     getDashboradSummary: `/dashboard/summary`,
+    getFilterPtSales: (filter) => `/leaderboard/top-sales?${filter}`,
+    getPtSales: (filter) => `/leaderboard/top-sales`,
 
     getFilteredConductionDashboradSummary: (filter) => `/member-conduction-stats?${filter}`,
     getConductionDashboradSummary: `/member-conduction-stats'`,
