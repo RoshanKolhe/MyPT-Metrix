@@ -29,7 +29,7 @@ const getRankColor = (rank) => {
 
 // ----------------------------------------------------------------------
 
-export default function PTConductions({ title, subheader, tableLabels, tableDataPtconductions, ...other }) {
+export default function PTConductions({ title, subheader, tableLabels, dashboardPtConductionsRank, ...other }) {
   return (
     <Card {...other}>
       <CardHeader title={title || 'PT Conductions'} subheader={subheader} sx={{ mb: 2 }} />
@@ -41,8 +41,8 @@ export default function PTConductions({ title, subheader, tableLabels, tableData
             <TableHeadCustom headLabel={tableLabels} />
 
             <TableBody>
-              {tableDataPtconductions.map((row) => (
-                <PTConductionsRow key={row.id} row={row} />
+              {dashboardPtConductionsRank.map((row) => (
+                <PTConductionsRow key={row.id || `${row.rank}`}  row={row}  />
               ))}
             </TableBody>
           </Table>
@@ -54,7 +54,7 @@ export default function PTConductions({ title, subheader, tableLabels, tableData
 
 PTConductions.propTypes = {
   subheader: PropTypes.string,
-  tableDataPtconductions: PropTypes.array,
+  dashboardPtConductionsRank: PropTypes.array,
   tableLabels: PropTypes.array,
   title: PropTypes.string,
 };
@@ -86,7 +86,7 @@ function PTConductionsRow({ row }) {
             {row.rank}
           </Box>
         </TableCell>
-        <TableCell>{row.staff}</TableCell>
+        <TableCell>{row.name}</TableCell>
         <TableCell>{row.target}</TableCell>
         <TableCell>{row.actual}</TableCell>
       </TableRow>

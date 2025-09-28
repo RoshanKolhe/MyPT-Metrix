@@ -14,6 +14,8 @@ import {
   useGetDashboradMonthlyData,
   useGetDashboradPtsVsMembershipRatio,
   useGetDashboradSummary,
+  useGetPtConductionsRank,
+  useGetPtRanks,
   useGetPtSalesRank,
 } from 'src/api/user';
 import { fShortenNumber } from 'src/utils/format-number';
@@ -80,10 +82,11 @@ export default function OverviewEcommerceView() {
     useGetDashboradMaleToFemaleRatio(queryString);
   const { dashboradPtsVsMembershipRatioData = {}, refreshDashboradPtsVsMembershipRatio } =
     useGetDashboradPtsVsMembershipRatio(queryString);
-  console.log(dashboradPtsVsMembershipRatioData);
   const { dashboardMemberStatistics = {}, refreshDashboradMemberStatistics } =
     useGetDashboradMemberStatistics(queryString);
   const { dashboardPtSalesRank, isLoading } = useGetPtSalesRank(queryString);
+  const { dashboardPtConductionsRank } = useGetPtConductionsRank(queryString);
+  const { dashboardPtRanks } = useGetPtRanks(queryString);
 
   const rawFilter = {
     where: {
@@ -290,6 +293,8 @@ export default function OverviewEcommerceView() {
               <TrainerPerformanceView
                 filters={filters}
                 dashboardPtSalesRank={dashboardPtSalesRank}
+                dashboardPtConductionsRank={dashboardPtConductionsRank}
+                dashboardPtRanks={dashboardPtRanks}
               />
             </Grid>
           </Grid>

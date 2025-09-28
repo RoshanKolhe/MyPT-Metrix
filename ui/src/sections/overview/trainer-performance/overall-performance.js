@@ -4,6 +4,7 @@
 
 import PropTypes from 'prop-types';
 import { Card, CardHeader, Avatar, Box, Typography, Stack, Divider } from '@mui/material';
+import { useState } from 'react';
 
 // Helper to color percentages
 const getPerformanceColor = (value) => {
@@ -13,9 +14,10 @@ const getPerformanceColor = (value) => {
   return 'error.main'; // red
 };
 
-export default function OverallPerformance({ title, data }) {
-  const topThree = data.slice(0, 3);
-  const rest = data.slice(3);
+export default function OverallPerformance({ title, dashboardPtRanks }) {
+  const safeRanks = Array.isArray(dashboardPtRanks) ? dashboardPtRanks : [];
+  const topThree = safeRanks.slice(0, 3);
+  const rest = safeRanks.slice(3);
 
   const podiumOrder = [topThree[1], topThree[0], topThree[2]];
 
@@ -37,6 +39,8 @@ export default function OverallPerformance({ title, data }) {
         sx={{ mb: 3, mt: 1 }}
       >
         {podiumOrder.map((item, index) => {
+          if (!item) return null;
+
           let transformStyle = '';
           let avatarSize = 72;
           let zIndex = 1;
@@ -72,7 +76,7 @@ export default function OverallPerformance({ title, data }) {
               <Box sx={{ position: 'relative', display: 'inline-block' }}>
                 {/* Avatar */}
                 <Avatar
-                  src={item.avatar}
+                  src={item.trainer?.avatar?.fileUrl}
                   alt={item.name}
                   sx={{
                     width: { md: 80, xs: 50 },
@@ -113,18 +117,17 @@ export default function OverallPerformance({ title, data }) {
                   fontSize: { xs: '12px', sm: '14px' },
                 }}
               >
-                {item.name}
+                {item.trainer?.firstName} {item.trainer?.lastName}
               </Typography>
-
               <Typography
                 variant="subtitle2"
                 fontWeight="bold"
-                color={getPerformanceColor(item.value)}
+                color={getPerformanceColor(item.achieved)}
                 sx={{
                   fontSize: { xs: '12px', sm: '14px' },
                 }}
               >
-                {item.value}%
+                {item.achieved}%
               </Typography>
             </Box>
           );
@@ -144,10 +147,14 @@ export default function OverallPerformance({ title, data }) {
             sx={{ mb: 1 }}
           >
             <Typography variant="body2" color="text.secondary">
-              {index + 4}. {item.name}
+              {index + 4}. {item.trainer?.firstName} {item.trainer?.lastName}
             </Typography>
-            <Typography variant="body2" fontWeight="bold" color={getPerformanceColor(item.value)}>
-              {item.value}%
+            <Typography
+              variant="body2"
+              fontWeight="bold"
+              color={getPerformanceColor(item.achieved)}
+            >
+              {item.achieved}%
             </Typography>
           </Stack>
         ))}
@@ -158,12 +165,5 @@ export default function OverallPerformance({ title, data }) {
 
 OverallPerformance.propTypes = {
   title: PropTypes.string,
-  data: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.number,
-      name: PropTypes.string,
-      avatar: PropTypes.string,
-      value: PropTypes.number,
-    })
-  ),
+  dashboardPtRanks: PropTypes.array,
 };

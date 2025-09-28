@@ -70,6 +70,10 @@ export const endpoints = {
     getDashboradSummary: `/dashboard/summary`,
     getFilterPtSales: (filter) => `/leaderboard/top-sales?${filter}`,
     getPtSales: (filter) => `/leaderboard/top-sales`,
+    getFilterPtConductions: (filter) => `/leaderboard/top-conductions?${filter}`,
+    getPtConductions: (filter) => `/leaderboard/top-conductions`,
+    getFilterPtRanks: (filter) => `/leaderboard/top-ranks?${filter}`,
+    getPtRanks: (filter) => `/leaderboard/top-conductions`,
 
     getFilteredConductionDashboradSummary: (filter) => `/member-conduction-stats?${filter}`,
     getConductionDashboradSummary: `/member-conduction-stats'`,

@@ -367,3 +367,47 @@ export function useGetPtSalesRank(filter) {
     refreshDashboardPtSalesRank,
   };
 }
+
+export function useGetPtConductionsRank(filter) {
+  const URL = endpoints.user.getFilterPtConductions(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboardPtConductionsRank = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilterPtConductions(newFilter)
+      : endpoints.user.getPtConductions;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboardPtConductionsRank: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboardPtConductionsRank,
+  };
+}
+
+export function useGetPtRanks(filter) {
+  const URL = endpoints.user.getFilterPtRanks(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboardPtRanks = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilterPtRanks(newFilter)
+      : endpoints.user.getPtRanks;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboardPtRanks: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboardPtRanks,
+  };
+}

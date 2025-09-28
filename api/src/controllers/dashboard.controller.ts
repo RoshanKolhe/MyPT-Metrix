@@ -1610,10 +1610,12 @@ export class DashboardController {
 
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
+
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       throw new HttpErrors.BadRequest('Invalid date format.');
     }
-    // Fetch targets
+
+    // Fetch targets filtered by KPI
     const targets = await this.targetRepository.find({
       where: {
         branchId,
@@ -1633,7 +1635,7 @@ export class DashboardController {
               {
                 relation: 'trainerTargets',
                 scope: {
-                  where: {isDeleted: false},
+                  where: {isDeleted: false, kpiId: 16},
                   include: ['trainer', 'kpi'],
                 },
               },
@@ -1643,7 +1645,7 @@ export class DashboardController {
       ],
     });
 
-    // Flatten TrainerTargets
+    // Flatten TrainerTargets for selected KPI(s)
     const trainerTargets = targets.flatMap((t: any) =>
       (t.departmentTargets ?? []).flatMap((dt: any) =>
         (dt.trainerTargets ?? []).map((tt: any) => ({
@@ -1679,11 +1681,14 @@ export class DashboardController {
     const result: any[] = [];
 
     for (const [trainerId, trainerData] of trainerMap) {
-      // Fetch actual sales for this trainer in the period
+      // Fetch actual sales for this trainer in the period filtered by KPI
       const sales = await this.salesRepository.find({
         where: {
           trainerId,
           createdAt: {between: [startDate, endDate]},
+          kpiId: 16,
+          ...(branchId && {branchId}),
+          ...(departmentId && {departmentId}),
         },
         include: ['membershipDetails'],
       });
@@ -1697,19 +1702,17 @@ export class DashboardController {
         ? (actual / trainerData.totalTarget) * 100
         : 0;
 
-      if (achieved >= 0) {
-        result.push({
-          trainerId,
-          name: trainerData.name,
-          target: trainerData.totalTarget,
-          actual: Math.round(actual),
-          achieved: +achieved.toFixed(1),
-        });
-      }
+      result.push({
+        trainerId,
+        name: trainerData.name,
+        target: trainerData.totalTarget,
+        actual: Math.round(actual),
+        achieved: +achieved.toFixed(1),
+      });
     }
 
-    // Sort by achieved % in desc order and take top 10
-    result.sort((a, b) => b.achieved - a.achieved);
+    // Sort by actual sales (or achievement %) and take top 10
+    result.sort((a, b) => b.actual - a.actual); // <-- Top sellers
     const top10 = result.slice(0, 10);
 
     // Add ranks
@@ -1718,5 +1721,248 @@ export class DashboardController {
     });
 
     return top10;
+  }
+  @get('/leaderboard/top-conductions')
+  async getTopConductionsLeaderboard(
+    @param.query.string('startDate') startDateStr: string,
+    @param.query.string('endDate') endDateStr: string,
+    @param.query.number('branchId') branchId?: number,
+    @param.query.number('departmentId') departmentId?: number,
+  ): Promise<any[]> {
+    if (!startDateStr || !endDateStr) {
+      throw new HttpErrors.BadRequest('startDate and endDate are required.');
+    }
+
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new HttpErrors.BadRequest('Invalid date format.');
+    }
+
+    // Fetch targets filtered by KPI
+    const targets = await this.targetRepository.find({
+      where: {
+        branchId,
+        startDate: {lte: endDate.toISOString().split('T')[0]},
+        endDate: {gte: startDate.toISOString().split('T')[0]},
+        isDeleted: false,
+      },
+      include: [
+        {
+          relation: 'departmentTargets',
+          scope: {
+            where: {
+              ...(departmentId ? {departmentId} : {}),
+              isDeleted: false,
+            },
+            include: [
+              {
+                relation: 'trainerTargets',
+                scope: {
+                  where: {isDeleted: false, kpiId: 17},
+                  include: ['trainer', 'kpi'],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    // Flatten TrainerTargets for selected KPI(s)
+    const trainerTargets = targets.flatMap((t: any) =>
+      (t.departmentTargets ?? []).flatMap((dt: any) =>
+        (dt.trainerTargets ?? []).map((tt: any) => ({
+          trainerId: tt.trainerId,
+          trainer: tt.trainer,
+          kpiId: tt.kpiId,
+          targetValue: tt.targetValue,
+          departmentId: dt.departmentId,
+          branchId: t.branchId,
+        })),
+      ),
+    );
+
+    // Group by trainerId -> sum target values
+    const trainerMap = new Map<number, any>();
+
+    for (const tt of trainerTargets) {
+      if (!trainerMap.has(tt.trainerId)) {
+        trainerMap.set(tt.trainerId, {
+          trainerId: tt.trainerId,
+          name:
+            `${tt.trainer?.firstName ?? ''} ${tt.trainer?.lastName ?? ''}`.trim() ||
+            'Unknown',
+          totalTarget: 0,
+        });
+      }
+
+      const trainerData = trainerMap.get(tt.trainerId);
+      trainerData.totalTarget += tt.targetValue || 0;
+    }
+
+    // Prepare results
+    const result: any[] = [];
+
+    for (const [trainerId, trainerData] of trainerMap) {
+      // Fetch actual sales for this trainer in the period filtered by KPI
+      const sales = await this.salesRepository.find({
+        where: {
+          trainerId,
+          createdAt: {between: [startDate, endDate]},
+          kpiId: 17,
+          ...(branchId && {branchId}),
+          ...(departmentId && {departmentId}),
+        },
+        include: ['membershipDetails'],
+      });
+
+      const actual = sales.reduce(
+        (sum, sale) => sum + (sale.membershipDetails?.discountedPrice || 0),
+        0,
+      );
+
+      const achieved = trainerData.totalTarget
+        ? (actual / trainerData.totalTarget) * 100
+        : 0;
+
+      result.push({
+        trainerId,
+        name: trainerData.name,
+        target: trainerData.totalTarget,
+        actual: Math.round(actual),
+        achieved: +achieved.toFixed(1),
+      });
+    }
+
+    // Sort by actual sales (or achievement %) and take top 10
+    result.sort((a, b) => b.actual - a.actual); // <-- Top sellers
+    const top10 = result.slice(0, 10);
+
+    // Add ranks
+    top10.forEach((item, index) => {
+      item.rank = index + 1;
+    });
+
+    return top10;
+  }
+
+  @get('/leaderboard/top-ranks')
+  async getTopRanksLeaderboard(
+    @param.query.string('startDate') startDateStr: string,
+    @param.query.string('endDate') endDateStr: string,
+    @param.query.number('branchId') branchId?: number,
+    @param.query.number('departmentId') departmentId?: number,
+  ): Promise<any[]> {
+    if (!startDateStr || !endDateStr) {
+      throw new HttpErrors.BadRequest('startDate and endDate are required.');
+    }
+
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new HttpErrors.BadRequest('Invalid date format.');
+    }
+
+    const targets = await this.targetRepository.find({
+      where: {
+        branchId,
+        startDate: {lte: endDate.toISOString().split('T')[0]},
+        endDate: {gte: startDate.toISOString().split('T')[0]},
+        isDeleted: false,
+      },
+      include: [
+        {
+          relation: 'departmentTargets',
+          scope: {
+            where: {
+              ...(departmentId ? {departmentId} : {}),
+              isDeleted: false,
+            },
+            include: [
+              {
+                relation: 'trainerTargets',
+                scope: {
+                  where: {isDeleted: false},
+                  include: [
+                    {
+                      relation: 'trainer',
+                      scope: {
+                        include: [
+                          {relation: 'branch'}, // keep only existing relations
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const trainerTargets = targets.flatMap((t: any) =>
+      (t.departmentTargets ?? []).flatMap((dt: any) =>
+        (dt.trainerTargets ?? []).map((tt: any) => ({
+          trainerId: tt.trainerId,
+          trainer: tt.trainer,
+          targetValue: tt.targetValue,
+          departmentId: dt.departmentId,
+          branchId: t.branchId,
+        })),
+      ),
+    );
+
+    const trainerMap = new Map<number, any>();
+
+    for (const tt of trainerTargets) {
+      if (!trainerMap.has(tt.trainerId)) {
+        trainerMap.set(tt.trainerId, {
+          trainerId: tt.trainerId,
+          trainer: tt.trainer,
+          totalTarget: 0,
+        });
+      }
+
+      const trainerData = trainerMap.get(tt.trainerId);
+      trainerData.totalTarget += tt.targetValue || 0;
+    }
+
+    const result: any[] = [];
+
+    for (const [trainerId, trainerData] of trainerMap) {
+      const sales = await this.salesRepository.find({
+        where: {
+          trainerId,
+          createdAt: {between: [startDate, endDate]},
+          ...(branchId && {branchId}),
+          ...(departmentId && {departmentId}),
+        },
+        include: ['membershipDetails'],
+      });
+
+      const actual = sales.reduce(
+        (sum, sale) => sum + (sale.membershipDetails?.discountedPrice || 0),
+        0,
+      );
+
+      const achieved = trainerData.totalTarget
+        ? (actual / trainerData.totalTarget) * 100
+        : 0;
+        console.log('trainerData',trainerData);
+
+      result.push({
+        trainerId,
+        trainer: trainerData.trainer, // full trainer info (with branch)
+        totalTarget: trainerData.totalTarget,
+        actual,
+        achieved: +achieved.toFixed(1),
+      });
+    }
+    result.sort((a, b) => b.achieved - a.achieved);
+    return result.slice(0, 10);
   }
 }
