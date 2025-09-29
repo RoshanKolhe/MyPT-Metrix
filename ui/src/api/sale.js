@@ -2,7 +2,7 @@
 import useSWR from 'swr';
 import { useCallback, useMemo } from 'react';
 // utils
-import { fetcher, endpoints } from 'src/utils/axios';
+import axiosInstance,{ fetcher, endpoints } from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
 // Valid sort fields for sales (optional, can be used for sorting UI)
@@ -157,3 +157,30 @@ export function useGetSalesWithFilter({
     };
   }, [data, isLoading, error, refreshFilteredSales]);
 }
+
+export const exportSalesWithFilter = async ({ startDate, endDate, searchTextValue = '', extraFilter = {} }) => {
+  const startDateISO = startDate ? new Date(startDate).toISOString() : undefined;
+  const endDateISO = endDate ? new Date(endDate).toISOString() : undefined;
+
+  const rawFilter = {
+    where: { isDeleted: false, ...extraFilter },
+  };
+
+  if (searchTextValue) {
+    const search = `%${searchTextValue}%`;
+    rawFilter.where.or = [
+      { memberName: { like: search } },
+      { salesPerson: { like: search } },
+      { trainer: { like: search } },
+      { branch: { like: search } },
+      { department: { like: search } },
+    ];
+  }
+
+  let queryString = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}&export=true`;
+  if (startDateISO) queryString += `&startDate=${encodeURIComponent(startDateISO)}`;
+  if (endDateISO) queryString += `&endDate=${encodeURIComponent(endDateISO)}`;
+
+  const res = await axiosInstance.get(`${endpoints.sale.list}?${queryString}`);
+  return res.data.data; // 👈 only filtered rows (all, no pagination)
+};

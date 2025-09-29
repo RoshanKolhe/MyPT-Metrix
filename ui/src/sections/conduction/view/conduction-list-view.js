@@ -35,8 +35,10 @@ import {
   TableSelectedAction,
   TablePaginationCustom,
 } from 'src/components/table';
+// import { fDate } from 'src/utils/formatTime';
+
 //
-import { useGetConductions } from 'src/api/conduction';
+import { useGetConductions, exportConductionsWithFilter } from 'src/api/conduction';
 import { _roles } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'notistack';
@@ -102,6 +104,10 @@ export default function ConductionListView() {
       searchTextValue: filters.name,
     });
 
+  // Format date utility
+  const fDate = (date) => (date ? new Date(date).toLocaleDateString('en-GB') : '');
+
+
   // const dataFiltered = applyFilter({
   //   inputData: tableData,
   //   comparator: getComparator(table.order, table.orderBy),
@@ -131,25 +137,48 @@ export default function ConductionListView() {
     [table]
   );
 
-  const handleExport = useCallback(() => {
-    const fileName = 'Conduction Report.xlsx';
+  const handleExportConductions = useCallback(async () => {
+    try {
+      // Reuse the same filters from the table
+      const exportParams = {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        searchTextValue: filters.name, // conduction search field
+        extraFilter: { isDeleted: false }, // if you have soft delete logic
+      };
 
-    const formatted = conductions.map((item) => ({
-      ID: item.id,
-      Date: item.conductionDate,
-      Trainer: `${item.trainer?.firstName} ${item.trainer?.lastName || ''}`,
-      Branch: item.branch?.name || '',
-      Department: item.department?.name || '',
-      KPI: item.kpi?.name || '',
-      Value: item.conductions,
-      CreatedAt: item.createdAt,
-    }));
+      // Call your backend export API for conductions
+      const rows = await exportConductionsWithFilter(exportParams); // ✅ your API function
 
-    const ws = XLSX.utils.json_to_sheet(formatted);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Conductions');
-    XLSX.writeFile(wb, fileName);
-  }, [conductions]);
+      if (!Array.isArray(rows)) {
+        console.error('Export failed: rows is not an array', rows);
+        return;
+      }
+
+      // Format rows for XLSX
+      const formatted = rows.map((item) => ({
+        ConductionID: item.id,
+        ConductionDate: item.conductionDate,
+        Trainer: item.trainer
+          ? `${item.trainer.firstName} ${item.trainer.lastName || ''}`
+          : '',
+        Branch: item.branch?.name || '',
+        Department: item.department?.name || '',
+        KPI: item.kpi?.name || '',
+        Value: item.conductions,
+        CreatedAt: fDate(item.createdAt),
+      }));
+
+      // Export XLSX
+      const ws = XLSX.utils.json_to_sheet(formatted);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Conductions');
+      XLSX.writeFile(wb, 'Conduction Report.xlsx');
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
+  }, [filters]);
+
 
   const handleDeleteRow = useCallback(
     async (id) => {
@@ -291,7 +320,8 @@ export default function ConductionListView() {
             onFilters={handleFilters}
             //
             roleOptions={_roles}
-            onExport={handleExport}
+            onExport={handleExportConductions}
+
             refreshConductions={refreshConductions}
           />
 

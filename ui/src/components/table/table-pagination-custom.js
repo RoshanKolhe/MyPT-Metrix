@@ -4,6 +4,64 @@ import Box from '@mui/material/Box';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import TablePagination from '@mui/material/TablePagination';
+import Button from '@mui/material/Button';
+
+// ----------------------------------------------------------------------
+
+function TablePaginationActions({ count, page, rowsPerPage, onPageChange }) {
+  const lastPage = Math.max(0, Math.ceil(count / rowsPerPage) - 1);
+
+  return (
+    <Box sx={{ flexShrink: 0, ml: 2.5, display: 'flex', gap: 1 }}>
+      {/* First Page */}
+      <Button
+        size="small"
+        // variant="outlined"
+        onClick={(e) => onPageChange(e, 0)}
+        disabled={page === 0}
+      >
+        {'<<'}
+      </Button>
+
+      {/* Previous Page */}
+      <Button
+        size="small"
+        // variant="outlined"
+        onClick={(e) => onPageChange(e, page - 1)}
+        disabled={page === 0}
+      >
+        {'<'}
+      </Button>
+
+      {/* Next Page */}
+      <Button
+        size="small"
+        // variant="outlined"
+        onClick={(e) => onPageChange(e, page + 1)}
+        disabled={page >= lastPage}
+      >
+        {'>'}
+      </Button>
+
+      {/* Last Page */}
+      <Button
+        size="small"
+        // variant="contained"
+        onClick={(e) => onPageChange(e, lastPage)}
+        disabled={page >= lastPage}
+      >
+        {'>>'}
+      </Button>
+    </Box>
+  );
+}
+
+TablePaginationActions.propTypes = {
+  count: PropTypes.number.isRequired,
+  page: PropTypes.number.isRequired,
+  rowsPerPage: PropTypes.number.isRequired,
+  onPageChange: PropTypes.func.isRequired,
+};
 
 // ----------------------------------------------------------------------
 
@@ -20,9 +78,8 @@ export default function TablePaginationCustom({
   loading = false,
   ...other
 }) {
-  // Calculate the last valid page index
   const lastPage = Math.max(0, Math.ceil(count / rowsPerPage) - 1);
-  const safePage = Math.min(page, lastPage); // clamp the page
+  const safePage = Math.min(page, lastPage);
 
   return (
     <Box sx={{ position: 'relative', ...sx }}>
@@ -30,13 +87,16 @@ export default function TablePaginationCustom({
         rowsPerPageOptions={rowsPerPageOptions}
         component="div"
         count={count}
-        page={safePage}      // use clamped page
+        page={safePage}
         rowsPerPage={rowsPerPage}
         onPageChange={onPageChange}
         onRowsPerPageChange={onRowsPerPageChange}
         SelectProps={{
           disabled: loading,
         }}
+        ActionsComponent={(subProps) => (
+          <TablePaginationActions {...subProps} count={count} />
+        )}
         {...other}
         sx={{
           borderTopColor: 'transparent',
@@ -60,7 +120,6 @@ export default function TablePaginationCustom({
     </Box>
   );
 }
-
 
 TablePaginationCustom.propTypes = {
   dense: PropTypes.bool,

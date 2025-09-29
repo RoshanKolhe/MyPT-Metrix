@@ -6,23 +6,22 @@ import { fetcher, endpoints } from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
 
-export function useGetUsers() {
-  const URL = endpoints.user.list;
+
+export function useGetUsers({ page = 1, limit = 10 } = {}) {
+  const URL = `${endpoints.user.list}?page=${page}&limit=${limit}`;
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshUsers = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
-  };
-
   return {
-    users: data || [],
+    users: data?.data || [],
+    total: data?.total || 0,
+    page: data?.page ?? page,
+    limit: data?.limit ?? limit,
     usersLoading: isLoading,
     usersError: error,
     usersValidating: isValidating,
-    usersEmpty: !isLoading && !data?.length,
-    refreshUsers, // Include the refresh function separately
+    usersEmpty: !isLoading && !(data?.data?.length > 0),
+    refreshUsers: mutate,
   };
 }
 
@@ -74,28 +73,22 @@ export function useGetUser(userId) {
 
 // ----------------------------------------------------------------------
 
-export function useGetUsersWithFilter(filter) {
-  let URL;
-  if (filter) {
-    URL = endpoints.user.filterList(filter);
-  } else {
-    URL = endpoints.user.list;
-  }
+export function useGetUsersWithFilter({ filter = {}, page = 1, limit = 10 } = {}) {
+  const query = new URLSearchParams({ ...filter, page, limit }).toString();
+  const URL = endpoints.user.filterList(query);
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
-  const refreshFilterUsers = () => {
-    // Use the `mutate` function to trigger a revalidation
-    mutate();
-  };
-
   return {
-    filteredUsers: data || [],
+    filteredUsers: data?.data || [],
+    total: data?.total || 0,
+    page: data?.page ?? page,
+    limit: data?.limit ?? limit,
     filteredUsersLoading: isLoading,
     filteredUsersError: error,
     filteredUsersValidating: isValidating,
-    filteredUsersEmpty: !isLoading && !data?.length,
-    refreshFilterUsers, // Include the refresh function separately
+    filteredUsersEmpty: !isLoading && !(data?.data?.length > 0),
+    refreshFilterUsers: mutate,
   };
 }
 

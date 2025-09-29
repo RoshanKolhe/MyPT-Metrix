@@ -53,7 +53,12 @@ export default function StaffImportExcelModel({ open, onClose, refreshStaffs }) 
     setValue,
     formState: { isSubmitting, errors },
   } = methods;
-  console.log('errors', errors);
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log('Form validation errors:', errors);
+    }
+  }, [errors]);
+
 
   const watchedFile = watch('file');
 

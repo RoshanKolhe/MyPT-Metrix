@@ -12,7 +12,6 @@ export function useGetTargets() {
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
   const refreshTargets = () => {
-    // Use the `mutate` function to trigger a revalidation
     mutate();
   };
 
@@ -22,7 +21,7 @@ export function useGetTargets() {
     targetsError: error,
     targetsValidating: isValidating,
     targetsEmpty: !isLoading && !data?.length,
-    refreshTargets, // Include the refresh function separately
+    refreshTargets,
   };
 }
 
@@ -66,18 +65,18 @@ export function useGetDepartmentTarget(targetId, depTargetId) {
 
 // ----------------------------------------------------------------------
 
-export function useGetTargetsWithFilter(filter) {
-  let URL;
-  if (filter) {
-    URL = endpoints.target.filterList(filter);
-  } else {
-    URL = endpoints.target.list;
-  }
+export function useGetTargetsWithFilter(filter = {}) {
+  // Build query string for backend filtering
+  const queryParams = new URLSearchParams();
+
+  if (filter.name) queryParams.append('name', filter.name);
+  if (filter.status && filter.status !== 'all') queryParams.append('status', filter.status);
+
+  const URL = `${endpoints.target.list}?${queryParams.toString()}`;
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
   const refreshFilterTargets = () => {
-    // Use the `mutate` function to trigger a revalidation
     mutate();
   };
 
@@ -87,6 +86,6 @@ export function useGetTargetsWithFilter(filter) {
     filteredTargetsError: error,
     filteredTargetsValidating: isValidating,
     filteredTargetsEmpty: !isLoading && !data?.length,
-    refreshFilterTargets, // Include the refresh function separately
+    refreshFilterTargets,
   };
 }

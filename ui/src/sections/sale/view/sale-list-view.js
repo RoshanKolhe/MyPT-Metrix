@@ -38,7 +38,7 @@ import {
 //
 // eslint-disable-next-line import/no-extraneous-dependencies
 import * as XLSX from 'xlsx';
-import { useGetSalesWithFilter } from 'src/api/sale';
+import { useGetSalesWithFilter, exportSalesWithFilter } from 'src/api/sale';
 import { _roles } from 'src/utils/constants';
 import axiosInstance from 'src/utils/axios';
 import { useSnackbar } from 'notistack';
@@ -200,33 +200,63 @@ export default function SaleListView() {
     [table]
   );
 
-  const handleExport = useCallback(() => {
-    const fileName = 'Sales Report.xlsx';
-    const formatted = dataFiltered.map((item) => ({
-      MemberName: item.memberName,
-      Gender: item.gender,
-      TrainingAt: item.trainingAt,
-      MemberType: item.memberType,
-      SalesPerson: item.salesPerson,
-      Trainer: item.trainerName,
-      Branch: item.branch,
-      Department: item.department,
-      Kpi: item.kpi,
-      ContactNumber: item.contactNumber,
-      PurchaseDate: fDate(item.purchaseDate),
-      MembershipType: item.membershipType,
-      ActualPrice: item.actualPrice,
-      DiscountedPrice: item.discountedPrice,
-      ValidityDays: item.validityDays,
-      ExpiryDate: fDate(item.expiryDate),
-      FreezingDays: item.freezingDays,
-      CreatedAt: fDate(item.createdAt),
-    }));
-    const ws = XLSX.utils.json_to_sheet(formatted);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Sales');
-    XLSX.writeFile(wb, fileName);
-  }, [dataFiltered]);
+  const handleExport = useCallback(async () => {
+    try {
+      // Reuse the same filters from the table
+      const exportParams = {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        searchTextValue: filters.searchText,
+        extraFilter: { isDeleted: false },
+      };
+
+      // Call the backend export API
+      const rows = await exportSalesWithFilter(exportParams); // ✅ use your hook
+
+      if (!Array.isArray(rows)) {
+        console.error('Export failed: rows is not an array', rows);
+        return;
+      }
+
+      // Format rows for XLSX
+      const formatted = rows.map((item) => ({
+        MemberName: item.memberName || '',
+        Gender: item.gender || '',
+        TrainingAt: item.trainingAt || '',
+        MemberType: item.memberType || '',
+        SalesPerson: item.salesTrainer
+          ? `${item.salesTrainer.firstName} ${item.salesTrainer.lastName || ''}`
+          : '',
+        Trainer: item.trainer
+          ? `${item.trainer.firstName} ${item.trainer.lastName || ''}`
+          : '',
+        Branch: item.branch || '',
+        Department: item.department || '',
+        Kpi: item.kpi?.name || '',
+        ContactNumber: item.contactNumber || '',
+        PurchaseDate: fDate(item.membershipDetails?.purchaseDate),
+        MembershipType:
+          item.membershipDetails?.membershipType?.map((m) => m.label).join(', ') ||
+          '',
+        ActualPrice: item.membershipDetails?.actualPrice || '',
+        DiscountedPrice: item.membershipDetails?.discountedPrice || '',
+        ValidityDays: item.membershipDetails?.validityDays || '',
+        ExpiryDate: fDate(item.membershipDetails?.expiryDate),
+        FreezingDays: item.membershipDetails?.freezingDays || '',
+        CreatedAt: fDate(item.createdAt),
+      }));
+
+      // Export XLSX
+      const ws = XLSX.utils.json_to_sheet(formatted);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Sales');
+      XLSX.writeFile(wb, 'Sales Report.xlsx');
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
+  }, [filters]);
+
+
 
   const handleDeleteRow = useCallback(
     async (id) => {

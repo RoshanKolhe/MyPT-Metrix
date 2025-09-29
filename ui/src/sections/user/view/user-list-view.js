@@ -38,7 +38,7 @@ import {
   TablePaginationCustom,
 } from 'src/components/table';
 //
-import { useGetUsers } from 'src/api/user';
+import { useGetUsersWithFilter } from 'src/api/user';
 import { _roles, USER_STATUS_OPTIONS } from 'src/utils/constants';
 import { useAuthContext } from 'src/auth/hooks';
 import UserTableRow from '../user-table-row';
@@ -72,63 +72,82 @@ const roleLabels = {
   hod: 'Hod',
   sub_hod: 'Sub Hod',
 };
+
 // ----------------------------------------------------------------------
 
 export default function UserListView() {
   const { user: currentUser } = useAuthContext();
   const userRole = currentUser?.permissions?.[0];
+
   const roleOptions =
     userRole === 'hod'
       ? _roles.filter((r) => r === roleLabels.sub_hod)
       : userRole === 'cgm'
-      ? _roles.filter((r) => r === roleLabels.hod || r === roleLabels.sub_hod)
-      : _roles;
+        ? _roles.filter((r) => r === roleLabels.hod || r === roleLabels.sub_hod)
+        : _roles;
 
-  console.log(roleOptions);
-  const table = useTable({
-    defaultOrderBy: 'id',
-  });
-
+  const table = useTable({ defaultOrderBy: 'id' });
   const settings = useSettingsContext();
-
   const router = useRouter();
-
   const confirm = useBoolean();
 
-  const [quickEditRow, setQuickEditRow] = useState();
-
+  const [quickEditRow, setQuickEditRow] = useState(null);
   const quickEdit = useBoolean();
-
   const [tableData, setTableData] = useState([]);
-
   const [filters, setFilters] = useState(defaultFilters);
 
-  const { users, refreshUsers } = useGetUsers();
+  // ---- API CALL (must come before using in useEffect)
+  const {
+    filteredUsers,
+    total: totalFilteredUsers,
+    refreshFilterUsers,
+  } = useGetUsersWithFilter({
+    page: table.page + 1, // backend expects 1-based
+    limit: table.rowsPerPage,
+    filter: {
+      search: filters.name,
+      role: filters.role.map((r) => r.toLowerCase().replace(' ', '_')),
+    },
+  });
+
+  // ---- SYNC tableData with API response
+  useEffect(() => {
+    if (Array.isArray(filteredUsers)) {
+      setTableData(filteredUsers.filter((obj) => !obj.permissions.includes('super_admin')));
+    }
+  }, [filteredUsers]);
+
+  const roleFilter = filters.role.map((r) => r.toLowerCase().replace(' ', '_'));
 
   const dataFiltered = applyFilter({
     inputData: tableData,
     comparator: getComparator(table.order, table.orderBy),
     filters,
+  }).filter((user) => {
+    // Role match: check if any selected role is in user.permissions
+    const roleMatch =
+      roleFilter.length === 0 || user.permissions.some((p) => roleFilter.includes(p));
+
+    // Name match
+    const nameMatch =
+      !filters.name ||
+      `${user.firstName || ''} ${user.lastName || ''}`
+        .toLowerCase()
+        .includes(filters.name.toLowerCase());
+
+    return roleMatch && nameMatch;
   });
 
-  const dataInPage = dataFiltered.slice(
-    table.page * table.rowsPerPage,
-    table.page * table.rowsPerPage + table.rowsPerPage
-  );
 
   const denseHeight = table.dense ? 52 : 72;
-
   const canReset = !isEqual(defaultFilters, filters);
-
   const notFound = (!dataFiltered.length && canReset) || !dataFiltered.length;
 
+  // ---- Handlers
   const handleFilters = useCallback(
     (name, value) => {
       table.onResetPage();
-      setFilters((prevState) => ({
-        ...prevState,
-        [name]: value,
-      }));
+      setFilters((prev) => ({ ...prev, [name]: value }));
     },
     [table]
   );
@@ -137,34 +156,27 @@ export default function UserListView() {
     (id) => {
       const deleteRow = tableData.filter((row) => row.id !== id);
       setTableData(deleteRow);
-
-      table.onUpdatePageDeleteRow(dataInPage.length);
+      table.onUpdatePageDeleteRow(tableData.length);
     },
-    [dataInPage.length, table, tableData]
+    [table, tableData]
   );
 
   const handleDeleteRows = useCallback(() => {
     const deleteRows = tableData.filter((row) => !table.selected.includes(row.id));
     setTableData(deleteRows);
-
     table.onUpdatePageDeleteRows({
       totalRows: tableData.length,
-      totalRowsInPage: dataInPage.length,
-      totalRowsFiltered: dataFiltered.length,
+      totalRowsInPage: tableData.length,
     });
-  }, [dataFiltered.length, dataInPage.length, table, tableData]);
+  }, [table, tableData]);
 
   const handleEditRow = useCallback(
-    (id) => {
-      router.push(paths.dashboard.user.edit(id));
-    },
+    (id) => router.push(paths.dashboard.user.edit(id)),
     [router]
   );
 
   const handleViewRow = useCallback(
-    (id) => {
-      router.push(paths.dashboard.user.view(id));
-    },
+    (id) => router.push(paths.dashboard.user.view(id)),
     [router]
   );
 
@@ -177,15 +189,14 @@ export default function UserListView() {
   );
 
   const handleFilterStatus = useCallback(
-    (event, newValue) => {
-      handleFilters('status', newValue);
-    },
+    (event, newValue) => handleFilters('status', newValue),
     [handleFilters]
   );
 
   const handleResetFilters = useCallback(() => {
     setFilters(defaultFilters);
-  }, []);
+    refreshFilterUsers();   // force API to fetch all users again
+  }, [refreshFilterUsers]);
 
   const handleExport = useCallback(() => {
     const fileName = 'User Report.xlsx';
@@ -209,13 +220,7 @@ export default function UserListView() {
     XLSX.writeFile(wb, fileName);
   }, [dataFiltered]);
 
-  useEffect(() => {
-    if (users) {
-      const updatedUsers = users.filter((obj) => !obj.permissions.includes('super_admin'));
-      setTableData(updatedUsers);
-    }
-  }, [users]);
-
+  // ---- Render
   return (
     <>
       <Container maxWidth={settings.themeStretch ? false : 'lg'}>
@@ -236,9 +241,7 @@ export default function UserListView() {
               New User
             </Button>
           }
-          sx={{
-            mb: { xs: 3, md: 5 },
-          }}
+          sx={{ mb: { xs: 3, md: 5 } }}
         />
 
         <Card>
@@ -268,9 +271,8 @@ export default function UserListView() {
                     }
                   >
                     {tab.value === 'all' && tableData.length}
-                    {tab.value === '1' && tableData.filter((user) => user.isActive).length}
-
-                    {tab.value === '0' && tableData.filter((user) => !user.isActive).length}
+                    {tab.value === '1' && tableData.filter((u) => u.isActive).length}
+                    {tab.value === '0' && tableData.filter((u) => !u.isActive).length}
                   </Label>
                 }
               />
@@ -280,7 +282,6 @@ export default function UserListView() {
           <UserTableToolbar
             filters={filters}
             onFilters={handleFilters}
-            //
             roleOptions={roleOptions}
             onExport={handleExport}
           />
@@ -289,10 +290,8 @@ export default function UserListView() {
             <UserTableFiltersResult
               filters={filters}
               onFilters={handleFilters}
-              //
               onResetFilters={handleResetFilters}
-              //
-              results={dataFiltered.length}
+              results={totalFilteredUsers || 0}
               sx={{ p: 2.5, pt: 0 }}
             />
           )}
@@ -336,26 +335,19 @@ export default function UserListView() {
                 />
 
                 <TableBody>
-                  {dataFiltered
-                    .slice(
-                      table.page * table.rowsPerPage,
-                      table.page * table.rowsPerPage + table.rowsPerPage
-                    )
-                    .map((row) => (
-                      <UserTableRow
-                        key={row.id}
-                        row={row}
-                        selected={table.selected.includes(row.id)}
-                        onSelectRow={() => table.onSelectRow(row.id)}
-                        onDeleteRow={() => handleDeleteRow(row.id)}
-                        onEditRow={() => handleEditRow(row.id)}
-                        onViewRow={() => handleViewRow(row.id)}
-                        handleQuickEditRow={(user) => {
-                          handleQuickEditRow(user);
-                        }}
-                        quickEdit={quickEdit}
-                      />
-                    ))}
+                  {dataFiltered.map((row) => (
+                    <UserTableRow
+                      key={row.id}
+                      row={row}
+                      selected={table.selected.includes(row.id)}
+                      onSelectRow={() => table.onSelectRow(row.id)}
+                      onDeleteRow={() => handleDeleteRow(row.id)}
+                      onEditRow={() => handleEditRow(row.id)}
+                      onViewRow={() => handleViewRow(row.id)}
+                      handleQuickEditRow={handleQuickEditRow}
+                      quickEdit={quickEdit}
+                    />
+                  ))}
 
                   <TableEmptyRows
                     height={denseHeight}
@@ -369,12 +361,11 @@ export default function UserListView() {
           </TableContainer>
 
           <TablePaginationCustom
-            count={dataFiltered.length}
-            page={table.page}
+            count={totalFilteredUsers || 0}
+            page={Number.isNaN(table.page) ? 0 : table.page}
             rowsPerPage={table.rowsPerPage}
             onPageChange={table.onChangePage}
             onRowsPerPageChange={table.onChangeRowsPerPage}
-            //
             dense={table.dense}
             onChangeDense={table.onChangeDense}
           />
@@ -387,7 +378,7 @@ export default function UserListView() {
         title="Delete"
         content={
           <>
-            Are you sure want to delete <strong> {table.selected.length} </strong> items?
+            Are you sure want to delete <strong>{table.selected.length}</strong> items?
           </>
         }
         action={
@@ -412,7 +403,7 @@ export default function UserListView() {
             setQuickEditRow(null);
             quickEdit.onFalse();
           }}
-          refreshUsers={refreshUsers}
+          refreshUsers={refreshFilterUsers}
         />
       )}
     </>
@@ -422,15 +413,9 @@ export default function UserListView() {
 // ----------------------------------------------------------------------
 
 function applyFilter({ inputData, comparator, filters }) {
-  const { name, status, role } = filters;
-  const stabilizedThis = inputData.map((el, index) => [el, index]);
-  const roleMapping = {
-    super_admin: 'Super Admin',
-    admin: 'Admin',
-    cgm: 'CGM',
-    hod: 'Hod',
-    sub_hod: 'Sub Hod',
-  };
+  const { status } = filters;
+  const stabilizedThis = inputData.map((el, idx) => [el, idx]);
+
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
@@ -439,27 +424,8 @@ function applyFilter({ inputData, comparator, filters }) {
 
   inputData = stabilizedThis.map((el) => el[0]);
 
-  if (name) {
-    inputData = inputData.filter((user) =>
-      Object.values(user).some((value) => String(value).toLowerCase().includes(name.toLowerCase()))
-    );
-  }
-
   if (status !== 'all') {
     inputData = inputData.filter((user) => (status === '1' ? user.isActive : !user.isActive));
-  }
-
-  if (role.length) {
-    inputData = inputData.filter(
-      (user) =>
-        user.permissions &&
-        user.permissions.some((userRole) => {
-          console.log(userRole);
-          const mappedRole = roleMapping[userRole];
-          console.log('Mapped Role:', mappedRole); // Check the mapped role
-          return mappedRole && role.includes(mappedRole);
-        })
-    );
   }
 
   return inputData;

@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 // @mui
 import Stack from '@mui/material/Stack';
 import MenuItem from '@mui/material/MenuItem';
@@ -26,12 +26,22 @@ export default function UserTableToolbar({
 }) {
   const popover = usePopover();
 
-  const handleFilterName = useCallback(
-    (event) => {
-      onFilters('name', event.target.value);
-    },
-    [onFilters]
-  );
+  // local search state
+  const [searchInput, setSearchInput] = useState(filters.name || '');
+
+  // debounce effect: trigger only after 500ms & when >= 3 chars
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (searchInput.trim().length >= 3) {
+        onFilters('name', searchInput.trim());
+      } else {
+        onFilters('name', ''); // reset if less than 3 chars
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchInput, onFilters]);
+
 
   const handleFilterRole = useCallback(
     (event) => {
@@ -42,6 +52,12 @@ export default function UserTableToolbar({
     },
     [onFilters]
   );
+
+  // Add this effect inside UserTableToolbar
+  useEffect(() => {
+    setSearchInput(filters.name || '');
+  }, [filters.name]);
+
 
   return (
     <>
@@ -89,8 +105,9 @@ export default function UserTableToolbar({
         <Stack direction="row" alignItems="center" spacing={2} flexGrow={1} sx={{ width: 1 }}>
           <TextField
             fullWidth
-            value={filters.name}
-            onChange={handleFilterName}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+
             placeholder="Search..."
             InputProps={{
               startAdornment: (

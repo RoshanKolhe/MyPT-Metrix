@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { useCallback, useMemo } from 'react';
 
 // utils
-import { fetcher, endpoints } from 'src/utils/axios';
+import axiosInstance, { fetcher, endpoints } from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
 // Valid sort fields for conductions
@@ -176,3 +176,40 @@ export function useGetConductionsWithFilter({
     };
   }, [data, isLoading, error, refreshFilteredConductions]);
 }
+
+
+export const exportConductionsWithFilter = async ({
+  startDate,
+  endDate,
+  searchTextValue = '',
+  extraFilter = {},
+}) => {
+  const startDateStr = startDate
+    ? new Date(new Date(startDate).setHours(0, 0, 0, 0)).toISOString()
+    : undefined;
+
+  const endDateStr = endDate
+    ? new Date(new Date(endDate).setHours(23, 59, 59, 999)).toISOString()
+    : undefined;
+
+  const rawFilter = {
+    where: { isDeleted: false, ...extraFilter },
+  };
+
+  if (searchTextValue?.trim()) {
+    const search = `%${searchTextValue.trim()}%`;
+    rawFilter.where.or = [
+      { trainer: { like: search } },
+      { branch: { like: search } },
+      { department: { like: search } },
+      { kpi: { like: search } },
+    ];
+  }
+
+  let queryString = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}&export=true`;
+  if (startDateStr) queryString += `&startDate=${encodeURIComponent(startDateStr)}`;
+  if (endDateStr) queryString += `&endDate=${encodeURIComponent(endDateStr)}`;
+
+  const res = await axiosInstance.get(`${endpoints.conduction.list}?${queryString}`);
+  return res.data.data; // 👈 all filtered rows, no pagination
+};
