@@ -32,33 +32,36 @@ const StyledChart = styled(Chart)(({ theme }) => ({
 
 // ----------------------------------------------------------------------
 
-export default function EcommerceSaleByGender({
+export default function EcommercePtsVsMembership({
   title,
   subheader,
-  dashboradMaleToFemaleRatioData,
+  dashboradPtsVsMembershipRatioData,
   ...other
 }) {
   const theme = useTheme();
 
-  // Fetch chart data from API
-  const { maleToFemaleRatio, maleRatio, femaleRatio, totalUniqueClients } =
-    dashboradMaleToFemaleRatioData;
+  // Extract API data
+  const { membership, pt, ratio } = dashboradPtsVsMembershipRatioData;
+  const totalUniqueClients = (membership?.total ?? 0) + (pt?.total ?? 0);
 
-  console.log('totalUniqueClients', totalUniqueClients);
-
-  // Build chart data dynamically
+  // Chart data
   const chartData = useMemo(
     () => ({
       colors: [
-        [theme.palette.primary.light, theme.palette.primary.main],
-        [theme.palette.warning.light, theme.palette.warning.main],
+        [theme.palette.primary.light, theme.palette.primary.main], // PTS
+        [theme.palette.warning.light, theme.palette.warning.main], // Membership
       ],
       series: [
-        { label: 'Male', value: parseFloat(maleRatio) },
-        { label: 'Female', value: parseFloat(femaleRatio) },
+        { label: 'PTS', value: pt?.total ?? 0, male: pt?.male ?? 0, female: pt?.female ?? 0 },
+        {
+          label: 'Membership',
+          value: membership?.total ?? 0,
+          male: membership?.male ?? 0,
+          female: membership?.female ?? 0,
+        },
       ],
     }),
-    [maleRatio, femaleRatio, theme]
+    [theme, membership, pt]
   );
 
   const chartSeries = chartData.series.map((item) => item.value);
@@ -97,8 +100,50 @@ export default function EcommerceSaleByGender({
           },
         },
       },
+      tooltip: {
+        enabled: true,
+        custom({ series, seriesIndex, w }) {
+          const label = w.globals.labels[seriesIndex];
+          const value = series[seriesIndex];
+          let male = 0;
+          let female = 0;
+
+          if (seriesIndex === 0) {
+            male = pt?.male ?? 0;
+            female = pt?.female ?? 0;
+          } else if (seriesIndex === 1) {
+            male = membership?.male ?? 0;
+            female = membership?.female ?? 0;
+          }
+
+          return `
+      <div style="padding:6px 10px;">
+        <div style="display:flex;align-items:center;margin-bottom:4px;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${w.globals.colors[seriesIndex]};margin-right:6px;"></span>
+          <span style="font-weight:500;">${label}: ${value}</span>
+        </div>
+        <div style="display:flex;align-items:center;margin-bottom:2px;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#4e79a7;margin-right:6px;"></span>
+          Male: ${male}
+        </div>
+        <div style="display:flex;align-items:center;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f28e2c;margin-right:6px;"></span>
+          Female: ${female}
+        </div>
+      </div>
+    `;
+        },
+      },
     }),
-    [chartData, totalUniqueClients]
+    [
+      chartData.colors,
+      chartData.series,
+      membership?.female,
+      membership?.male,
+      pt?.female,
+      pt?.male,
+      totalUniqueClients,
+    ]
   );
 
   const chartOptions = useChart(chartConfig);
@@ -115,19 +160,20 @@ export default function EcommerceSaleByGender({
         height={300}
         key={totalUniqueClients}
       />
+
       <Divider />
 
       <Box sx={{ textAlign: 'center', py: 1, color: 'text.secondary' }}>
-        Male : Female = {maleToFemaleRatio}
+        PTS : membership = {ratio}
       </Box>
     </Card>
   );
 }
 
-EcommerceSaleByGender.propTypes = {
+EcommercePtsVsMembership.propTypes = {
   chart: PropTypes.object,
   subheader: PropTypes.string,
   title: PropTypes.string,
   total: PropTypes.number,
-  dashboradMaleToFemaleRatioData: PropTypes.object,
+  dashboradPtsVsMembershipRatioData: PropTypes.object,
 };

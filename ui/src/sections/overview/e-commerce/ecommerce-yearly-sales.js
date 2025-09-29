@@ -35,7 +35,7 @@ export default function EcommerceYearlySales({ title, subheader, dashboradChartD
       <CardHeader title={title} subheader={subheader} />
       <Box sx={{ mt: 3, mx: 3, overflowX: 'auto' }}>
         <Box sx={{ minWidth: Math.max(series[0]?.data.length * 80, 600) }}>
-          <Chart dir="ltr" type="area" series={series} options={chartOptions} height={364} />
+          <Chart dir="ltr" type="area" series={series} options={chartOptions} height={450} />
         </Box>
       </Box>
     </Card>

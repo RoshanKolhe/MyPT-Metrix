@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 // theme
 import { bgGradient } from 'src/theme/css';
 // utils
-import { fShortenNumber } from 'src/utils/format-number';
+import { fNumber } from 'src/utils/format-number';
 // theme
 
 // ----------------------------------------------------------------------
@@ -36,13 +36,14 @@ export default function AnalyticsWidgetSummary({
         textAlign: 'center',
         color: `${color}.darker`,
         backgroundColor: 'common.white',
+        width: '100%',
         ...sx,
       }}
       {...other}
     >
       {icon && <Box sx={{ width: 64, height: 64, mb: 1 }}>{icon}</Box>}
 
-      <Typography variant="h3">{fShortenNumber(total)}</Typography>
+      <Typography variant="h3">{fNumber(total)}</Typography>
 
       <Typography variant="subtitle2" sx={{ opacity: 0.64 }}>
         {title}

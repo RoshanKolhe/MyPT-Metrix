@@ -1,0 +1,171 @@
+import PropTypes from 'prop-types';
+import { useCallback } from 'react';
+// @mui
+import Stack from '@mui/material/Stack';
+import MenuItem from '@mui/material/MenuItem';
+import Checkbox from '@mui/material/Checkbox';
+import TextField from '@mui/material/TextField';
+import InputLabel from '@mui/material/InputLabel';
+import IconButton from '@mui/material/IconButton';
+import FormControl from '@mui/material/FormControl';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import InputAdornment from '@mui/material/InputAdornment';
+import Select from '@mui/material/Select';
+// components
+import Iconify from 'src/components/iconify';
+import CustomPopover, { usePopover } from 'src/components/custom-popover';
+
+// ----------------------------------------------------------------------
+
+export default function SalesmanLeaderboardTableToolbar({
+  filters,
+  onFilters,
+  //
+  roleOptions,
+  onExport,
+  branches,
+}) {
+  const popover = usePopover();
+
+  const handleFilterName = useCallback(
+    (event) => {
+      onFilters('name', event.target.value);
+    },
+    [onFilters]
+  );
+
+  const handleFilterRole = useCallback(
+    (event) => {
+      onFilters(
+        'role',
+        typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value
+      );
+    },
+    [onFilters]
+  );
+
+  const handleFilterBranch = useCallback(
+    (event) => {
+      onFilters('branch', event.target.value);
+      onFilters('department', ''); // reset department when branch changes
+    },
+    [onFilters]
+  );
+
+  const handleFilterDepartment = useCallback(
+    (event) => {
+      onFilters('department', event.target.value);
+    },
+    [onFilters]
+  );
+
+  const selectedBranch = branches.find((b) => b.id === filters.branch); 
+  const departmentOptions = selectedBranch?.departments || [];
+
+  return (
+    <>
+      <Stack
+        spacing={2}
+        alignItems={{ xs: 'flex-end', md: 'center' }}
+        direction={{
+          xs: 'column',
+          md: 'row',
+        }}
+        sx={{
+          p: 2.5,
+          pr: { xs: 2.5, md: 1 },
+        }}
+      >
+        <FormControl sx={{ width: { xs: 1, md: 200 } }}>
+          <InputLabel>Branch</InputLabel>
+          <Select
+            value={filters.branch}
+            onChange={handleFilterBranch}
+            input={<OutlinedInput label="Branch" />}
+          >
+            <MenuItem value="">All</MenuItem>
+            {branches.map((branch) => (
+              <MenuItem key={branch.id} value={branch.id}>
+                {branch.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl sx={{ width: { xs: 1, md: 200 } }} disabled={!filters.branch}>
+          <InputLabel>Department</InputLabel>
+          <Select
+            value={filters.department}
+            onChange={handleFilterDepartment}
+            input={<OutlinedInput label="Department" />}
+          >
+            <MenuItem value="">All</MenuItem>
+            {departmentOptions.map((dept) => (
+              <MenuItem key={dept.id} value={dept.id}>
+                {dept.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Stack direction="row" alignItems="center" spacing={2} flexGrow={1} sx={{ width: 1 }}>
+          <TextField
+            fullWidth
+            value={filters.name}
+            onChange={handleFilterName}
+            placeholder="Search..."
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Stack>
+      </Stack>
+
+      <CustomPopover
+        open={popover.open}
+        onClose={popover.onClose}
+        arrow="right-top"
+        sx={{ width: 140 }}
+      >
+        {/* <MenuItem
+          onClick={() => {
+            popover.onClose();
+          }}
+        >
+          <Iconify icon="solar:printer-minimalistic-bold" />
+          Print
+        </MenuItem> */}
+
+        {/* <MenuItem
+          onClick={() => {
+            popover.onClose();
+          }}
+        >
+          <Iconify icon="solar:import-bold" />
+          Import
+        </MenuItem> */}
+
+        <MenuItem
+          onClick={() => {
+            popover.onClose();
+            onExport();
+          }}
+        >
+          <Iconify icon="solar:export-bold" />
+          Export
+        </MenuItem>
+      </CustomPopover>
+    </>
+  );
+}
+
+SalesmanLeaderboardTableToolbar.propTypes = {
+  filters: PropTypes.object,
+  onFilters: PropTypes.func,
+  roleOptions: PropTypes.array,
+  onExport: PropTypes.func,
+  branches: PropTypes.array,
+};

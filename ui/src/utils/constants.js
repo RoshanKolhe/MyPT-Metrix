@@ -381,6 +381,12 @@ export const COMMON_STATUS_OPTIONS = [
   { value: '0', label: 'In-Active' },
 ];
 
+export const TRAINER_LEADERBOARD_STATUS_OPTIONS = [
+  { value: 'Under Performer', label: 'Under Performer' },
+  { value: 'Achiever', label: 'Achiever' },
+  { value: 'Over Achiever', label: 'Over Achiever' },
+];
+
 export const formatTime = (isoString) => {
   const date = new Date(isoString);
   const minutes = date.getMinutes();

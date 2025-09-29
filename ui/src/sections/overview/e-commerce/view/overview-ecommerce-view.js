@@ -1,10 +1,7 @@
 // @mui
 import { useTheme } from '@mui/material/styles';
-import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Unstable_Grid2';
-// _mock
-import { _ecommerceBestSalesman } from 'src/_mock';
 // components
 import { useSettingsContext } from 'src/components/settings';
 //
@@ -14,7 +11,12 @@ import {
   useGetDashboradConductionSummary,
   useGetDashboradMaleToFemaleRatio,
   useGetDashboradMemberStatistics,
+  useGetDashboradMonthlyData,
+  useGetDashboradPtsVsMembershipRatio,
   useGetDashboradSummary,
+  useGetPtConductionsRank,
+  useGetPtRanks,
+  useGetPtSalesRank,
 } from 'src/api/user';
 import { fShortenNumber } from 'src/utils/format-number';
 import { Box } from '@mui/material';
@@ -22,8 +24,9 @@ import { useState } from 'react';
 import { useAuthContext } from 'src/auth/hooks';
 import { useGetBranchsWithFilter } from 'src/api/branch';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
+import { SalesmanLeaderboardListView } from 'src/sections/salesmanLeaderboard/view';
+import { CountrySalesLeaderboardListView } from 'src/sections/countrySalesLeaderboard/view';
 import EcommerceYearlySales from '../ecommerce-yearly-sales';
-import EcommerceBestSalesman from '../ecommerce-best-salesman';
 import EcommerceSaleByGender from '../ecommerce-sale-by-gender';
 import EcommerceWidgetSummary from '../ecommerce-widget-summary';
 import EcommerceYearlyConductions from '../ecommerce-yearly-conductions';
@@ -31,6 +34,9 @@ import EcommerceTargetForecasting from '../ecommerce-target-forecasting';
 import EcommerceFiltersForm from '../ecommerce-filters-form';
 import EcommerceMemberStatistics from '../ecommerce-member-statistics';
 import AnalyticsWidgetSummary from '../analytics-widget-summary';
+import EcommercePtsVsMembership from '../ecommerce-pts-vs-membership';
+import EcommerceMonthlySales from '../ecommerce-month-wise-sales';
+import { TrainerPerformanceView } from '../../trainer-performance/view';
 
 // ----------------------------------------------------------------------
 
@@ -46,6 +52,7 @@ export default function OverviewEcommerceView() {
     startDate: startOfMonth(new Date()),
     endDate: endOfMonth(new Date()),
     country: null,
+    day: 1,
   });
 
   const [showFilters, setShowFilters] = useState(false);
@@ -56,7 +63,8 @@ export default function OverviewEcommerceView() {
     filters.department?.id ? `departmentId=${filters.department.id}` : '',
     filters.startDate ? `startDate=${format(new Date(filters.startDate), 'yyyy-MM-dd')}` : '',
     filters.endDate ? `endDate=${format(new Date(filters.endDate), 'yyyy-MM-dd')}` : '',
-    filters.country ? `country=${filters.country}` : '', // <-- NEW line
+    filters.country ? `country=${filters.country}` : '',
+    filters.day ? `day=${filters.day}` : '',
   ]
     .filter(Boolean)
     .join('&');
@@ -66,12 +74,19 @@ export default function OverviewEcommerceView() {
     useGetDashboradConductionSummary(queryString);
   const { dashboradChartData = {}, refreshDashboradChartData } =
     useGetDashboradChartData(queryString);
+  const { dashboradMonthlyData = {}, refreshDashboradMonthlyData } =
+    useGetDashboradMonthlyData(queryString);
   const { dashboradConductionsData = {}, refreshDashboradConductionsData } =
     useGetDashboradConductionsData(queryString);
   const { dashboradMaleToFemaleRatioData = {}, refreshDashboradMaleToFemaleRatio } =
     useGetDashboradMaleToFemaleRatio(queryString);
+  const { dashboradPtsVsMembershipRatioData = {}, refreshDashboradPtsVsMembershipRatio } =
+    useGetDashboradPtsVsMembershipRatio(queryString);
   const { dashboardMemberStatistics = {}, refreshDashboradMemberStatistics } =
     useGetDashboradMemberStatistics(queryString);
+  const { dashboardPtSalesRank, isLoading } = useGetPtSalesRank(queryString);
+  const { dashboardPtConductionsRank } = useGetPtConductionsRank(queryString);
+  const { dashboardPtRanks } = useGetPtRanks(queryString);
 
   const rawFilter = {
     where: {
@@ -117,6 +132,7 @@ export default function OverviewEcommerceView() {
     // Call with latest query string
     refreshDashboardSummary(updatedQueryString);
     refreshDashboradChartData(updatedQueryString);
+    refreshDashboradMonthlyData(updatedQueryString);
     refreshDashboradMaleToFemaleRatio(updatedQueryString);
     refreshDashboradConductionsData(updatedQueryString);
     refreshDashboradMemberStatistics(updatedQueryString);
@@ -178,14 +194,6 @@ export default function OverviewEcommerceView() {
 
             <Grid xs={12} sm={6} md={3}>
               <AnalyticsWidgetSummary
-                title="Total Members"
-                total={conductionDashboardCounts?.totalMembers || 0}
-                icon={<img alt="icon" src="/assets/icons/glass/ic_glass_users.png" />}
-              />
-            </Grid>
-
-            <Grid xs={12} sm={6} md={3}>
-              <AnalyticsWidgetSummary
                 title="Total Conductions"
                 total={conductionDashboardCounts?.totalConductions || 0}
                 color="info"
@@ -195,10 +203,37 @@ export default function OverviewEcommerceView() {
 
             <Grid xs={12} sm={6} md={3}>
               <AnalyticsWidgetSummary
-                title="Avg Conductions"
-                total={conductionDashboardCounts?.avgConductions || 0}
+                title="Avg conduction/Day "
+                total={conductionDashboardCounts?.avgConductionsPerDay || 0}
+                icon={<img alt="icon" src="/assets/icons/glass/ic_glass_users.png" />}
+              />
+            </Grid>
+
+            <Grid xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Avg Codncution/Trainer"
+                total={conductionDashboardCounts?.avgConductionsPerTrainer || 0}
                 color="warning"
                 icon={<img alt="icon" src="/assets/icons/glass/ic_glass_buy.png" />}
+              />
+            </Grid>
+
+            <Grid xs={12} sm={6} md={3}>
+              <AnalyticsWidgetSummary
+                title="Avg Revenue/Trainer"
+                total={dashboardCounts?.avgRevenuePerTrainer || 0}
+                color="warning"
+                icon={<img alt="icon" src="/assets/icons/glass/ic_glass_message.png" />}
+              />
+            </Grid>
+
+            <Grid xs={12} md={12} lg={12}>
+              <EcommerceMonthlySales
+                title="Revenue (Month-on-Month, Last 13 Months)"
+                dashboradChartData={dashboradMonthlyData}
+                filters={filters}
+                setFilters={setFilters}
+                refreshDashboradMonthlyData={refreshDashboradMonthlyData}
               />
             </Grid>
 
@@ -223,6 +258,19 @@ export default function OverviewEcommerceView() {
                 dashboardMemberStatistics={dashboardMemberStatistics}
               />
             </Grid>
+            <Grid xs={12} md={6} lg={4}>
+              <EcommercePtsVsMembership
+                title="PTS Vs Membership"
+                dashboradPtsVsMembershipRatioData={dashboradPtsVsMembershipRatioData}
+              />
+            </Grid>
+            <Grid xs={12} md={6} lg={6}>
+              <CountrySalesLeaderboardListView filter={queryString} />
+            </Grid>
+
+            <Grid xs={12} md={12} lg={6}>
+              <EcommerceTargetForecasting title="12-Month Sales Performance" />
+            </Grid>
 
             <Grid xs={12} md={12} lg={12}>
               <EcommerceYearlyConductions
@@ -234,25 +282,19 @@ export default function OverviewEcommerceView() {
               />
             </Grid>
 
-            <Grid xs={12} md={12} lg={12}>
-              <EcommerceTargetForecasting title="Forecasting" subheader="Target forecasting" />
-            </Grid>
-
             {/* <Grid xs={12} md={6} lg={8}>
               <EcommerceSalesOverview title="Sales Overview" data={_ecommerceSalesOverview} />
             </Grid> */}
 
+            {/* <Grid xs={12} md={12} lg={12}>
+              <SalesmanLeaderboardListView filter={queryString} branches={branches} />
+            </Grid> */}
             <Grid xs={12} md={12} lg={12}>
-              <EcommerceBestSalesman
-                title="Best Salesman"
-                tableData={_ecommerceBestSalesman}
-                tableLabels={[
-                  { id: 'name', label: 'Seller' },
-                  { id: 'category', label: 'Product' },
-                  { id: 'country', label: 'Country', align: 'center' },
-                  { id: 'totalAmount', label: 'Total', align: 'right' },
-                  { id: 'rank', label: 'Rank', align: 'right' },
-                ]}
+              <TrainerPerformanceView
+                filters={filters}
+                dashboardPtSalesRank={dashboardPtSalesRank}
+                dashboardPtConductionsRank={dashboardPtConductionsRank}
+                dashboardPtRanks={dashboardPtRanks}
               />
             </Grid>
           </Grid>

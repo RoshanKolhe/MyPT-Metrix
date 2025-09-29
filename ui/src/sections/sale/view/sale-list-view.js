@@ -200,63 +200,38 @@ export default function SaleListView() {
     [table]
   );
 
-  const handleExport = useCallback(async () => {
-    try {
-      // Reuse the same filters from the table
-      const exportParams = {
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        searchTextValue: filters.searchText,
-        extraFilter: { isDeleted: false },
-      };
+  const handleExport = useCallback(() => {
+    const fileName = 'Sales Report.xlsx';
 
-      // Call the backend export API
-      const rows = await exportSalesWithFilter(exportParams); // ✅ use your hook
-
-      if (!Array.isArray(rows)) {
-        console.error('Export failed: rows is not an array', rows);
-        return;
-      }
-
-      // Format rows for XLSX
-      const formatted = rows.map((item) => ({
-        MemberName: item.memberName || '',
-        Gender: item.gender || '',
-        TrainingAt: item.trainingAt || '',
-        MemberType: item.memberType || '',
-        SalesPerson: item.salesTrainer
-          ? `${item.salesTrainer.firstName} ${item.salesTrainer.lastName || ''}`
-          : '',
-        Trainer: item.trainer
-          ? `${item.trainer.firstName} ${item.trainer.lastName || ''}`
-          : '',
-        Branch: item.branch || '',
-        Department: item.department || '',
-        Kpi: item.kpi?.name || '',
-        ContactNumber: item.contactNumber || '',
-        PurchaseDate: fDate(item.membershipDetails?.purchaseDate),
-        MembershipType:
-          item.membershipDetails?.membershipType?.map((m) => m.label).join(', ') ||
-          '',
-        ActualPrice: item.membershipDetails?.actualPrice || '',
-        DiscountedPrice: item.membershipDetails?.discountedPrice || '',
-        ValidityDays: item.membershipDetails?.validityDays || '',
-        ExpiryDate: fDate(item.membershipDetails?.expiryDate),
-        FreezingDays: item.membershipDetails?.freezingDays || '',
-        CreatedAt: fDate(item.createdAt),
-      }));
-
-      // Export XLSX
-      const ws = XLSX.utils.json_to_sheet(formatted);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Sales');
-      XLSX.writeFile(wb, 'Sales Report.xlsx');
-    } catch (err) {
-      console.error('Export failed:', err);
-    }
-  }, [filters]);
-
-
+    const formatted = dataFiltered.map((item) => ({
+      MemberName: item.memberName || '',
+      Gender: item.gender || '',
+      TrainingAt: item.trainingAt || '',
+      MemberType: item.memberType || '',
+      SalesTrainer: item.salesTrainer
+        ? `${item.salesTrainer.firstName} ${item.salesTrainer.lastName || ''}`
+        : '',
+      SalesTrainerEmail: item.salesTrainer?.email || '',
+      Trainer: item.trainer ? `${item.trainer.firstName} ${item.trainer.lastName || ''}` : '',
+      TrainerEmail: item.trainer?.email || '',
+      Branch: item.branch?.name || '',
+      Department: item.department?.name || '',
+      Kpi: item.kpi?.name || '',
+      ContactNumber: item.contactNumber || '',
+      PurchaseDate: fDate(item.membershipDetails?.purchaseDate) || '',
+      MembershipType: item.membershipDetails?.membershipType?.map((m) => m.label).join(', ') || '',
+      ActualPrice: item.membershipDetails?.actualPrice || '',
+      DiscountedPrice: item.membershipDetails?.discountedPrice || '',
+      ValidityDays: item.membershipDetails?.validityDays || '',
+      ExpiryDate: fDate(item.membershipDetails?.expiryDate) || '',
+      FreezingDays: item.membershipDetails?.freezingDays || '',
+      CreatedAt: item.createdAt || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(formatted);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sales');
+    XLSX.writeFile(wb, fileName);
+  }, [dataFiltered]);
 
   const handleDeleteRow = useCallback(
     async (id) => {
@@ -508,33 +483,36 @@ const applyFilter = ({ inputData, comparator, filters }) => {
     );
   }
 
-  // 🔎 Plan filter
-  if (filters.plan) {
-    filtered = filtered.filter((sale) =>
-      sale.membershipDetails?.plan
-        ?.toLowerCase()
-        .includes(filters.plan.toLowerCase())
+  if (status !== 'all') {
+    inputData = inputData.filter((sale) => (status === '1' ? sale.isActive : !sale.isActive));
+  }
+
+  if (role.length) {
+    inputData = inputData.filter(
+      (sale) =>
+        sale.permissions &&
+        sale.permissions.some((saleRole) => {
+          console.log(saleRole);
+          const mappedRole = roleMapping[saleRole];
+          console.log('Mapped Role:', mappedRole); // Check the mapped role
+          return mappedRole && role.includes(mappedRole);
+        })
     );
   }
 
-  // 📅 Date range filter
-  // if (filters.startDate || filters.endDate) {
-  //   const start = filters.startDate
-  //     ? new Date(filters.startDate).setHours(0, 0, 0, 0)
-  //     : null;
-  //   const end = filters.endDate
-  //     ? new Date(filters.endDate).setHours(23, 59, 59, 999)
-  //     : null;
+  if (filters.startDate && filters.endDate) {
+    console.log('here');
+    const start = new Date(filters.startDate).toISOString().split('T')[0];
+    const end = new Date(filters.endDate).toISOString().split('T')[0];
 
-  //   filtered = filtered.filter((sale) => {
-  //     if (!sale.purchaseDate) return false;
-  //     const saleDate = new Date(sale.purchaseDate).getTime();
-  //     if (Number.isNaN(saleDate)) return false;
-  //     if (start && saleDate < start) return false;
-  //     if (end && saleDate > end) return false;
-  //     return true;
-  //   });
-  // }
+    inputData = inputData.filter((sale) => {
+      const purchaseDate = sale.membershipDetails?.purchaseDate;
+      if (!purchaseDate) return false;
+
+      const dateOnly = new Date(purchaseDate).toISOString().split('T')[0];
+      return dateOnly >= start && dateOnly <= end;
+    });
+  }
 
   return filtered;
 };

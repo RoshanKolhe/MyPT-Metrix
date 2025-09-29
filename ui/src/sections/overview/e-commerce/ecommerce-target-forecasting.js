@@ -33,7 +33,7 @@ export default function EcommerceTargetForecasting({
   onFilterChange,
   ...other
 }) {
-  const [interval, setInterval] = useState('yearly');
+  const [interval, setInterval] = useState('monthly');
   const [endDate, setEndDate] = useState(endOfMonth(new Date()));
   const [selectedKpis, setSelectedKpis] = useState([]);
 
@@ -42,9 +42,15 @@ export default function EcommerceTargetForecasting({
 
   // Fetch chart data from API
   const { dashboradChartData = {} } = useGetDashboradForecastingData(kpiQueryString);
-  const { targetSeries = [], actualSeries = [], labels = [], forecast = {} } = dashboradChartData;
+  const {
+    targetSeries = [],
+    actualSeries = [],
+    deficitPercentSeries = [],
+    labels = [],
+    forecast = {},
+  } = dashboradChartData;
   const percent = forecast?.variancePercent ?? 0;
-  const series = [
+  const dataSeries = [
     { name: 'Target', data: targetSeries },
     { name: 'Actual', data: actualSeries },
   ];
@@ -65,10 +71,26 @@ export default function EcommerceTargetForecasting({
       tickPlacement: 'on',
     },
     tooltip: {
-      y: {
-        formatter: (val) => `₹${val.toLocaleString()}`,
+      enabled: true,
+      shared: true,
+      custom: ({ series, seriesIndex, dataPointIndex, w }) => {
+        const target = series[0][dataPointIndex];
+        const actual = series[1][dataPointIndex];
+        const deficit = deficitPercentSeries[dataPointIndex]; // from your state/API
+
+        return `
+      <div style="padding:8px">
+        <div><b>${labels[dataPointIndex]}</b></div>
+        <div>Target: AED ${target.toLocaleString()}</div>
+        <div>Actual: AED ${actual.toLocaleString()}</div>
+        <div style="color:${deficit < 0 ? 'red' : 'green'}">
+          Deficit: ${deficit.toFixed(1)}%
+        </div>
+      </div>
+    `;
       },
     },
+
     stroke: {
       curve: 'smooth',
     },
@@ -100,66 +122,11 @@ export default function EcommerceTargetForecasting({
     setSelectedKpis(typeof value === 'string' ? value.split(',') : value);
   };
 
-  // const FilterFields = (
-  //   <Grid container spacing={2}>
-  //     <Grid item xs={12} sm={6} md={4}>
-  //       <DatePicker
-  //         label="Start Date"
-  //         value={startDate}
-  //         onChange={(newValue) => setStartDate(newValue)}
-  //         slotProps={{ textField: { size: 'small', fullWidth: true } }}
-  //       />
-  //     </Grid>
-  //     <Grid item xs={12} sm={6} md={4}>
-  //       <DatePicker
-  //         label="End Date"
-  //         value={endDate}
-  //         onChange={(newValue) => setEndDate(newValue)}
-  //         slotProps={{ textField: { size: 'small', fullWidth: true } }}
-  //       />
-  //     </Grid>
-  //     <Grid item xs={12} md={4}>
-  //       <FormControl size="small" sx={{ width: { xs: '100%', md: 200 } }}>
-  //         <InputLabel>KPIs</InputLabel>
-  //         <Select
-  //           multiple
-  //           size="small"
-  //           value={selectedKpis}
-  //           onChange={handleKpiChange}
-  //           input={<OutlinedInput label="KPIs" />}
-  //           renderValue={(selected) =>
-  //             selected
-  //               .map((id) => kpiOptions.find((option) => option.id === id)?.name)
-  //               .filter(Boolean)
-  //               .join(', ')
-  //           }
-  //           MenuProps={{ PaperProps: { sx: { maxHeight: 240 } } }}
-  //         >
-  //           {(kpiOptions ?? []).map((option) => (
-  //             <MenuItem key={option.id} value={option.id}>
-  //               <Checkbox size="small" checked={selectedKpis.includes(option.id)} />
-  //               {option.name}
-  //             </MenuItem>
-  //           ))}
-  //         </Select>
-  //       </FormControl>
-  //     </Grid>
-  //   </Grid>
-  // );
-
-  // Notify parent of filter changes
-  // useEffect(() => {
-  //   if (onFilterChange) {
-  //     onFilterChange({
-  //       startDate,
-  //       endDate,
-  //       kpis: selectedKpis,
-  //     });
-  //   }
-  // }, [startDate, endDate, selectedKpis, onFilterChange]);
-
   return (
     <>
+      {/*
+      Uncomment once ai integration is done
+      
       <Card
         sx={{
           mt: 2,
@@ -198,13 +165,13 @@ export default function EcommerceTargetForecasting({
             </Box>
           </Stack>
         </Box>
-      </Card>
+      </Card> */}
       <Card {...other}>
         <CardHeader title={title} subheader={subheader} />
         {/* {isMobile && <Box sx={{ mt: 2, px: 3, pb: 2 }}>{FilterFields}</Box>} */}
         <Box sx={{ mt: 3, mx: 3, overflowX: 'auto' }}>
-          <Box sx={{ minWidth: Math.max(series[0]?.data.length * 80, 600) }}>
-            <Chart dir="ltr" type="area" series={series} options={chartOptions} height={364} />
+          <Box sx={{ minWidth: Math.max(dataSeries[0]?.data.length * 80, 600) }}>
+            <Chart dir="ltr" type="area" series={dataSeries} options={chartOptions} height={364} />
           </Box>
         </Box>
       </Card>

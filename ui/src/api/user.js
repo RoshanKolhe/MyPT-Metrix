@@ -146,6 +146,33 @@ export function useGetDashboradChartData(filter) {
   };
 }
 
+export function useGetDashboradMonthlyData(filter) {
+  let URL;
+  if (filter) {
+    URL = endpoints.user.getFilteredMonthlyData(filter);
+  } else {
+    URL = endpoints.user.getMonthlyData;
+  }
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradMonthlyData = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredMonthlyData(newFilter)
+      : endpoints.user.getMonthlyData;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboradMonthlyData: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradMonthlyData,
+  };
+}
+
 export function useGetDashboradConductionsData(filter) {
   let URL;
   if (filter) {
@@ -214,6 +241,28 @@ export function useGetDashboradMaleToFemaleRatio(filter) {
   };
 }
 
+export function useGetDashboradPtsVsMembershipRatio(filter) {
+  const URL = endpoints.user.getPtsVsMembershipRatio(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboradPtsVsMembershipRatio = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilteredConductionsData(newFilter)
+      : endpoints.user.getConductionsData;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboradPtsVsMembershipRatioData: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboradPtsVsMembershipRatio,
+  };
+}
+
 export function useGetDashboradMemberStatistics(filter) {
   const URL = endpoints.user.getMemberStatistics(filter);
 
@@ -260,5 +309,98 @@ export function useGetDashboradConductionSummary(filter) {
     error,
     isValidating,
     refreshDashboardConductionSummary,
+  };
+}
+
+// export function useGetPtSalesRank(filter) {
+//   let URL;
+//   if (filter) {
+//     URL = endpoints.user.getFilterPtSales(filter);
+//   } else {
+//     URL = endpoints.user.getPtSales;
+//   }
+
+//   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+//   const refreshDashboardPtSalesRank = (newFilter = filter) => {
+//     const newURL = newFilter
+//       ? endpoints.user.getFilterPtSales(newFilter)
+//       : endpoints.user.getPtSales;
+
+//     mutate(newURL); // trigger re-fetch for new URL
+//   };
+
+//   return {
+//     dashboardPtSalesRank: data || [],
+//     isLoading,
+//     error,
+//     isValidating,
+//     refreshDashboardPtSalesRank,
+//   };
+// }
+
+export function useGetPtSalesRank(filter) {
+  const URL = endpoints.user.getFilterPtSales(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboardPtSalesRank = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilterPtSales(newFilter)
+      : endpoints.user.getPtSales;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboardPtSalesRank: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboardPtSalesRank,
+  };
+}
+
+export function useGetPtConductionsRank(filter) {
+  const URL = endpoints.user.getFilterPtConductions(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboardPtConductionsRank = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilterPtConductions(newFilter)
+      : endpoints.user.getPtConductions;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboardPtConductionsRank: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboardPtConductionsRank,
+  };
+}
+
+export function useGetPtRanks(filter) {
+  const URL = endpoints.user.getFilterPtRanks(filter);
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshDashboardPtRanks = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.user.getFilterPtRanks(newFilter)
+      : endpoints.user.getPtRanks;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    dashboardPtRanks: data || [],
+    isLoading,
+    error,
+    isValidating,
+    refreshDashboardPtRanks,
   };
 }

@@ -17,6 +17,18 @@ export default function EcommerceYearlyConductions({
     plotOptions: {
       bar: {
         columnWidth: '60%',
+        dataLabels: {
+          position: 'top',
+        },
+      },
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: (val) => (val > 0 ? val : ''),
+      offsetY: -20,
+      style: {
+        fontSize: '12px',
+        colors: ['#304758'],
       },
     },
     legend: {
