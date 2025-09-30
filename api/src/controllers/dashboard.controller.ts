@@ -87,7 +87,8 @@ export class DashboardController {
       start.setHours(0, 0, 0, 0); // midnight UTC
       const end = new Date(endDateStr);
       end.setHours(23, 59, 59, 999); // end of day UTC
-
+      console.log('summaryStart',start)
+      console.log('summaryEnd',end)
       const memberships = await this.membershipDetailsRepository.find({
         where: {
           purchaseDate: {between: [start, end]},
@@ -1299,7 +1300,8 @@ export class DashboardController {
       const safeDay = Math.min(day || 1, lastDayOfMonth);
       end.setDate(safeDay);
       end.setHours(23, 59, 59, 999);
-
+      console.log('start', start);
+      console.log('end', end);
       // Step 1: Get membershipDetails in this window
       const memberships = await this.membershipDetailsRepository.find({
         where: {
