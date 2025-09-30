@@ -483,22 +483,22 @@ const applyFilter = ({ inputData, comparator, filters }) => {
     );
   }
 
-  if (status !== 'all') {
-    inputData = inputData.filter((sale) => (status === '1' ? sale.isActive : !sale.isActive));
-  }
+  // if (status !== 'all') {
+  //   inputData = inputData.filter((sale) => (status === '1' ? sale.isActive : !sale.isActive));
+  // }
 
-  if (role.length) {
-    inputData = inputData.filter(
-      (sale) =>
-        sale.permissions &&
-        sale.permissions.some((saleRole) => {
-          console.log(saleRole);
-          const mappedRole = roleMapping[saleRole];
-          console.log('Mapped Role:', mappedRole); // Check the mapped role
-          return mappedRole && role.includes(mappedRole);
-        })
-    );
-  }
+  // if (role.length) {
+  //   inputData = inputData.filter(
+  //     (sale) =>
+  //       sale.permissions &&
+  //       sale.permissions.some((saleRole) => {
+  //         console.log(saleRole);
+  //         const mappedRole = roleMapping[saleRole];
+  //         console.log('Mapped Role:', mappedRole); // Check the mapped role
+  //         return mappedRole && role.includes(mappedRole);
+  //       })
+  //   );
+  // }
 
   if (filters.startDate && filters.endDate) {
     console.log('here');

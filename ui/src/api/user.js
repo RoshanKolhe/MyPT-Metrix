@@ -6,9 +6,12 @@ import { fetcher, endpoints } from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
 
+// ----------------------------------------------------------------------
 
-export function useGetUsers({ page = 1, limit = 10 } = {}) {
-  const URL = `${endpoints.user.list}?page=${page}&limit=${limit}`;
+export function useGetUsers({ filter = {}, page = 1, limit = 10 } = {}) {
+  // Convert filters into query string
+  const query = new URLSearchParams({ ...filter, page, limit }).toString();
+  const URL = `${endpoints.user.list}?${query}`;
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
