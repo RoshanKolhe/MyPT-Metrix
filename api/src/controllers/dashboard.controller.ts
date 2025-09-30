@@ -85,17 +85,14 @@ export class DashboardController {
     if (startDateStr && endDateStr) {
       const start = new Date(startDateStr);
       start.setHours(0, 0, 0, 0); // midnight UTC
-      console.log('Start', start);
       const end = new Date(endDateStr);
       end.setHours(23, 59, 59, 999); // end of day UTC
-      console.log('End', end);
 
       const memberships = await this.membershipDetailsRepository.find({
         where: {
           purchaseDate: {between: [start, end]},
         },
       });
-      console.log(memberships.length, 'memberships found');
       saleIds = memberships.map(m => m.salesId).filter(Boolean) as number[];
     }
 
@@ -119,7 +116,6 @@ export class DashboardController {
       isDeleted: false,
       isActive: true,
     });
-    console.log('totalTrainers ->', totalTrainers);
 
     // The rest of your calculations remain the same (but use membershipDetails.purchaseDate)
     const totalRevenue = allSales.reduce(
@@ -128,7 +124,6 @@ export class DashboardController {
     );
     const avgRevenuePerTrainer =
       totalTrainers.count > 0 ? totalRevenue / totalTrainers.count : 0;
-    console.log('avgRevenuePerTrainer ->', avgRevenuePerTrainer);
 
     const totalTickets = allSales.length;
     const avgTicket = totalTickets > 0 ? totalRevenue / totalTickets : 0;
@@ -1073,7 +1068,6 @@ export class DashboardController {
     // 2. Fetch conductions
     const conductions = await this.conductionRepository.find(conductionFilter);
     // return conductions;
-    console.log('Conductions fetched:', conductions.length);
 
     // 3. Total conductions = sum of conductions column
     const totalConductions = conductions.reduce(
@@ -1732,6 +1726,7 @@ export class DashboardController {
 
     return top10;
   }
+
   @get('/leaderboard/top-conductions')
   async getTopConductionsLeaderboard(
     @param.query.string('startDate') startDateStr: string,
@@ -1817,7 +1812,7 @@ export class DashboardController {
 
     for (const [trainerId, trainerData] of trainerMap) {
       // Fetch actual sales for this trainer in the period filtered by KPI
-      const sales = await this.salesRepository.find({
+      const conductions = await this.conductionRepository.find({
         where: {
           trainerId,
           createdAt: {between: [startDate, endDate]},
@@ -1825,11 +1820,11 @@ export class DashboardController {
           ...(branchId && {branchId}),
           ...(departmentId && {departmentId}),
         },
-        include: ['membershipDetails'],
+        // include: ['membershipDetails'],
       });
 
-      const actual = sales.reduce(
-        (sum, sale) => sum + (sale.membershipDetails?.discountedPrice || 0),
+      const actual = conductions.reduce(
+        (sum, conductions) => sum + (conductions.conductions || 0),
         0,
       );
 
