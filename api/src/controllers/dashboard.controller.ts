@@ -1287,11 +1287,17 @@ export class DashboardController {
     for (let i = 12; i >= 0; i--) {
       const start = new Date(today);
       start.setMonth(start.getMonth() - i);
-      start.setDate(1); // always start from 1st
+      start.setDate(1);
       start.setHours(0, 0, 0, 0);
 
       const end = new Date(start);
-      end.setDate(day || 1);
+      const lastDayOfMonth = new Date(
+        start.getFullYear(),
+        start.getMonth() + 1,
+        0,
+      ).getDate();
+      const safeDay = Math.min(day || 1, lastDayOfMonth);
+      end.setDate(safeDay);
       end.setHours(23, 59, 59, 999);
 
       // Step 1: Get membershipDetails in this window
