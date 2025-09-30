@@ -21,18 +21,18 @@ import {
   RestBindings,
   Response,
 } from '@loopback/rest';
-import { Conduction, ConductionWithRelations } from '../models';
-import { ConductionRepository, UserRepository } from '../repositories';
-import { TrainerRepository } from '../repositories';
-import { BranchRepository } from '../repositories';
-import { DepartmentRepository } from '../repositories';
-import { KpiRepository } from '../repositories';
-import { authenticate, AuthenticationBindings } from '@loopback/authentication';
-import { PermissionKeys } from '../authorization/permission-keys';
-import { inject } from '@loopback/core';
-import { UserProfile } from '@loopback/security';
-import ExcelJS, { Workbook } from 'exceljs';
-import { Request as ExpressRequest } from 'express';
+import {Conduction, ConductionWithRelations} from '../models';
+import {ConductionRepository, UserRepository} from '../repositories';
+import {TrainerRepository} from '../repositories';
+import {BranchRepository} from '../repositories';
+import {DepartmentRepository} from '../repositories';
+import {KpiRepository} from '../repositories';
+import {authenticate, AuthenticationBindings} from '@loopback/authentication';
+import {PermissionKeys} from '../authorization/permission-keys';
+import {inject} from '@loopback/core';
+import {UserProfile} from '@loopback/security';
+import ExcelJS, {Workbook} from 'exceljs';
+import {Request as ExpressRequest} from 'express';
 import multer from 'multer';
 
 export class ConductionController {
@@ -52,7 +52,7 @@ export class ConductionController {
 
     @repository(KpiRepository)
     public kpiRepository: KpiRepository,
-  ) { }
+  ) {}
 
   @authenticate({
     strategy: 'jwt',
@@ -69,7 +69,7 @@ export class ConductionController {
   @post('/conductions')
   @response(200, {
     description: 'Conduction model instance',
-    content: { 'application/json': { schema: getModelSchemaRef(Conduction) } },
+    content: {'application/json': {schema: getModelSchemaRef(Conduction)}},
   })
   async create(
     @requestBody({
@@ -99,92 +99,106 @@ export class ConductionController {
       ],
     },
   })
-
- @get('/conductions')
-@response(200, {
-  description: 'Paginated & searchable list of Conduction instances (search by trainer name only)',
-  content: {
-    'application/json': {
-      schema: {
-        type: 'object',
-        properties: {
-          data: {
-            type: 'array',
-            items: getModelSchemaRef(Conduction, { includeRelations: true }),
+  @get('/conductions')
+  @response(200, {
+    description:
+      'Paginated & searchable list of Conduction instances (search by trainer name only)',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            data: {
+              type: 'array',
+              items: getModelSchemaRef(Conduction, {includeRelations: true}),
+            },
+            total: {type: 'number'},
+            page: {type: 'number'},
+            rowsPerPage: {type: 'number'},
           },
-          total: { type: 'number' },
-          page: { type: 'number' },
-          rowsPerPage: { type: 'number' },
         },
       },
     },
-  },
-})
-async find(
-  @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
-  @param.query.number('page') page = 1,
-  @param.query.number('rowsPerPage') rowsPerPage = 25,
-  @param.query.string('search') search?: string,
-  @param.query.string('startDate') startDate?: string,
-  @param.query.string('endDate') endDate?: string,
-  @param.query.boolean('export') exportFlag?: boolean, // export flag
-): Promise<{ data: ConductionWithRelations[]; total: number; page: number; rowsPerPage: number }> {
+  })
+  async find(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.query.number('page') page = 1,
+    @param.query.number('rowsPerPage') rowsPerPage = 25,
+    @param.query.string('search') search?: string,
+    @param.query.string('startDate') startDate?: string,
+    @param.query.string('endDate') endDate?: string,
+    @param.query.boolean('export') exportFlag?: boolean, // export flag
+  ): Promise<{
+    data: ConductionWithRelations[];
+    total: number;
+    page: number;
+    rowsPerPage: number;
+  }> {
+    const where: any = {isDeleted: false};
 
-  const where: any = { isDeleted: false };
+    // Apply 'between' date filter if startDate and/or endDate exist
+    if (startDate || endDate) {
+      const start = startDate
+        ? new Date(new Date(startDate).setHours(0, 0, 0, 0))
+        : undefined;
+      const end = endDate
+        ? new Date(new Date(endDate).setHours(23, 59, 59, 999))
+        : undefined;
 
-  // Apply 'between' date filter if startDate and/or endDate exist
-  if (startDate || endDate) {
-    const start = startDate ? new Date(new Date(startDate).setHours(0, 0, 0, 0)) : undefined;
-    const end = endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined;
-
-    if (start && end) {
-      where.conductionDate = { between: [start, end] };
-    } else if (start) {
-      where.conductionDate = { gte: start };
-    } else if (end) {
-      where.conductionDate = { lte: end };
+      if (start && end) {
+        where.conductionDate = {between: [start, end]};
+      } else if (start) {
+        where.conductionDate = {gte: start};
+      } else if (end) {
+        where.conductionDate = {lte: end};
+      }
     }
+
+    // Fetch all matching records with relations
+    const allConductions: ConductionWithRelations[] =
+      await this.conductionRepository.find({
+        where,
+        include: [
+          {relation: 'trainer'},
+          {relation: 'branch'},
+          {relation: 'department'},
+          {relation: 'kpi'},
+          {relation: 'deletedByUser'},
+        ],
+        order: ['conductionDate ASC'],
+      });
+
+    // Filter by trainer name search
+    let filtered = allConductions;
+    if (search && search.trim() !== '') {
+      const lower = search.toLowerCase().trim();
+      filtered = filtered.filter(c => {
+        const first = (c.trainer?.firstName ?? '').toLowerCase().trim();
+        const last = (c.trainer?.lastName ?? '').toLowerCase().trim();
+        const full = `${first} ${last}`.trim();
+        return (
+          first.includes(lower) || last.includes(lower) || full.includes(lower)
+        );
+      });
+    }
+
+    const total = filtered.length;
+
+    // ✅ Return all rows if exportFlag=true, else return paginated rows
+    const dataToReturn = exportFlag
+      ? filtered
+      : filtered.slice(
+          (page - 1) * rowsPerPage,
+          (page - 1) * rowsPerPage + rowsPerPage,
+        );
+
+    return {
+      data: dataToReturn,
+      total,
+      page,
+      rowsPerPage: exportFlag ? total : rowsPerPage,
+    };
   }
-
-  // Fetch all matching records with relations
-  const allConductions: ConductionWithRelations[] = await this.conductionRepository.find({
-    where,
-    include: [
-      { relation: 'trainer' },
-      { relation: 'branch' },
-      { relation: 'department' },
-      { relation: 'kpi' },
-      { relation: 'deletedByUser' },
-    ],
-    order: ['conductionDate ASC'],
-  });
-
-  // Filter by trainer name search
-  let filtered = allConductions;
-  if (search && search.trim() !== '') {
-    const lower = search.toLowerCase().trim();
-    filtered = filtered.filter(c => {
-      const first = (c.trainer?.firstName ?? '').toLowerCase().trim();
-      const last = (c.trainer?.lastName ?? '').toLowerCase().trim();
-      const full = `${first} ${last}`.trim();
-      return first.includes(lower) || last.includes(lower) || full.includes(lower);
-    });
-  }
-
-  const total = filtered.length;
-
-  // ✅ Return all rows if exportFlag=true, else return paginated rows
-  const dataToReturn = exportFlag
-    ? filtered
-    : filtered.slice((page - 1) * rowsPerPage, (page - 1) * rowsPerPage + rowsPerPage);
-
-  return {
-    data: dataToReturn,
-    total,
-    page,
-    rowsPerPage: exportFlag ? total : rowsPerPage,
-  };
-}
 
   @authenticate({
     strategy: 'jwt',
@@ -203,13 +217,13 @@ async find(
     description: 'Conduction model instance',
     content: {
       'application/json': {
-        schema: getModelSchemaRef(Conduction, { includeRelations: true }),
+        schema: getModelSchemaRef(Conduction, {includeRelations: true}),
       },
     },
   })
   async findById(
     @param.path.number('id') id: number,
-    @param.filter(Conduction, { exclude: 'where' })
+    @param.filter(Conduction, {exclude: 'where'})
     filter?: FilterExcludingWhere<Conduction>,
   ): Promise<Conduction> {
     return this.conductionRepository.findById(id, {
@@ -239,7 +253,7 @@ async find(
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(Conduction, { partial: true }),
+          schema: getModelSchemaRef(Conduction, {partial: true}),
         },
       },
     })
@@ -330,7 +344,7 @@ async find(
       description: 'Excel Template Download',
       content: {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
-          schema: { type: 'string', format: 'binary' },
+          schema: {type: 'string', format: 'binary'},
         },
       },
     },
@@ -342,15 +356,15 @@ async find(
           schema: {
             type: 'object',
             properties: {
-              branchId: { type: 'number' },
-              departmentId: { type: 'number' },
+              branchId: {type: 'number'},
+              departmentId: {type: 'number'},
             },
             required: ['branchId', 'departmentId'],
           },
         },
       },
     })
-    requestBody: { branchId: number; departmentId: number },
+    requestBody: {branchId: number; departmentId: number},
 
     @inject(RestBindings.Http.RESPONSE) response: Response,
   ): Promise<Response> {
@@ -390,7 +404,7 @@ async find(
     responses: {
       '200': {
         description: 'Import conduction template from Excel',
-        content: { 'application/json': { schema: { type: 'object' } } },
+        content: {'application/json': {schema: {type: 'object'}}},
       },
     },
   })
@@ -400,7 +414,7 @@ async find(
   ): Promise<object> {
     return new Promise((resolve, reject) => {
       const storage = multer.memoryStorage();
-      const upload = multer({ storage }).single('file');
+      const upload = multer({storage}).single('file');
 
       upload(request, response, async err => {
         if (err || !request.file) {

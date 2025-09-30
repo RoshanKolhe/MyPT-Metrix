@@ -657,8 +657,10 @@ export class DashboardController {
     const whereConditions: any[] = [
       {
         conductionDate: {
-          gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
-          lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+          between: [
+            new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+            new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+          ],
         },
       },
       {isDeleted: false},
@@ -672,6 +674,7 @@ export class DashboardController {
       where: {and: whereConditions},
       include: [{relation: 'kpi'}],
     });
+
     // Initialize date range
     const categories: string[] = [];
     const dateMap: {[date: string]: {[kpiName: string]: number}} = {};
@@ -680,30 +683,35 @@ export class DashboardController {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    for (
-      let d = new Date(start.getTime());
-      d <= end;
-      d.setDate(d.getDate() + 1)
-    ) {
+    const totalDays = Math.floor(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    for (let i = 0; i <= totalDays; i++) {
+      const d = new Date(start.getTime());
+      d.setDate(d.getDate() + i);
+
       const dateStr = d.toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
       });
+
       categories.push(dateStr);
       dateMap[dateStr] = {};
     }
 
     for (const c of conductions) {
-      const dateStr = c.createdAt
-        ? new Date(c.createdAt).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-          })
-        : null;
+      if (!c.conductionDate) continue;
+
+      const dateStr = new Date(c.conductionDate).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+
       const kpiName = c.kpi?.name || 'Unknown KPI';
-      if (!dateStr || !dateMap[dateStr]) continue;
+      if (!dateMap[dateStr]) continue;
 
       kpiSet.add(kpiName);
       if (!dateMap[dateStr][kpiName]) dateMap[dateStr][kpiName] = 0;
@@ -1185,7 +1193,6 @@ export class DashboardController {
       deficitPercentSeries: [],
     };
 
-    // Loop over last 12 months (including current month)
     for (let i = 11; i >= 0; i--) {
       const startDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
       const endDate = new Date(
@@ -1193,15 +1200,15 @@ export class DashboardController {
         today.getMonth() - i + 1,
         0,
       );
+      endDate.setHours(23, 59, 59, 999);
 
-      // Label like "Sep 2025"
       const label = startDate.toLocaleString('en-US', {
         month: 'short',
         year: 'numeric',
       });
 
-      // Fetch targets for this month
-      const targets = await this.targetRepository.find({
+      // Step 1: Sum all branch targets for this month
+      const targetsForMonth = await this.targetRepository.find({
         where: {
           and: [
             {startDate: {lte: endDate.toISOString()}},
@@ -1211,32 +1218,44 @@ export class DashboardController {
         },
       });
 
-      const targetTotal = targets.reduce(
+      const targetTotal = targetsForMonth.reduce(
         (sum, t) => sum + (t.targetValue || 0),
         0,
       );
 
-      // Fetch actual sales for this month
-      const sales = await this.salesRepository.find({
+      // Step 2: Memberships purchased in this month
+      const memberships = await this.membershipDetailsRepository.find({
         where: {
-          createdAt: {between: [startDate, endDate]},
+          purchaseDate: {between: [startDate, endDate]},
         },
-        include: ['membershipDetails'],
       });
 
-      const actualTotal = sales.reduce(
-        (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
-        0,
-      );
+      const saleIds = memberships
+        .map(m => m.salesId)
+        .filter(Boolean) as number[];
 
-      // Calculate deficit percentage
+      let actualTotal = 0;
+      if (saleIds.length > 0) {
+        const sales = await this.salesRepository.find({
+          where: {
+            isDeleted: false,
+            id: {inq: saleIds},
+          },
+          include: ['membershipDetails'],
+        });
+
+        actualTotal = sales.reduce(
+          (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
+          0,
+        );
+      }
+
       const deficitPercent = targetTotal
         ? parseFloat(
             (((actualTotal - targetTotal) / targetTotal) * 100).toFixed(1),
           )
         : 0;
 
-      // Push data into arrays
       result.labels.push(label);
       result.targetSeries.push(targetTotal);
       result.actualSeries.push(actualTotal);
@@ -1292,12 +1311,11 @@ export class DashboardController {
     for (let i = 12; i >= 0; i--) {
       const start = new Date(today);
       start.setMonth(start.getMonth() - i);
-      start.setDate(effectiveDay);
+      start.setDate(1); // always start from 1st
       start.setHours(0, 0, 0, 0);
 
       const end = new Date(start);
-      end.setMonth(end.getMonth() + 1);
-      end.setDate(end.getDate());
+      end.setDate(effectiveDay); // cap to effectiveDay
       end.setHours(23, 59, 59, 999);
 
       // Step 1: Get membershipDetails in this window
@@ -1313,11 +1331,7 @@ export class DashboardController {
 
       if (saleIds.length === 0) {
         labels.push(
-          end.toLocaleDateString('en-US', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-          }),
+          `${start.toLocaleString('default', {month: 'short'})} ${start.getFullYear()}`,
         );
         revenueSeries.push(0);
         continue;
@@ -1343,11 +1357,7 @@ export class DashboardController {
       );
 
       labels.push(
-        end.toLocaleDateString('en-US', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-        }),
+        `${start.toLocaleString('default', {month: 'short'})} ${start.getFullYear()}`,
       );
       revenueSeries.push(totalRevenue);
     }
@@ -1952,7 +1962,6 @@ export class DashboardController {
       const achieved = trainerData.totalTarget
         ? (actual / trainerData.totalTarget) * 100
         : 0;
-        console.log('trainerData',trainerData);
 
       result.push({
         trainerId,

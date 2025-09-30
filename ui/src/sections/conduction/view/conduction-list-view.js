@@ -158,7 +158,7 @@ export default function ConductionListView() {
     // Format rows for XLSX
     const formatted = rows.map(item => ({
       ConductionID: item.id,
-      ConductionDate: item.conductionDate,
+      ConductionDate: fDate(item.conductionDate) || '',
       Trainer: item.trainer
         ? `${item.trainer.firstName} ${item.trainer.lastName || ''}`
         : '',
