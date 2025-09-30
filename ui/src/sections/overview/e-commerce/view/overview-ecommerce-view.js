@@ -45,6 +45,10 @@ export default function OverviewEcommerceView() {
   const isSuperOrAdmin =
     user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
 
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
   const [filters, setFilters] = useState({
     branch: null,
     department: null,
@@ -52,7 +56,7 @@ export default function OverviewEcommerceView() {
     startDate: startOfMonth(new Date()),
     endDate: endOfMonth(new Date()),
     country: null,
-    day: 1,
+    day: yesterday.getDate(),
   });
 
   const [showFilters, setShowFilters] = useState(false);
@@ -64,7 +68,6 @@ export default function OverviewEcommerceView() {
     filters.startDate ? `startDate=${format(new Date(filters.startDate), 'yyyy-MM-dd')}` : '',
     filters.endDate ? `endDate=${format(new Date(filters.endDate), 'yyyy-MM-dd')}` : '',
     filters.country ? `country=${filters.country}` : '',
-    filters.day ? `day=${filters.day}` : '',
   ]
     .filter(Boolean)
     .join('&');
@@ -74,8 +77,9 @@ export default function OverviewEcommerceView() {
     useGetDashboradConductionSummary(queryString);
   const { dashboradChartData = {}, refreshDashboradChartData } =
     useGetDashboradChartData(queryString);
-  const { dashboradMonthlyData = {}, refreshDashboradMonthlyData } =
-    useGetDashboradMonthlyData(queryString);
+  const { dashboradMonthlyData = {}, refreshDashboradMonthlyData } = useGetDashboradMonthlyData(
+    `${queryString}&day=${filters.day}`
+  );
   const { dashboradConductionsData = {}, refreshDashboradConductionsData } =
     useGetDashboradConductionsData(queryString);
   const { dashboradMaleToFemaleRatioData = {}, refreshDashboradMaleToFemaleRatio } =

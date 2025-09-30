@@ -1278,23 +1278,6 @@ export class DashboardController {
           .filter(Boolean)
       : [];
 
-    const now = new Date();
-    const todayDateInIST = now.getDate();
-
-    // Determine effectiveDay
-    const isDayProvided =
-      typeof day === 'number' &&
-      !Number.isNaN(day) &&
-      day >= 1 &&
-      day <= 31 &&
-      !(day === 1); // ignore if day=1, fallback to today-1
-
-    const effectiveDay = isDayProvided
-      ? day!
-      : todayDateInIST > 1
-        ? todayDateInIST - 1
-        : 1;
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -1308,7 +1291,7 @@ export class DashboardController {
       start.setHours(0, 0, 0, 0);
 
       const end = new Date(start);
-      end.setDate(effectiveDay); // cap to effectiveDay
+      end.setDate(day || 1);
       end.setHours(23, 59, 59, 999);
 
       // Step 1: Get membershipDetails in this window
