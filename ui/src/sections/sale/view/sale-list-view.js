@@ -200,10 +200,25 @@ export default function SaleListView() {
     [table]
   );
 
-  const handleExport = useCallback(() => {
+const handleExport = useCallback(async () => {
+  try {
     const fileName = 'Sales Report.xlsx';
 
-    const formatted = dataFiltered.map((item) => ({
+    // ✅ Fetch all filtered sales from backend
+    const allSales = await exportSalesWithFilter({
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      searchTextValue: filters.searchText,
+      extraFilter: { isDeleted: false },
+    });
+
+    if (!allSales || allSales.length === 0) {
+      enqueueSnackbar('No sales to export', { variant: 'info' });
+      return;
+    }
+
+    // ✅ Format data for XLSX
+    const formatted = allSales.map((item) => ({
       MemberName: item.memberName || '',
       Gender: item.gender || '',
       TrainingAt: item.trainingAt || '',
@@ -227,11 +242,20 @@ export default function SaleListView() {
       FreezingDays: item.membershipDetails?.freezingDays || '',
       CreatedAt: item.createdAt || '',
     }));
+
+    // ✅ Create workbook and write Excel file
     const ws = XLSX.utils.json_to_sheet(formatted);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sales');
     XLSX.writeFile(wb, fileName);
-  }, [dataFiltered]);
+
+    enqueueSnackbar('Sales exported successfully!', { variant: 'success' });
+  } catch (error) {
+    console.error('Export failed:', error);
+    enqueueSnackbar('Failed to export sales', { variant: 'error' });
+  }
+}, [filters, enqueueSnackbar]);
+
 
   const handleDeleteRow = useCallback(
     async (id) => {

@@ -119,102 +119,124 @@ export class SalesController {
     },
   })
 
-
-
-  @get('/sales')
-  @response(200, {
-    description: 'Paginated & Searchable Sales list with membership purchase date filter',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'array',
-              items: getModelSchemaRef(Sales, { includeRelations: true }),
-            },
-            total: { type: 'number' },
-            page: { type: 'number' },
-            rowsPerPage: { type: 'number' },
+@get('/sales')
+@response(200, {
+  description: 'Paginated & Searchable Sales list with membership purchase date filter',
+  content: {
+    'application/json': {
+      schema: {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'array',
+            items: getModelSchemaRef(Sales, { includeRelations: true }),
           },
+          total: { type: 'number' },
+          page: { type: 'number' },
+          rowsPerPage: { type: 'number' },
         },
       },
     },
-  })
-  async find(
-    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
-    @param.query.number('page') page: number = 1,
-    @param.query.number('rowsPerPage') rowsPerPage: number = 25,
-    @param.query.string('search') search?: string,
-    @param.query.string('startDate') startDate?: string,
-    @param.query.string('endDate') endDate?: string,
-    @param.filter(Sales) filter?: Filter<Sales>,
-  ): Promise<{ data: Sales[]; total: number; page: number; rowsPerPage: number }> {
+  },
+})
+async find(
+  @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+  @param.query.number('page') page: number = 1,
+  @param.query.number('rowsPerPage') rowsPerPage: number = 25,
+  @param.query.string('search') search?: string,
+  @param.query.string('startDate') startDate?: string,
+  @param.query.string('endDate') endDate?: string,
+  @param.query.boolean('export') exportFlag?: boolean, // export flag
+  @param.filter(Sales) filter?: Filter<Sales>,
+): Promise<{ data: Sales[]; total: number; page: number; rowsPerPage: number }> {
 
-    const user = await this.userRepository.findById(currentUser.id);
-    const isCGM = user.permissions?.includes(PermissionKeys.CGM);
-    const isHOD = user.permissions?.includes(PermissionKeys.HOD);
+  const user = await this.userRepository.findById(currentUser.id);
+  const isCGM = user.permissions?.includes(PermissionKeys.CGM);
+  const isHOD = user.permissions?.includes(PermissionKeys.HOD);
 
-    // Base filter for Sales
-    const salesWhere: any = {
-      ...(filter?.where ?? {}),
-      isDeleted: false,
-    };
+  // Base filter for Sales
+  const salesWhere: any = {
+    ...(filter?.where ?? {}),
+    isDeleted: false,
+  };
 
-    // Search filter
-    if (search) {
-      salesWhere.or = [
-        { memberName: { like: `%${search}%`, options: 'i' } },
-        { contactNumber: { like: `%${search}%`, options: 'i' } },
-        { email: { like: `%${search}%`, options: 'i' } },
-      ];
-    }
-
-    // Branch filter for CGM/HOD
-    if ((isCGM || isHOD) && user.branchId) {
-      salesWhere.branchId = user.branchId;
-    }
-
-    // Membership date filter inside include.scope
-    const membershipScope: any = {};
-    if (startDate && endDate) {
-      membershipScope.where = {};
-      const start = startDate ? new Date(new Date(startDate).setHours(0, 0, 0, 0)) : undefined;
-      const end = endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined;
-
-      if (start && end) {
-        membershipScope.where.purchaseDate = { between: [start, end] };
-      } else if (start) {
-        membershipScope.where.purchaseDate = { gte: start };
-      } else if (end) {
-        membershipScope.where.purchaseDate = { lte: end };
-      }
-    }
-
-    // Fetch all filtered data first (without skip/limit)
-    const allFiltered: Sales[] = await this.salesRepository.find({
-      where: salesWhere,
-      include: [
-        { relation: 'branch', scope: { include: [{ relation: 'departments' }] } },
-        { relation: 'department' },
-        { relation: 'salesTrainer' },
-        { relation: 'trainer' },
-        { relation: 'membershipDetails', scope: membershipScope },
-        { relation: 'kpi' },
-      ],
-    });
-
-    // Filter out Sales without membershipDetails after scope
-    const filteredData = allFiltered.filter(sale => sale.membershipDetails);
-
-    const total = filteredData.length;
-
-    // Apply pagination manually
-    const skip = (page - 1) * rowsPerPage;
-    const paginatedData = filteredData.slice(skip, skip + rowsPerPage);
-
-    return { data: paginatedData, total, page, rowsPerPage };
+  // Search filter
+  if (search) {
+    salesWhere.or = [
+      { memberName: { like: `%${search}%`, options: 'i' } },
+      { contactNumber: { like: `%${search}%`, options: 'i' } },
+      { email: { like: `%${search}%`, options: 'i' } },
+    ];
   }
+
+  // Branch filter for CGM/HOD
+  if ((isCGM || isHOD) && user.branchId) {
+    salesWhere.branchId = user.branchId;
+  }
+
+  // Membership date filter inside include.scope
+  const membershipScope: any = {};
+  if (startDate || endDate) {
+    membershipScope.where = {};
+    const start = startDate ? new Date(new Date(startDate).setHours(0, 0, 0, 0)) : undefined;
+    const end = endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined;
+
+    if (start && end) {
+      membershipScope.where.purchaseDate = { between: [start, end] };
+    } else if (start) {
+      membershipScope.where.purchaseDate = { gte: start };
+    } else if (end) {
+      membershipScope.where.purchaseDate = { lte: end };
+    }
+  }
+
+  // Fetch all filtered data first (without skip/limit)
+  const allFiltered: Sales[] = await this.salesRepository.find({
+    where: salesWhere,
+    include: [
+      { relation: 'branch', scope: { include: [{ relation: 'departments' }] } },
+      { relation: 'department' },
+      { relation: 'salesTrainer' },
+      { relation: 'trainer' },
+      { relation: 'membershipDetails', scope: membershipScope },
+      { relation: 'kpi' },
+    ],
+  });
+
+  // Filter sales based on membershipDetails date range
+  const filteredData = allFiltered.filter(sale => {
+    if (!sale.membershipDetails) return false;
+
+    const mdList = Array.isArray(sale.membershipDetails)
+      ? sale.membershipDetails
+      : [sale.membershipDetails];
+
+    const start = startDate ? new Date(new Date(startDate).setHours(0, 0, 0, 0)).getTime() : null;
+    const end = endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)).getTime() : null;
+
+    return mdList.some(md => {
+      if (!md?.purchaseDate) return false;
+      const purchaseTime = new Date(md.purchaseDate).getTime();
+      if (start && purchaseTime < start) return false;
+      if (end && purchaseTime > end) return false;
+      return true;
+    });
+  });
+
+  const total = filteredData.length;
+
+  // ✅ Handle export: return all filtered rows if exportFlag is true
+  const dataToReturn = exportFlag
+    ? filteredData
+    : filteredData.slice((page - 1) * rowsPerPage, (page - 1) * rowsPerPage + rowsPerPage);
+
+  return {
+    data: dataToReturn,
+    total,
+    page,
+    rowsPerPage: exportFlag ? total : rowsPerPage,
+  };
+}
 
 
 
