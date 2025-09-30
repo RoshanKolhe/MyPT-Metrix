@@ -323,7 +323,6 @@ export default function CountrySalesLeaderboardListView({ filter }) {
             onRowsPerPageChange={table.onChangeRowsPerPage}
             //
             dense={table.dense}
-            onChangeDense={table.onChangeDense}
           />
         </Card>
       </Container>
