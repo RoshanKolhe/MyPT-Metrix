@@ -100,95 +100,91 @@ export class ConductionController {
     },
   })
 
-  @get('/conductions')
-  @response(200, {
-    description: 'Paginated & searchable list of Conduction instances (search by trainer name only)',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'array',
-              items: getModelSchemaRef(Conduction, { includeRelations: true }),
-            },
-            total: { type: 'number' },
-            page: { type: 'number' },
-            rowsPerPage: { type: 'number' },
+ @get('/conductions')
+@response(200, {
+  description: 'Paginated & searchable list of Conduction instances (search by trainer name only)',
+  content: {
+    'application/json': {
+      schema: {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'array',
+            items: getModelSchemaRef(Conduction, { includeRelations: true }),
           },
+          total: { type: 'number' },
+          page: { type: 'number' },
+          rowsPerPage: { type: 'number' },
         },
       },
     },
-  })
-  async find(
-    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
-    @param.query.number('page') page = 1,
-    @param.query.number('rowsPerPage') rowsPerPage = 25,
-    @param.query.string('search') search?: string,
-    @param.query.string('startDate') startDate?: string,
-    @param.query.string('endDate') endDate?: string,
-  ): Promise<{ data: ConductionWithRelations[]; total: number; page: number; rowsPerPage: number }> {
+  },
+})
+async find(
+  @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+  @param.query.number('page') page = 1,
+  @param.query.number('rowsPerPage') rowsPerPage = 25,
+  @param.query.string('search') search?: string,
+  @param.query.string('startDate') startDate?: string,
+  @param.query.string('endDate') endDate?: string,
+  @param.query.boolean('export') exportFlag?: boolean, // export flag
+): Promise<{ data: ConductionWithRelations[]; total: number; page: number; rowsPerPage: number }> {
 
-    const where: any = { isDeleted: false };
+  const where: any = { isDeleted: false };
 
-    // Apply proper 'between' date filter if startDate and/or endDate exist
-    if (startDate && endDate) {
-      const start = startDate
-        ? new Date(new Date(startDate).setHours(0, 0, 0, 0))
-        : undefined;
-      const end = endDate
-        ? new Date(new Date(endDate).setHours(23, 59, 59, 999))
-        : undefined;
+  // Apply 'between' date filter if startDate and/or endDate exist
+  if (startDate || endDate) {
+    const start = startDate ? new Date(new Date(startDate).setHours(0, 0, 0, 0)) : undefined;
+    const end = endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined;
 
-      if (start && end) {
-        // Both start and end exist
-        where.conductionDate = { between: [start, end] };
-      } else if (start) {
-        // Only start date provided
-        where.conductionDate = { gte: start };
-      } else if (end) {
-        // Only end date provided
-        where.conductionDate = { lte: end };
-      }
+    if (start && end) {
+      where.conductionDate = { between: [start, end] };
+    } else if (start) {
+      where.conductionDate = { gte: start };
+    } else if (end) {
+      where.conductionDate = { lte: end };
     }
-
-    // Fetch with relations
-    const allConductions: ConductionWithRelations[] = await this.conductionRepository.find({
-      where,
-      include: [
-        { relation: 'trainer' },
-        { relation: 'branch' },
-        { relation: 'department' },
-        { relation: 'kpi' },
-        { relation: 'deletedByUser' },
-      ],
-      order: ['conductionDate ASC'],
-    });
-
-    let filtered = allConductions;
-
-    if (search && search.trim() !== '') {
-      const lower = search.toLowerCase().trim();
-
-      filtered = filtered.filter(c => {
-        const first = (c.trainer?.firstName ?? '').toLowerCase().trim();
-        const last = (c.trainer?.lastName ?? '').toLowerCase().trim();
-        const full = `${first} ${last}`.trim();
-
-        return (
-          first.includes(lower) ||
-          last.includes(lower) ||
-          full.includes(lower)
-        );
-      });
-    }
-
-    const total = filtered.length;
-    const skip = (page - 1) * rowsPerPage;
-    const data = filtered.slice(skip, skip + rowsPerPage);
-
-    return { data, total, page, rowsPerPage };
   }
+
+  // Fetch all matching records with relations
+  const allConductions: ConductionWithRelations[] = await this.conductionRepository.find({
+    where,
+    include: [
+      { relation: 'trainer' },
+      { relation: 'branch' },
+      { relation: 'department' },
+      { relation: 'kpi' },
+      { relation: 'deletedByUser' },
+    ],
+    order: ['conductionDate ASC'],
+  });
+
+  // Filter by trainer name search
+  let filtered = allConductions;
+  if (search && search.trim() !== '') {
+    const lower = search.toLowerCase().trim();
+    filtered = filtered.filter(c => {
+      const first = (c.trainer?.firstName ?? '').toLowerCase().trim();
+      const last = (c.trainer?.lastName ?? '').toLowerCase().trim();
+      const full = `${first} ${last}`.trim();
+      return first.includes(lower) || last.includes(lower) || full.includes(lower);
+    });
+  }
+
+  const total = filtered.length;
+
+  // ✅ Return all rows if exportFlag=true, else return paginated rows
+  const dataToReturn = exportFlag
+    ? filtered
+    : filtered.slice((page - 1) * rowsPerPage, (page - 1) * rowsPerPage + rowsPerPage);
+
+  return {
+    data: dataToReturn,
+    total,
+    page,
+    rowsPerPage: exportFlag ? total : rowsPerPage,
+  };
+}
 
   @authenticate({
     strategy: 'jwt',
