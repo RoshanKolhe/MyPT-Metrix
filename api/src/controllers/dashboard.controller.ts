@@ -1279,8 +1279,7 @@ export class DashboardController {
       : [];
 
     const now = new Date();
-    const nowInIST = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-    const todayDateInIST = nowInIST.getDate();
+    const todayDateInIST = now.getDate();
 
     // Determine effectiveDay
     const isDayProvided =
