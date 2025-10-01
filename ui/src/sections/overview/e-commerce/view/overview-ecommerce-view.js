@@ -273,7 +273,10 @@ export default function OverviewEcommerceView() {
             </Grid>
 
             <Grid xs={12} md={12} lg={6}>
-              <EcommerceTargetForecasting title="12-Month Sales Performance" />
+              <EcommerceTargetForecasting
+                title="12-Month Sales Performance"
+                branch={filters.branch}
+              />
             </Grid>
 
             <Grid xs={12} md={12} lg={12}>

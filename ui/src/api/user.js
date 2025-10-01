@@ -204,7 +204,12 @@ export function useGetDashboradConductionsData(filter) {
 }
 
 export function useGetDashboradForecastingData(filter) {
-  const URL = endpoints.user.getForecastingData(filter);
+  let URL;
+  if (filter) {
+    URL = endpoints.user.getForecastingDataWithFilter(filter);
+  } else {
+    URL = endpoints.user.getForecastingData;
+  }
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 

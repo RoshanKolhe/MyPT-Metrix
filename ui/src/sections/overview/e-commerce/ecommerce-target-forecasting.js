@@ -27,18 +27,23 @@ import { useGetDashboradChartData, useGetDashboradForecastingData } from 'src/ap
 import Iconify from 'src/components/iconify';
 
 export default function EcommerceTargetForecasting({
+  branch,
   title,
   subheader,
   kpiOptions,
   onFilterChange,
   ...other
 }) {
+  console.log('branch', branch);
   const [interval, setInterval] = useState('monthly');
   const [endDate, setEndDate] = useState(endOfMonth(new Date()));
   const [selectedKpis, setSelectedKpis] = useState([]);
   const scrollRef = useRef(null);
 
-  const kpiQueryString = `interval=${interval}`;
+  let kpiQueryString;
+  if (branch) {
+    kpiQueryString = `branchId=${branch?.id}`;
+  }
   const { dashboradChartData = {} } = useGetDashboradForecastingData(kpiQueryString);
   const {
     targetSeries = [],
@@ -118,6 +123,7 @@ export default function EcommerceTargetForecasting({
 
 EcommerceTargetForecasting.propTypes = {
   title: PropTypes.string,
+  branch: PropTypes.any,
   subheader: PropTypes.string,
   kpiOptions: PropTypes.array,
   onFilterChange: PropTypes.func,

@@ -1121,7 +1121,7 @@ export class DashboardController {
       purchaseStartDate.setHours(0, 0, 0, 0);
       const purchaseEndDate = new Date(endDateStr);
       purchaseEndDate.setHours(23, 59, 59, 999);
-      
+
       const memberships = await this.salesRepository.dataSource.execute(
         `SELECT id FROM MembershipDetails WHERE purchaseDate BETWEEN ? AND ?`,
         [purchaseStartDate, purchaseEndDate],
@@ -1181,7 +1181,9 @@ export class DashboardController {
     strategy: 'jwt',
   })
   @get('/dashboard/forecast/monthly-series')
-  async monthlyForecastSeries(): Promise<any> {
+  async monthlyForecastSeries(
+    @param.query.number('branchId') branchId?: number,
+  ): Promise<any> {
     const today = new Date(new Date().toDateString());
 
     const result: {
@@ -1210,7 +1212,7 @@ export class DashboardController {
         year: 'numeric',
       });
 
-      // Step 1: Sum all branch targets for this month
+      // ---- Step 1: Branch Targets
       const targetsForMonth = await this.targetRepository.find({
         where: {
           and: [
@@ -1218,15 +1220,16 @@ export class DashboardController {
             {endDate: {gte: startDate.toISOString()}},
           ],
           isDeleted: false,
+          ...(branchId ? {branchId} : {}),
         },
       });
-
+      console.log('targetsForMonth', targetsForMonth);
       const targetTotal = targetsForMonth.reduce(
         (sum, t) => sum + (t.targetValue || 0),
         0,
       );
 
-      // Step 2: Memberships purchased in this month
+      // ---- Step 2: Memberships purchased in this month
       const memberships = await this.membershipDetailsRepository.find({
         where: {
           purchaseDate: {between: [startDate, endDate]},
@@ -1243,6 +1246,7 @@ export class DashboardController {
           where: {
             isDeleted: false,
             id: {inq: saleIds},
+            ...(branchId ? {branchId} : {}), // ✅ single branch filter
           },
           include: ['membershipDetails'],
         });
@@ -1253,6 +1257,7 @@ export class DashboardController {
         );
       }
 
+      // ---- Step 3: Deficit %
       const deficitPercent = targetTotal
         ? parseFloat(
             (((actualTotal - targetTotal) / targetTotal) * 100).toFixed(1),
