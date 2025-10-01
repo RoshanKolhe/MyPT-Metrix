@@ -114,6 +114,9 @@ export function useGetSalesWithFilter({
 }) {
   const backendPage = page + 1;
 
+  const startDateISO = startDate ? new Date(startDate).toISOString() : undefined;
+  const endDateISO = endDate ? new Date(endDate).toISOString() : undefined;
+
   const rawFilter = {
     where: { isDeleted: false, ...extraFilter },
     order: orderBy ? [`${orderBy} ${order}`] : undefined,
@@ -134,9 +137,9 @@ export function useGetSalesWithFilter({
   let queryString = `filter=${encodeURIComponent(
     JSON.stringify(rawFilter)
   )}&page=${backendPage}&rowsPerPage=${rowsPerPage}`;
-  if (startDate && endDate) {
-    queryString += `&startDate=${encodeURIComponent(startDate)}`;
-    queryString += `&endDate=${encodeURIComponent(endDate)}`;
+  if (startDateISO && endDateISO) {
+    queryString += `&startDate=${encodeURIComponent(startDateISO)}`;
+    queryString += `&endDate=${encodeURIComponent(endDateISO)}`;
   }
 
   const URL = `${endpoints.sale.list}?${queryString}`;
