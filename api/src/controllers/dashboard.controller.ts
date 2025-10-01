@@ -1104,6 +1104,7 @@ export class DashboardController {
     @param.query.string('kpiIds') kpiIdsStr?: string,
     @param.query.string('startDate') startDateStr?: string,
     @param.query.string('endDate') endDateStr?: string,
+    @param.query.number('branchId') branchId?: number,
   ): Promise<any> {
     // Parse KPI IDs
     const kpiIds = kpiIdsStr
@@ -1140,6 +1141,11 @@ export class DashboardController {
         `s.id IN (SELECT salesId FROM MembershipDetails WHERE id IN (${membershipIds.map(() => '?').join(',')}))`,
       );
       params.push(...membershipIds);
+    }
+
+    if (branchId) {
+      whereClauses.push('s.branchId = ?');
+      params.push(branchId);
     }
 
     const whereSQL = whereClauses.join(' AND ');
@@ -1260,7 +1266,7 @@ export class DashboardController {
     return result;
   }
 
-  @authenticate({ strategy: 'jwt' })
+  @authenticate({strategy: 'jwt'})
   @get('/dashboard/monthly-revenue')
   async getMonthlyRevenue(
     @param.query.string('kpiIds') kpiIdsStr?: string,
@@ -1273,7 +1279,10 @@ export class DashboardController {
   ): Promise<any> {
     // parse kpi ids
     const kpiIds = kpiIdsStr
-      ? kpiIdsStr.split(',').map(id => parseInt(id.trim(), 10)).filter(Boolean)
+      ? kpiIdsStr
+          .split(',')
+          .map(id => parseInt(id.trim(), 10))
+          .filter(Boolean)
       : [];
 
     const labels: string[] = [];
@@ -1293,7 +1302,7 @@ export class DashboardController {
       const lastDayOfMonth = new Date(
         start.getFullYear(),
         start.getMonth() + 1,
-        0
+        0,
       ).getDate();
       const safeDay = Math.min(day || lastDayOfMonth, lastDayOfMonth);
       end.setDate(safeDay);
@@ -1305,14 +1314,16 @@ export class DashboardController {
 
       // Step 1: Get membershipDetails in this window
       const memberships = await this.membershipDetailsRepository.find({
-        where: { purchaseDate: { between: [start, end] } },
+        where: {purchaseDate: {between: [start, end]}},
       });
 
-      const saleIds = memberships.map(m => m.salesId).filter(Boolean) as number[];
+      const saleIds = memberships
+        .map(m => m.salesId)
+        .filter(Boolean) as number[];
 
       if (saleIds.length === 0) {
         labels.push(
-          `${start.toLocaleString('default', { month: 'short' })} ${start.getFullYear()}`
+          `${start.toLocaleString('default', {month: 'short'})} ${start.getFullYear()}`,
         );
         revenueSeries.push(0);
         continue;
@@ -1322,11 +1333,11 @@ export class DashboardController {
       const sales = await this.salesRepository.find({
         where: {
           isDeleted: false,
-          ...(kpiIds.length > 0 && { kpiId: { inq: kpiIds } }),
-          ...(branchId && { branchId }),
-          ...(departmentId && { departmentId }),
-          ...(country && { country }),
-          id: { inq: saleIds },
+          ...(kpiIds.length > 0 && {kpiId: {inq: kpiIds}}),
+          ...(branchId && {branchId}),
+          ...(departmentId && {departmentId}),
+          ...(country && {country}),
+          id: {inq: saleIds},
         },
         include: ['membershipDetails'],
       });
@@ -1334,18 +1345,17 @@ export class DashboardController {
       // Step 3: Revenue calculation
       const totalRevenue = sales.reduce(
         (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
-        0
+        0,
       );
 
       labels.push(
-        `${start.toLocaleString('default', { month: 'short' })} ${start.getFullYear()}`
+        `${start.toLocaleString('default', {month: 'short'})} ${start.getFullYear()}`,
       );
       revenueSeries.push(totalRevenue);
     }
 
-    return { labels, series: [{ name: 'revenue', data: revenueSeries }] };
+    return {labels, series: [{name: 'revenue', data: revenueSeries}]};
   }
-
 
   @get('/leaderboard/trainer-performance/kpi')
   async getTrainerLeaderboardByKpi(
