@@ -8,23 +8,23 @@ import { fetcher, endpoints } from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
 
-export function useGetUsers({ filter = {}, page = 1, limit = 10 } = {}) {
-  // Convert filters into query string
-  const query = new URLSearchParams({ ...filter, page, limit }).toString();
-  const URL = `${endpoints.user.list}?${query}`;
+export function useGetUsers() {
+  const URL = endpoints.user.list;
 
   const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
 
+  const refreshUsers = () => {
+    // Use the `mutate` function to trigger a revalidation
+    mutate();
+  };
+
   return {
-    users: data?.data || [],
-    total: data?.total || 0,
-    page: data?.page ?? page,
-    limit: data?.limit ?? limit,
+    users: data || [],
     usersLoading: isLoading,
     usersError: error,
     usersValidating: isValidating,
-    usersEmpty: !isLoading && !(data?.data?.length > 0),
-    refreshUsers: mutate,
+    usersEmpty: !isLoading && !data?.length,
+    refreshUsers, // Include the refresh function separately
   };
 }
 
