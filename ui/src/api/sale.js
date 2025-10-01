@@ -3,6 +3,7 @@ import useSWR from 'swr';
 import { useCallback, useMemo } from 'react';
 // utils
 import axiosInstance, { fetcher, endpoints } from 'src/utils/axios';
+import { format } from 'date-fns';
 
 // ----------------------------------------------------------------------
 // Valid sort fields for sales (optional, can be used for sorting UI)
@@ -114,9 +115,6 @@ export function useGetSalesWithFilter({
 }) {
   const backendPage = page + 1;
 
-  const startDateISO = startDate ? new Date(startDate).toISOString() : undefined;
-  const endDateISO = endDate ? new Date(endDate).toISOString() : undefined;
-
   const rawFilter = {
     where: { isDeleted: false, ...extraFilter },
     order: orderBy ? [`${orderBy} ${order}`] : undefined,
@@ -137,9 +135,9 @@ export function useGetSalesWithFilter({
   let queryString = `filter=${encodeURIComponent(
     JSON.stringify(rawFilter)
   )}&page=${backendPage}&rowsPerPage=${rowsPerPage}`;
-  if (startDateISO && endDateISO) {
-    queryString += `&startDate=${encodeURIComponent(startDateISO)}`;
-    queryString += `&endDate=${encodeURIComponent(endDateISO)}`;
+  if (startDate && endDate) {
+    queryString += `&startDate=${format(new Date(startDate), 'yyyy-MM-dd')}`;
+    queryString += `&endDate=${format(new Date(endDate), 'yyyy-MM-dd')}`;
   }
 
   const URL = `${endpoints.sale.list}?${queryString}`;
