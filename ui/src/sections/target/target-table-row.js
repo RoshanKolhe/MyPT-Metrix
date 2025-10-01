@@ -36,7 +36,6 @@ export default function TargetTableRow({
   const isSuperOrAdmin =
     user?.permissions?.includes('super_admin') || user?.permissions?.includes('admin');
   const { id, startDate, endDate, status, branch } = row;
-  console.log(row);
   const confirm = useBoolean();
 
   const popover = usePopover();
