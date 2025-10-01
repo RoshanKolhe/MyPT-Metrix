@@ -1117,9 +1117,11 @@ export class DashboardController {
     // Step 1: Filter MembershipDetails by purchaseDate if dates are provided
     let membershipIds: number[] = [];
     if (startDateStr && endDateStr) {
-      const purchaseStartDate = new Date(startDateStr + 'T00:00:00Z');
-      const purchaseEndDate = new Date(endDateStr + 'T23:59:59Z');
-
+      const purchaseStartDate = new Date(startDateStr);
+      purchaseStartDate.setHours(0, 0, 0, 0);
+      const purchaseEndDate = new Date(endDateStr);
+      purchaseEndDate.setHours(23, 59, 59, 999);
+      
       const memberships = await this.salesRepository.dataSource.execute(
         `SELECT id FROM MembershipDetails WHERE purchaseDate BETWEEN ? AND ?`,
         [purchaseStartDate, purchaseEndDate],
