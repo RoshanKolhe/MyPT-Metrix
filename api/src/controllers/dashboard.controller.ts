@@ -87,8 +87,8 @@ export class DashboardController {
       start.setHours(0, 0, 0, 0); // midnight UTC
       const end = new Date(endDateStr);
       end.setHours(23, 59, 59, 999); // end of day UTC
-      console.log('summaryStart',start)
-      console.log('summaryEnd',end)
+      console.log('summaryStart', start);
+      console.log('summaryEnd', end);
       const memberships = await this.membershipDetailsRepository.find({
         where: {
           purchaseDate: {between: [start, end]},
@@ -1279,29 +1279,32 @@ export class DashboardController {
           .filter(Boolean)
       : [];
 
+    // today normalized (UTC midnight)
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const labels: string[] = [];
     const revenueSeries: number[] = [];
 
     for (let i = 12; i >= 0; i--) {
-      const start = new Date(today);
-      start.setMonth(start.getMonth() - i);
-      start.setDate(1);
-      start.setHours(0, 0, 0, 0);
+      const year = today.getUTCFullYear();
+      const monthIndex = today.getUTCMonth() - i;
 
-      const end = new Date(start);
+      // ✅ start of month (UTC)
+      const start = new Date(Date.UTC(year, monthIndex, 1, 0, 0, 0, 0));
+
+      // ✅ end of month/day (UTC)
       const lastDayOfMonth = new Date(
-        start.getFullYear(),
-        start.getMonth() + 1,
-        0,
-      ).getDate();
-      const safeDay = Math.min(day || 1, lastDayOfMonth);
-      end.setDate(safeDay);
-      end.setHours(23, 59, 59, 999);
+        Date.UTC(year, monthIndex + 1, 0),
+      ).getUTCDate();
+      const safeDay = Math.min(day ?? 1, lastDayOfMonth);
+      const end = new Date(
+        Date.UTC(year, monthIndex, safeDay, 23, 59, 59, 999),
+      );
+
       console.log('start', start);
       console.log('end', end);
+
       // Step 1: Get membershipDetails in this window
       const memberships = await this.membershipDetailsRepository.find({
         where: {
@@ -1315,7 +1318,7 @@ export class DashboardController {
 
       if (saleIds.length === 0) {
         labels.push(
-          `${start.toLocaleString('default', {month: 'short'})} ${start.getFullYear()}`,
+          `${start.toLocaleString('default', {month: 'short'})} ${start.getUTCFullYear()}`,
         );
         revenueSeries.push(0);
         continue;
@@ -1341,7 +1344,7 @@ export class DashboardController {
       );
 
       labels.push(
-        `${start.toLocaleString('default', {month: 'short'})} ${start.getFullYear()}`,
+        `${start.toLocaleString('default', {month: 'short'})} ${start.getUTCFullYear()}`,
       );
       revenueSeries.push(totalRevenue);
     }
