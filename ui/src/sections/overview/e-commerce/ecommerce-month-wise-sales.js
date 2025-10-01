@@ -72,6 +72,11 @@ export default function EcommerceMonthlySales({
       },
       tickPlacement: 'on',
     },
+    grid: {
+      padding: {
+        right: 50, // 👈 extra space after the last point
+      },
+    },
     ...options,
   });
 
@@ -107,7 +112,7 @@ export default function EcommerceMonthlySales({
         }
       />
       <Box sx={{ mt: 3, mx: 3, overflowX: 'auto' }}>
-        <Box sx={{ minWidth: Math.max(series[0]?.data.length * 80, 600) }}>
+        <Box sx={{ minWidth: Math.max((series[0]?.data.length + 1) * 80, 600) }}>
           <Chart dir="ltr" type="area" series={series} options={chartOptions} height={450} />
         </Box>
       </Box>

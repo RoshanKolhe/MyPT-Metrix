@@ -27,6 +27,11 @@ export default function EcommerceYearlySales({ title, subheader, dashboradChartD
       },
       tickPlacement: 'on',
     },
+    grid: {
+      padding: {
+        right: 50,
+      },
+    },
     ...options,
   });
 
