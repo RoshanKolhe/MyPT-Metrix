@@ -3,7 +3,7 @@
 // overall-performance.js
 
 import PropTypes from 'prop-types';
-import { Card, CardHeader, Avatar, Box, Typography, Stack, Divider } from '@mui/material';
+import { Card, CardHeader, Avatar, Box, Typography, Stack, Divider, Tooltip } from '@mui/material';
 import { useState } from 'react';
 
 // Helper to color percentages
@@ -110,15 +110,26 @@ export default function OverallPerformance({ title, dashboardPtRanks }) {
                 </Box>
               </Box>
 
-              <Typography
-                variant="subtitle2"
-                mt={1}
-                sx={{
-                  fontSize: { xs: '12px', sm: '14px' },
-                }}
-              >
-                {item.trainer?.firstName} {item.trainer?.lastName}
-              </Typography>
+              <Tooltip title={`${item.trainer?.firstName} ${item.trainer?.lastName}`} arrow>
+                <Typography
+                  variant="subtitle2"
+                  mt={1}
+                  sx={{
+                    fontSize: { xs: '12px', sm: '14px' },
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: 150, // adjust based on your layout
+                    cursor: 'pointer',
+                  }}
+                >
+                  {`${item.trainer?.firstName} ${item.trainer?.lastName}`.slice(0, 10) +
+                    (item.trainer &&
+                    `${item.trainer.firstName} ${item.trainer.lastName}`.length > 10
+                      ? '...'
+                      : '')}
+                </Typography>
+              </Tooltip>
               <Typography
                 variant="subtitle2"
                 fontWeight="bold"

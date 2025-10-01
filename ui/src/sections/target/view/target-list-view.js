@@ -36,7 +36,7 @@ import {
   TablePaginationCustom,
 } from 'src/components/table';
 //
-import { useGetTargetsWithFilter } from 'src/api/target';
+import { useGetTargets } from 'src/api/target';
 import { _roles, TARGET_STATUS_OPTIONS } from 'src/utils/constants';
 import { useAuthContext } from 'src/auth/hooks';
 import TargetTableRow from '../target-table-row';
@@ -84,14 +84,13 @@ export default function TargetListView() {
 
   const [filters, setFilters] = useState(defaultFilters);
 
-  const {
-    filteredTargets: targets,
-    filteredTargetsLoading: targetsLoading,
-    filteredTargetsEmpty: targetsEmpty,
-    refreshFilterTargets: refreshTargets,
-  } = useGetTargetsWithFilter(filters);
+  const { targets, targetsLoading, targetsEmpty, refreshTargets } = useGetTargets();
 
-  const dataFiltered = targets.slice().sort(getComparator(table.order, table.orderBy));
+  const dataFiltered = applyFilter({
+    inputData: tableData,
+    comparator: getComparator(table.order, table.orderBy),
+    filters,
+  });
 
   const dataInPage = dataFiltered.slice(
     table.page * table.rowsPerPage,
@@ -169,11 +168,11 @@ export default function TargetListView() {
     setFilters(defaultFilters);
   }, []);
 
-  // useEffect(() => {
-  //   if (targets) {
-  //     setTableData(targets);
-  //   }
-  // }, [targets]);
+  useEffect(() => {
+    if (targets) {
+      setTableData(targets);
+    }
+  }, [targets]);
 
   return (
     <>
@@ -265,8 +264,7 @@ export default function TargetListView() {
             <TableSelectedAction
               dense={table.dense}
               numSelected={table.selected.length}
-              rowCount={dataFiltered.length}
-
+              rowCount={tableData.length}
               onSelectAllRows={(checked) =>
                 table.onSelectAllRows(
                   checked,
@@ -384,30 +382,52 @@ export default function TargetListView() {
 // ----------------------------------------------------------------------
 
 function applyFilter({ inputData, comparator, filters }) {
-  const { name, status } = filters;
-
+  const { name, status, role } = filters;
   const stabilizedThis = inputData.map((el, index) => [el, index]);
+  const roleMapping = {
+    super_admin: 'Super Admin',
+    admin: 'Admin',
+    cgm: 'CGM',
+    hod: 'Hod',
+    sub_hod: 'Sub Hod',
+  };
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
     if (order !== 0) return order;
     return a[1] - b[1];
   });
+
   inputData = stabilizedThis.map((el) => el[0]);
 
-  // 🔎 Search only in Branch Name
   if (name) {
     inputData = inputData.filter((target) =>
-      target.branch?.toLowerCase().includes(name.toLowerCase())
+      Object.values(target).some((value) =>
+        String(value).toLowerCase().includes(name.toLowerCase())
+      )
     );
   }
 
-  // 🏷️ Status filter
   if (status !== 'all') {
+    console.log(typeof status);
     inputData = inputData.filter((target) => {
+      console.log(target);
       if (status === '1') return target.status === 1;
       if (status === '2') return target.status === 2;
       return target.status === 0;
     });
+  }
+
+  if (role.length) {
+    inputData = inputData.filter(
+      (target) =>
+        target.permissions &&
+        target.permissions.some((targetRole) => {
+          console.log(targetRole);
+          const mappedRole = roleMapping[targetRole];
+          console.log('Mapped Role:', mappedRole); // Check the mapped role
+          return mappedRole && role.includes(mappedRole);
+        })
+    );
   }
 
   return inputData;
