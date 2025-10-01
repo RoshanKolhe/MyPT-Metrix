@@ -22,19 +22,19 @@ import {
   RestBindings,
   Response,
 } from '@loopback/rest';
-import { MembershipDetails, Sales } from '../models';
+import {MembershipDetails, Sales} from '../models';
 import {
   SalesRepository,
   TrainerRepository,
   UserRepository,
 } from '../repositories';
-import { authenticate, AuthenticationBindings } from '@loopback/authentication';
-import { PermissionKeys } from '../authorization/permission-keys';
-import { inject } from '@loopback/core';
-import { UserProfile } from '@loopback/security';
-import { MyptMetrixDataSource } from '../datasources';
-import ExcelJS, { Workbook } from 'exceljs';
-import { Request as ExpressRequest } from 'express';
+import {authenticate, AuthenticationBindings} from '@loopback/authentication';
+import {PermissionKeys} from '../authorization/permission-keys';
+import {inject} from '@loopback/core';
+import {UserProfile} from '@loopback/security';
+import {MyptMetrixDataSource} from '../datasources';
+import ExcelJS, {Workbook} from 'exceljs';
+import {Request as ExpressRequest} from 'express';
 import multer from 'multer';
 
 export class SalesController {
@@ -47,7 +47,7 @@ export class SalesController {
     public userRepository: UserRepository,
     @repository(TrainerRepository)
     public trainerRepository: TrainerRepository,
-  ) { }
+  ) {}
 
   @authenticate({
     strategy: 'jwt',
@@ -64,7 +64,7 @@ export class SalesController {
   @post('/sales')
   @response(200, {
     description: 'Sales model instance',
-    content: { 'application/json': { schema: getModelSchemaRef(Sales) } },
+    content: {'application/json': {schema: getModelSchemaRef(Sales)}},
   })
   async create(
     @requestBody({
@@ -78,13 +78,13 @@ export class SalesController {
         },
       },
     })
-    salesData: Omit<Sales, 'id'> & { membershipDetails?: MembershipDetails },
+    salesData: Omit<Sales, 'id'> & {membershipDetails?: MembershipDetails},
   ): Promise<Sales> {
     const repo = new DefaultTransactionalRepository(Sales, this.dataSource);
     const tx = await repo.beginTransaction(IsolationLevel.READ_COMMITTED);
 
     try {
-      const { membershipDetails, ...salesFields } = salesData;
+      const {membershipDetails, ...salesFields} = salesData;
 
       const createdSale = await this.salesRepository.create(salesFields, {
         transaction: tx,
@@ -93,7 +93,7 @@ export class SalesController {
       if (membershipDetails) {
         await this.salesRepository
           .membershipDetails(createdSale.id)
-          .create(membershipDetails, { transaction: tx });
+          .create(membershipDetails, {transaction: tx});
       }
 
       await tx.commit();
@@ -118,127 +118,140 @@ export class SalesController {
       ],
     },
   })
-
-@get('/sales')
-@response(200, {
-  description: 'Paginated & Searchable Sales list with membership purchase date filter',
-  content: {
-    'application/json': {
-      schema: {
-        type: 'object',
-        properties: {
-          data: {
-            type: 'array',
-            items: getModelSchemaRef(Sales, { includeRelations: true }),
+  @get('/sales')
+  @response(200, {
+    description:
+      'Paginated & Searchable Sales list with membership purchase date filter',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            data: {
+              type: 'array',
+              items: getModelSchemaRef(Sales, {includeRelations: true}),
+            },
+            total: {type: 'number'},
+            page: {type: 'number'},
+            rowsPerPage: {type: 'number'},
           },
-          total: { type: 'number' },
-          page: { type: 'number' },
-          rowsPerPage: { type: 'number' },
         },
       },
     },
-  },
-})
-async find(
-  @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
-  @param.query.number('page') page: number = 1,
-  @param.query.number('rowsPerPage') rowsPerPage: number = 25,
-  @param.query.string('search') search?: string,
-  @param.query.string('startDate') startDate?: string,
-  @param.query.string('endDate') endDate?: string,
-  @param.query.boolean('export') exportFlag?: boolean, // export flag
-  @param.filter(Sales) filter?: Filter<Sales>,
-): Promise<{ data: Sales[]; total: number; page: number; rowsPerPage: number }> {
+  })
+  async find(
+    @inject(AuthenticationBindings.CURRENT_USER) currentUser: UserProfile,
+    @param.query.number('page') page: number = 1,
+    @param.query.number('rowsPerPage') rowsPerPage: number = 25,
+    @param.query.string('search') search?: string,
+    @param.query.string('startDate') startDate?: string,
+    @param.query.string('endDate') endDate?: string,
+    @param.query.boolean('export') exportFlag?: boolean, // export flag
+    @param.filter(Sales) filter?: Filter<Sales>,
+  ): Promise<{
+    data: Sales[];
+    total: number;
+    page: number;
+    rowsPerPage: number;
+  }> {
+    const user = await this.userRepository.findById(currentUser.id);
+    const isCGM = user.permissions?.includes(PermissionKeys.CGM);
+    const isHOD = user.permissions?.includes(PermissionKeys.HOD);
 
-  const user = await this.userRepository.findById(currentUser.id);
-  const isCGM = user.permissions?.includes(PermissionKeys.CGM);
-  const isHOD = user.permissions?.includes(PermissionKeys.HOD);
+    // Base filter for Sales
+    const salesWhere: any = {
+      ...(filter?.where ?? {}),
+      isDeleted: false,
+    };
 
-  // Base filter for Sales
-  const salesWhere: any = {
-    ...(filter?.where ?? {}),
-    isDeleted: false,
-  };
-
-  // Search filter
-  if (search) {
-    salesWhere.or = [
-      { memberName: { like: `%${search}%`, options: 'i' } },
-      { contactNumber: { like: `%${search}%`, options: 'i' } },
-      { email: { like: `%${search}%`, options: 'i' } },
-    ];
-  }
-
-  // Branch filter for CGM/HOD
-  if ((isCGM || isHOD) && user.branchId) {
-    salesWhere.branchId = user.branchId;
-  }
-
-  // Membership date filter inside include.scope
-  const membershipScope: any = {};
-  if (startDate || endDate) {
-    membershipScope.where = {};
-    const start = startDate ? new Date(new Date(startDate).setHours(0, 0, 0, 0)) : undefined;
-    const end = endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined;
-
-    if (start && end) {
-      membershipScope.where.purchaseDate = { between: [start, end] };
-    } else if (start) {
-      membershipScope.where.purchaseDate = { gte: start };
-    } else if (end) {
-      membershipScope.where.purchaseDate = { lte: end };
+    // Search filter
+    if (search) {
+      salesWhere.or = [
+        {memberName: {like: `%${search}%`, options: 'i'}},
+        {contactNumber: {like: `%${search}%`, options: 'i'}},
+        {email: {like: `%${search}%`, options: 'i'}},
+      ];
     }
-  }
 
-  // Fetch all filtered data first (without skip/limit)
-  const allFiltered: Sales[] = await this.salesRepository.find({
-    where: salesWhere,
-    include: [
-      { relation: 'branch', scope: { include: [{ relation: 'departments' }] } },
-      { relation: 'department' },
-      { relation: 'salesTrainer' },
-      { relation: 'trainer' },
-      { relation: 'membershipDetails', scope: membershipScope },
-      { relation: 'kpi' },
-    ],
-  });
+    // Branch filter for CGM/HOD
+    if ((isCGM || isHOD) && user.branchId) {
+      salesWhere.branchId = user.branchId;
+    }
 
-  // Filter sales based on membershipDetails date range
-  const filteredData = allFiltered.filter(sale => {
-    if (!sale.membershipDetails) return false;
+    // Membership date filter inside include.scope
+    const membershipScope: any = {};
+    if (startDate && endDate) {
+      membershipScope.where = {};
+      const start: any = startDate ? new Date(startDate) : undefined;
+      start.setHours(0, 0, 0, 0); // midnight UTC
+      const end: any = endDate ? new Date(endDate) : undefined;
+      end.setHours(23, 59, 59, 999); // end of day UTC
+      console.log('saleStart', start);
+      console.log('saleEnd', end);
 
-    const mdList = Array.isArray(sale.membershipDetails)
-      ? sale.membershipDetails
-      : [sale.membershipDetails];
+      if (start && end) {
+        membershipScope.where.purchaseDate = {between: [start, end]};
+      } else if (start) {
+        membershipScope.where.purchaseDate = {gte: start};
+      } else if (end) {
+        membershipScope.where.purchaseDate = {lte: end};
+      }
+    }
 
-    const start = startDate ? new Date(new Date(startDate).setHours(0, 0, 0, 0)).getTime() : null;
-    const end = endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)).getTime() : null;
-
-    return mdList.some(md => {
-      if (!md?.purchaseDate) return false;
-      const purchaseTime = new Date(md.purchaseDate).getTime();
-      if (start && purchaseTime < start) return false;
-      if (end && purchaseTime > end) return false;
-      return true;
+    // Fetch all filtered data first (without skip/limit)
+    const allFiltered: Sales[] = await this.salesRepository.find({
+      where: salesWhere,
+      include: [
+        {relation: 'branch', scope: {include: [{relation: 'departments'}]}},
+        {relation: 'department'},
+        {relation: 'salesTrainer'},
+        {relation: 'trainer'},
+        {relation: 'membershipDetails', scope: membershipScope},
+        {relation: 'kpi'},
+      ],
     });
-  });
 
-  const total = filteredData.length;
+    // Filter sales based on membershipDetails date range
+    const filteredData = allFiltered.filter(sale => {
+      if (!sale.membershipDetails) return false;
 
-  // ✅ Handle export: return all filtered rows if exportFlag is true
-  const dataToReturn = exportFlag
-    ? filteredData
-    : filteredData.slice((page - 1) * rowsPerPage, (page - 1) * rowsPerPage + rowsPerPage);
+      const mdList = Array.isArray(sale.membershipDetails)
+        ? sale.membershipDetails
+        : [sale.membershipDetails];
 
-  return {
-    data: dataToReturn,
-    total,
-    page,
-    rowsPerPage: exportFlag ? total : rowsPerPage,
-  };
-}
+      const start = startDate
+        ? new Date(new Date(startDate).setHours(0, 0, 0, 0)).getTime()
+        : null;
+      const end = endDate
+        ? new Date(new Date(endDate).setHours(23, 59, 59, 999)).getTime()
+        : null;
 
+      return mdList.some(md => {
+        if (!md?.purchaseDate) return false;
+        const purchaseTime = new Date(md.purchaseDate).getTime();
+        if (start && purchaseTime < start) return false;
+        if (end && purchaseTime > end) return false;
+        return true;
+      });
+    });
 
+    const total = filteredData.length;
+
+    // ✅ Handle export: return all filtered rows if exportFlag is true
+    const dataToReturn = exportFlag
+      ? filteredData
+      : filteredData.slice(
+          (page - 1) * rowsPerPage,
+          (page - 1) * rowsPerPage + rowsPerPage,
+        );
+
+    return {
+      data: dataToReturn,
+      total,
+      page,
+      rowsPerPage: exportFlag ? total : rowsPerPage,
+    };
+  }
 
   @authenticate({
     strategy: 'jwt',
@@ -257,13 +270,13 @@ async find(
     description: 'Sales model instance',
     content: {
       'application/json': {
-        schema: getModelSchemaRef(Sales, { includeRelations: true }),
+        schema: getModelSchemaRef(Sales, {includeRelations: true}),
       },
     },
   })
   async findById(
     @param.path.number('id') id: number,
-    @param.filter(Sales, { exclude: 'where' })
+    @param.filter(Sales, {exclude: 'where'})
     filter?: FilterExcludingWhere<Sales>,
   ): Promise<Sales> {
     return this.salesRepository.findById(id, {
@@ -276,7 +289,7 @@ async find(
               {
                 relation: 'departments',
                 scope: {
-                  include: [{ relation: 'kpis' }],
+                  include: [{relation: 'kpis'}],
                 },
               },
             ],
@@ -285,13 +298,13 @@ async find(
         {
           relation: 'department',
           scope: {
-            include: [{ relation: 'kpis' }],
+            include: [{relation: 'kpis'}],
           },
         },
-        { relation: 'salesTrainer' },
-        { relation: 'trainer' },
-        { relation: 'membershipDetails' },
-        { relation: 'kpi' },
+        {relation: 'salesTrainer'},
+        {relation: 'trainer'},
+        {relation: 'membershipDetails'},
+        {relation: 'kpi'},
       ],
     });
   }
@@ -324,10 +337,10 @@ async find(
         },
       },
     })
-    sales: Partial<Sales> & { membershipDetails?: Partial<MembershipDetails> },
+    sales: Partial<Sales> & {membershipDetails?: Partial<MembershipDetails>},
   ): Promise<void> {
     // 1. Destructure membershipDetails from sales
-    const { membershipDetails, ...salesFields } = sales;
+    const {membershipDetails, ...salesFields} = sales;
 
     await this.salesRepository.updateById(id, salesFields);
 
@@ -387,7 +400,7 @@ async find(
       description: 'Excel Template Download',
       content: {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
-          schema: { type: 'string', format: 'binary' },
+          schema: {type: 'string', format: 'binary'},
         },
       },
     },
@@ -399,15 +412,15 @@ async find(
           schema: {
             type: 'object',
             properties: {
-              branchId: { type: 'number' },
-              departmentId: { type: 'number' },
+              branchId: {type: 'number'},
+              departmentId: {type: 'number'},
             },
             required: ['branchId', 'departmentId'],
           },
         },
       },
     })
-    requestBody: { branchId: number; departmentId: number },
+    requestBody: {branchId: number; departmentId: number},
 
     @inject(RestBindings.Http.RESPONSE) response: Response,
   ): Promise<Response> {
@@ -474,7 +487,7 @@ async find(
     responses: {
       '200': {
         description: 'Import sales template from Excel',
-        content: { 'application/json': { schema: { type: 'object' } } },
+        content: {'application/json': {schema: {type: 'object'}}},
       },
     },
   })
@@ -484,7 +497,7 @@ async find(
   ): Promise<object> {
     return new Promise((resolve, reject) => {
       const storage = multer.memoryStorage();
-      const upload = multer({ storage }).single('file');
+      const upload = multer({storage}).single('file');
 
       upload(request, response, async err => {
         if (err || !request.file) {
@@ -516,7 +529,7 @@ async find(
           });
 
           // Map definitions
-          const excelToModelMap: { [key: string]: string } = {
+          const excelToModelMap: {[key: string]: string} = {
             srNo: 'srNo',
             memberName: 'memberName',
             memberEmail: 'email',
@@ -544,7 +557,7 @@ async find(
             kpiId: 'kpiId',
           };
 
-          const paymentExcelToModelMap: { [key: string]: string } = {
+          const paymentExcelToModelMap: {[key: string]: string} = {
             srNoRefFromSales: 'srNoRefFromSales',
             paymentAmount: 'amount',
             paymentReceiptNumber: 'paymentReceiptNumber',
@@ -567,14 +580,14 @@ async find(
           ];
 
           const membershipTypeOptions = [
-            { label: 'Academy', value: 'academy' },
-            { label: 'Gym Membership', value: 'gym' },
-            { label: 'PT Membership', value: 'pt' },
-            { label: 'Home Membership', value: 'home' },
-            { label: 'Reformer Pilates', value: 'reformer' },
-            { label: 'EMS Only', value: 'ems' },
-            { label: 'Group Ex Only', value: 'group' },
-            { label: 'Others', value: 'others' },
+            {label: 'Academy', value: 'academy'},
+            {label: 'Gym Membership', value: 'gym'},
+            {label: 'PT Membership', value: 'pt'},
+            {label: 'Home Membership', value: 'home'},
+            {label: 'Reformer Pilates', value: 'reformer'},
+            {label: 'EMS Only', value: 'ems'},
+            {label: 'Group Ex Only', value: 'group'},
+            {label: 'Others', value: 'others'},
           ];
 
           const salesHeaders = salesSheet.getRow(1).values.slice(1);
@@ -656,7 +669,7 @@ async find(
                 p => String(p.srNoRefFromSales) === String(sale.srNo),
               );
 
-              const finalPayload = { ...sale, paymentTypes: relatedPayments };
+              const finalPayload = {...sale, paymentTypes: relatedPayments};
 
               if (!this.validateSale(finalPayload)) {
                 skippedCount++;
@@ -664,7 +677,7 @@ async find(
                 continue;
               }
 
-              const { srNo, membershipDetails, ...salesFields } = finalPayload;
+              const {srNo, membershipDetails, ...salesFields} = finalPayload;
 
               const salesTrainer = await this.trainerRepository.findById(
                 salesFields.salesTrainerId,
@@ -680,13 +693,13 @@ async find(
 
               const createdSale = await this.salesRepository.create(
                 salesFields,
-                { transaction: tx },
+                {transaction: tx},
               );
 
               if (membershipDetails) {
                 await this.salesRepository
                   .membershipDetails(createdSale.id)
-                  .create(membershipDetails, { transaction: tx });
+                  .create(membershipDetails, {transaction: tx});
               }
 
               await tx.commit();
@@ -702,7 +715,7 @@ async find(
             }
           }
 
-          return resolve({ importedCount, skippedCount });
+          return resolve({importedCount, skippedCount});
         } catch (error) {
           return reject(error);
         }
