@@ -1260,79 +1260,73 @@ export class DashboardController {
     return result;
   }
 
-  @authenticate({
-    strategy: 'jwt',
-  })
+  @authenticate({ strategy: 'jwt' })
   @get('/dashboard/monthly-revenue')
   async getMonthlyRevenue(
     @param.query.string('kpiIds') kpiIdsStr?: string,
     @param.query.number('branchId') branchId?: number,
     @param.query.number('departmentId') departmentId?: number,
     @param.query.string('country') country?: string,
+    @param.query.string('startDate') startDateStr?: string,
+    @param.query.string('endDate') endDateStr?: string,
     @param.query.number('day') day?: number,
   ): Promise<any> {
     // parse kpi ids
     const kpiIds = kpiIdsStr
-      ? kpiIdsStr
-          .split(',')
-          .map(id => parseInt(id.trim(), 10))
-          .filter(Boolean)
+      ? kpiIdsStr.split(',').map(id => parseInt(id.trim(), 10)).filter(Boolean)
       : [];
-
-    // today normalized (UTC midnight)
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
 
     const labels: string[] = [];
     const revenueSeries: number[] = [];
 
     for (let i = 12; i >= 0; i--) {
-      const year = today.getUTCFullYear();
-      const monthIndex = today.getUTCMonth() - i;
+      // Base month from today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-      // ✅ start of month (UTC)
-      const start = new Date(Date.UTC(year, monthIndex, 1, 0, 0, 0, 0));
+      const start = new Date(today);
+      start.setMonth(start.getMonth() - i);
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
 
-      // ✅ end of month/day (UTC)
+      const end = new Date(start);
       const lastDayOfMonth = new Date(
-        Date.UTC(year, monthIndex + 1, 0),
-      ).getUTCDate();
-      const safeDay = Math.min(day ?? 1, lastDayOfMonth);
-      const end = new Date(
-        Date.UTC(year, monthIndex, safeDay, 23, 59, 59, 999),
-      );
+        start.getFullYear(),
+        start.getMonth() + 1,
+        0
+      ).getDate();
+      const safeDay = Math.min(day || lastDayOfMonth, lastDayOfMonth);
+      end.setDate(safeDay);
+      end.setHours(23, 59, 59, 999);
 
-      console.log('start', start);
-      console.log('end', end);
+      // ✅ Log to confirm IST handling
+      console.log('IST Start:', start.toString());
+      console.log('IST End  :', end.toString());
 
       // Step 1: Get membershipDetails in this window
       const memberships = await this.membershipDetailsRepository.find({
-        where: {
-          purchaseDate: {between: [start, end]},
-        },
+        where: { purchaseDate: { between: [start, end] } },
       });
 
-      const saleIds = memberships
-        .map(m => m.salesId)
-        .filter(Boolean) as number[];
+      const saleIds = memberships.map(m => m.salesId).filter(Boolean) as number[];
 
       if (saleIds.length === 0) {
         labels.push(
-          `${start.toLocaleString('default', {month: 'short'})} ${start.getUTCFullYear()}`,
+          `${start.toLocaleString('default', { month: 'short' })} ${start.getFullYear()}`
         );
         revenueSeries.push(0);
         continue;
       }
 
-      // Step 2: Get sales linked to those membershipDetails
+      // Step 2: Get sales
       const sales = await this.salesRepository.find({
         where: {
           isDeleted: false,
-          ...(kpiIds.length > 0 && {kpiId: {inq: kpiIds}}),
-          ...(branchId && {branchId}),
-          ...(departmentId && {departmentId}),
-          ...(country && {country}),
-          id: {inq: saleIds},
+          ...(kpiIds.length > 0 && { kpiId: { inq: kpiIds } }),
+          ...(branchId && { branchId }),
+          ...(departmentId && { departmentId }),
+          ...(country && { country }),
+          id: { inq: saleIds },
         },
         include: ['membershipDetails'],
       });
@@ -1340,20 +1334,18 @@ export class DashboardController {
       // Step 3: Revenue calculation
       const totalRevenue = sales.reduce(
         (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
-        0,
+        0
       );
 
       labels.push(
-        `${start.toLocaleString('default', {month: 'short'})} ${start.getUTCFullYear()}`,
+        `${start.toLocaleString('default', { month: 'short' })} ${start.getFullYear()}`
       );
       revenueSeries.push(totalRevenue);
     }
 
-    return {
-      labels,
-      series: [{name: 'revenue', data: revenueSeries}],
-    };
+    return { labels, series: [{ name: 'revenue', data: revenueSeries }] };
   }
+
 
   @get('/leaderboard/trainer-performance/kpi')
   async getTrainerLeaderboardByKpi(
