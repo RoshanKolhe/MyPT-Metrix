@@ -2,7 +2,7 @@
 import useSWR from 'swr';
 import { useCallback, useMemo } from 'react';
 // utils
-import axiosInstance,{ fetcher, endpoints } from 'src/utils/axios';
+import axiosInstance, { fetcher, endpoints } from 'src/utils/axios';
 
 // ----------------------------------------------------------------------
 // Valid sort fields for sales (optional, can be used for sorting UI)
@@ -31,7 +31,7 @@ export const saleSortFields = [
 // ----------------------------------------------------------------------
 // Hook: Get paginated sales without advanced filters
 export function useGetSales({
-  page = 0,          // frontend 0-based
+  page = 0, // frontend 0-based
   rowsPerPage = 25,
   order = 'ASC',
   orderBy = 'id',
@@ -57,7 +57,9 @@ export function useGetSales({
     ];
   }
 
-  const queryString = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}&page=${backendPage}&rowsPerPage=${rowsPerPage}`;
+  const queryString = `filter=${encodeURIComponent(
+    JSON.stringify(rawFilter)
+  )}&page=${backendPage}&rowsPerPage=${rowsPerPage}`;
 
   const URL = `${endpoints.sale.list}?${queryString}`;
   const { data, error, isLoading, mutate } = useSWR(URL, fetcher);
@@ -112,9 +114,6 @@ export function useGetSalesWithFilter({
 }) {
   const backendPage = page + 1;
 
-  const startDateISO = startDate ? new Date(startDate).toISOString() : undefined;
-  const endDateISO = endDate ? new Date(endDate).toISOString() : undefined;
-
   const rawFilter = {
     where: { isDeleted: false, ...extraFilter },
     order: orderBy ? [`${orderBy} ${order}`] : undefined,
@@ -132,9 +131,13 @@ export function useGetSalesWithFilter({
   }
 
   // Build query string with date filters
-  let queryString = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}&page=${backendPage}&rowsPerPage=${rowsPerPage}`;
-  if (startDateISO) queryString += `&startDate=${encodeURIComponent(startDateISO)}`;
-  if (endDateISO) queryString += `&endDate=${encodeURIComponent(endDateISO)}`;
+  let queryString = `filter=${encodeURIComponent(
+    JSON.stringify(rawFilter)
+  )}&page=${backendPage}&rowsPerPage=${rowsPerPage}`;
+  if (startDate && endDate) {
+    queryString += `&startDate=${encodeURIComponent(startDate)}`;
+    queryString += `&endDate=${encodeURIComponent(endDate)}`;
+  }
 
   const URL = `${endpoints.sale.list}?${queryString}`;
   const { data, error, isLoading, mutate } = useSWR(URL, fetcher);
@@ -158,7 +161,12 @@ export function useGetSalesWithFilter({
   }, [data, isLoading, error, refreshFilteredSales]);
 }
 
-export const exportSalesWithFilter = async ({ startDate, endDate, searchTextValue = '', extraFilter = {} }) => {
+export const exportSalesWithFilter = async ({
+  startDate,
+  endDate,
+  searchTextValue = '',
+  extraFilter = {},
+}) => {
   const startDateISO = startDate ? new Date(startDate).toISOString() : undefined;
   const endDateISO = endDate ? new Date(endDate).toISOString() : undefined;
 
