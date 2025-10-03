@@ -17,14 +17,16 @@ import {
   requestBody,
   response,
 } from '@loopback/rest';
-import {Sales} from '../models';
+import {MembershipDetails, Sales} from '../models';
 import {authenticate} from '@loopback/authentication';
 import {
   addDays,
+  endOfDay,
   endOfMonth,
   endOfWeek,
   endOfYear,
   format,
+  startOfDay,
   startOfMonth,
   startOfWeek,
   startOfYear,
@@ -1504,105 +1506,6 @@ export class DashboardController {
     return result;
   }
 
-  // @get('/leaderboard/top-sales')
-  // async getTopSalesLeaderboard(
-  //   @param.query.string('startDate') startDateStr: string,
-  //   @param.query.string('endDate') endDateStr: string,
-  //   @param.query.number('branchId') branchId?: number,
-  //   @param.query.number('departmentId') departmentId?: number,
-  // ): Promise<any[]> {
-  //   const startDate = new Date(startDateStr);
-  //   const endDate = new Date(endDateStr);
-
-  //   // Fetch targets
-  //   const targets = await this.targetRepository.find({
-  //     where: {
-  //       branchId,
-  //       startDate: {lte: endDate.toISOString().split('T')[0]},
-  //       endDate: {gte: startDate.toISOString().split('T')[0]},
-  //       isDeleted: false,
-  //     },
-  //     include: [
-  //       {
-  //         relation: 'departmentTargets',
-  //         scope: {
-  //           where: {
-  //             ...(departmentId ? {departmentId} : {}),
-  //             isDeleted: false,
-  //           },
-  //           include: [
-  //             {
-  //               relation: 'trainerTargets',
-  //               scope: {
-  //                 where: {isDeleted: false},
-  //                 include: ['trainer', 'kpi'],
-  //               },
-  //             },
-  //           ],
-  //         },
-  //       },
-  //     ],
-  //   });
-
-  //   // Flatten TrainerTargets
-  //   const trainerTargets = targets.flatMap((t: any) =>
-  //     (t.departmentTargets ?? []).flatMap((dt: any) =>
-  //       (dt.trainerTargets ?? []).map((tt: any) => ({
-  //         trainerId: tt.trainerId,
-  //         trainer: tt.trainer,
-  //         kpiId: tt.kpiId,
-  //         targetValue: tt.targetValue,
-  //         departmentId: dt.departmentId,
-  //         branchId: t.branchId,
-  //       })),
-  //     ),
-  //   );
-
-  //   const result: any[] = [];
-
-  //   for (const tt of trainerTargets) {
-  //     console.log('trainerTargets', trainerTargets);
-  //     // Actual sales for current period
-  //     const sales = await this.salesRepository.find({
-  //       where: {
-  //         trainerId: tt.trainerId,
-  //         createdAt: {between: [startDate, endDate]},
-  //       },
-  //       include: ['membershipDetails'],
-  //     });
-  //     console.log('sales', sales);
-
-  //     const actual = sales.reduce(
-  //       (sum, sale) => sum + (sale.membershipDetails?.discountedPrice || 0),
-  //       0,
-  //     );
-  //     console.log('actual', actual);
-
-  //     const achieved = tt.targetValue ? (actual / tt.targetValue) * 100 : 0;
-
-  //     // Only push those who are near target (>= 0%) or have crossed it
-  //     if (achieved >= 0) {
-  //       result.push({
-  //         trainerId: tt.trainerId,
-  //         name: `${tt.trainer?.firstName} ${tt.trainer?.lastName}` || 'Unknown',
-  //         target: tt.targetValue,
-  //         actual: Math.round(actual),
-  //         achieved: +achieved.toFixed(1),
-  //       });
-  //     }
-  //   }
-
-  //   // Sort by achieved % in desc order and take top 10
-  //   result.sort((a, b) => b.achieved - a.achieved);
-  //   const top10 = result.slice(0, 10);
-
-  //   // Add ranks
-  //   top10.forEach((item, index) => {
-  //     item.rank = index + 1;
-  //   });
-
-  //   return top10;
-  // }
   @get('/leaderboard/top-sales')
   async getTopSalesLeaderboard(
     @param.query.string('startDate') startDateStr: string,
@@ -1614,19 +1517,20 @@ export class DashboardController {
       throw new HttpErrors.BadRequest('startDate and endDate are required.');
     }
 
-    const startDate = new Date(startDateStr);
-    const endDate = new Date(endDateStr);
-
+    const startDate = startOfDay(new Date(startDateStr));
+    const endDate = endOfDay(new Date(endDateStr));
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       throw new HttpErrors.BadRequest('Invalid date format.');
     }
 
-    // Fetch targets filtered by KPI
+    // ----------------------------
+    // 1. Fetch targets filtered by KPI
+    // ----------------------------
     const targets = await this.targetRepository.find({
       where: {
         branchId,
-        startDate: {lte: endDate.toISOString().split('T')[0]},
-        endDate: {gte: startDate.toISOString().split('T')[0]},
+        startDate: {lte: format(endDate, 'yyyy-MM-dd')},
+        endDate: {gte: format(startDate, 'yyyy-MM-dd')},
         isDeleted: false,
       },
       include: [
@@ -1651,7 +1555,7 @@ export class DashboardController {
       ],
     });
 
-    // Flatten TrainerTargets for selected KPI(s)
+    // Flatten TrainerTargets
     const trainerTargets = targets.flatMap((t: any) =>
       (t.departmentTargets ?? []).flatMap((dt: any) =>
         (dt.trainerTargets ?? []).map((tt: any) => ({
@@ -1666,44 +1570,63 @@ export class DashboardController {
     );
 
     // Group by trainerId -> sum target values
-    const trainerMap = new Map<number, any>();
-
+    const trainerMap = new Map<number, {name: string; totalTarget: number}>();
     for (const tt of trainerTargets) {
       if (!trainerMap.has(tt.trainerId)) {
         trainerMap.set(tt.trainerId, {
-          trainerId: tt.trainerId,
           name:
             `${tt.trainer?.firstName ?? ''} ${tt.trainer?.lastName ?? ''}`.trim() ||
             'Unknown',
           totalTarget: 0,
         });
       }
-
-      const trainerData = trainerMap.get(tt.trainerId);
+      const trainerData = trainerMap.get(tt.trainerId)!;
       trainerData.totalTarget += tt.targetValue || 0;
     }
 
-    // Prepare results
-    const result: any[] = [];
-
-    for (const [trainerId, trainerData] of trainerMap) {
-      // Fetch actual sales for this trainer in the period filtered by KPI
-      const sales = await this.salesRepository.find({
-        where: {
-          trainerId,
-          createdAt: {between: [startDate, endDate]},
-          kpiId: 16,
-          ...(branchId && {branchId}),
-          ...(departmentId && {departmentId}),
+    // ----------------------------
+    // 2. Fetch memberships filtered by purchaseDate and include sales
+    // ----------------------------
+    const memberships = await this.membershipDetailsRepository.find({
+      where: {
+        purchaseDate: {gte: startDate, lte: endDate},
+      },
+      include: [
+        {
+          relation: 'sales', // BelongsTo relation
+          scope: {
+            where: {
+              kpiId: 16,
+              ...(branchId && {branchId}),
+              ...(departmentId && {departmentId}),
+            },
+          },
         },
-        include: ['membershipDetails'],
-      });
+      ],
+    });
 
-      const actual = sales.reduce(
-        (sum, sale) => sum + (sale.membershipDetails?.discountedPrice || 0),
-        0,
+    const filteredMemberships = (memberships as any[]).filter(m => m.sales);
+
+    // ----------------------------
+    // 3. Aggregate actual sales per trainer
+    // ----------------------------
+    const trainerActualMap = new Map<number, number>();
+    filteredMemberships.forEach(m => {
+      const trainerId = m.sales!.trainerId;
+      const price = m.discountedPrice || 0;
+
+      trainerActualMap.set(
+        trainerId,
+        (trainerActualMap.get(trainerId) || 0) + price,
       );
+    });
 
+    // ----------------------------
+    // 4. Prepare leaderboard
+    // ----------------------------
+    const result: any[] = [];
+    for (const [trainerId, trainerData] of trainerMap) {
+      const actual = trainerActualMap.get(trainerId) || 0;
       const achieved = trainerData.totalTarget
         ? (actual / trainerData.totalTarget) * 100
         : 0;
@@ -1717,14 +1640,12 @@ export class DashboardController {
       });
     }
 
-    // Sort by actual sales (or achievement %) and take top 10
-    result.sort((a, b) => b.actual - a.actual); // <-- Top sellers
+    // Sort by actual sales descending and take top 10
+    result.sort((a, b) => b.actual - a.actual);
     const top10 = result.slice(0, 10);
 
     // Add ranks
-    top10.forEach((item, index) => {
-      item.rank = index + 1;
-    });
+    top10.forEach((item, index) => (item.rank = index + 1));
 
     return top10;
   }
@@ -1740,8 +1661,8 @@ export class DashboardController {
       throw new HttpErrors.BadRequest('startDate and endDate are required.');
     }
 
-    const startDate = new Date(startDateStr);
-    const endDate = new Date(endDateStr);
+    const startDate = startOfDay(new Date(startDateStr));
+    const endDate = endOfDay(new Date(endDateStr));
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       throw new HttpErrors.BadRequest('Invalid date format.');
@@ -1751,8 +1672,8 @@ export class DashboardController {
     const targets = await this.targetRepository.find({
       where: {
         branchId,
-        startDate: {lte: endDate.toISOString().split('T')[0]},
-        endDate: {gte: startDate.toISOString().split('T')[0]},
+        startDate: {lte: format(endDate, 'yyyy-MM-dd')},
+        endDate: {gte: format(startDate, 'yyyy-MM-dd')},
         isDeleted: false,
       },
       include: [
@@ -1817,7 +1738,7 @@ export class DashboardController {
       const conductions = await this.conductionRepository.find({
         where: {
           trainerId,
-          createdAt: {between: [startDate, endDate]},
+          conductionDate: {gte: startDate, lte: endDate},
           kpiId: 17,
           ...(branchId && {branchId}),
           ...(departmentId && {departmentId}),
@@ -1854,7 +1775,7 @@ export class DashboardController {
 
     return top10;
   }
-
+  
   @get('/leaderboard/top-ranks')
   async getTopRanksLeaderboard(
     @param.query.string('startDate') startDateStr: string,
@@ -1866,18 +1787,21 @@ export class DashboardController {
       throw new HttpErrors.BadRequest('startDate and endDate are required.');
     }
 
-    const startDate = new Date(startDateStr);
-    const endDate = new Date(endDateStr);
+    const startDate = startOfDay(new Date(startDateStr));
+    const endDate = endOfDay(new Date(endDateStr));
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       throw new HttpErrors.BadRequest('Invalid date format.');
     }
 
+    // ----------------------------
+    // 1. Fetch targets
+    // ----------------------------
     const targets = await this.targetRepository.find({
       where: {
         branchId,
-        startDate: {lte: endDate.toISOString().split('T')[0]},
-        endDate: {gte: startDate.toISOString().split('T')[0]},
+        startDate: {lte: format(endDate, 'yyyy-MM-dd')},
+        endDate: {gte: format(startDate, 'yyyy-MM-dd')},
         isDeleted: false,
       },
       include: [
@@ -1893,16 +1817,7 @@ export class DashboardController {
                 relation: 'trainerTargets',
                 scope: {
                   where: {isDeleted: false},
-                  include: [
-                    {
-                      relation: 'trainer',
-                      scope: {
-                        include: [
-                          {relation: 'branch'}, // keep only existing relations
-                        ],
-                      },
-                    },
-                  ],
+                  include: ['trainer'],
                 },
               },
             ],
@@ -1911,6 +1826,7 @@ export class DashboardController {
       ],
     });
 
+    // Flatten trainer targets
     const trainerTargets = targets.flatMap((t: any) =>
       (t.departmentTargets ?? []).flatMap((dt: any) =>
         (dt.trainerTargets ?? []).map((tt: any) => ({
@@ -1923,52 +1839,82 @@ export class DashboardController {
       ),
     );
 
-    const trainerMap = new Map<number, any>();
-
+    // Group by trainerId -> sum target values
+    const trainerMap = new Map<number, {trainer: any; totalTarget: number}>();
     for (const tt of trainerTargets) {
       if (!trainerMap.has(tt.trainerId)) {
         trainerMap.set(tt.trainerId, {
-          trainerId: tt.trainerId,
           trainer: tt.trainer,
           totalTarget: 0,
         });
       }
-
-      const trainerData = trainerMap.get(tt.trainerId);
+      const trainerData = trainerMap.get(tt.trainerId)!;
       trainerData.totalTarget += tt.targetValue || 0;
     }
 
-    const result: any[] = [];
-
-    for (const [trainerId, trainerData] of trainerMap) {
-      const sales = await this.salesRepository.find({
-        where: {
-          trainerId,
-          createdAt: {between: [startDate, endDate]},
-          ...(branchId && {branchId}),
-          ...(departmentId && {departmentId}),
+    // ----------------------------
+    // 2. Fetch memberships filtered by purchaseDate and branch/department
+    // ----------------------------
+    const memberships = await this.membershipDetailsRepository.find({
+      where: {
+        purchaseDate: {gte: startDate, lte: endDate},
+      },
+      include: [
+        {
+          relation: 'sales', // BelongsTo relation
+          scope: {
+            where: {
+              ...(branchId && {branchId}),
+              ...(departmentId && {departmentId}),
+            },
+          },
         },
-        include: ['membershipDetails'],
-      });
+      ],
+    });
 
-      const actual = sales.reduce(
-        (sum, sale) => sum + (sale.membershipDetails?.discountedPrice || 0),
-        0,
+    // Filter memberships that have a sale linked
+    const filteredMemberships = (memberships as any[]).filter(m => m.sales);
+
+    // ----------------------------
+    // 3. Aggregate actual sales per trainer
+    // ----------------------------
+    const trainerActualMap = new Map<number, number>();
+    filteredMemberships.forEach(m => {
+      const trainerId = m.sales!.trainerId;
+      const price = m.discountedPrice || 0;
+
+      trainerActualMap.set(
+        trainerId,
+        (trainerActualMap.get(trainerId) || 0) + price,
       );
+    });
 
+    // ----------------------------
+    // 4. Prepare leaderboard
+    // ----------------------------
+    const result: any[] = [];
+    for (const [trainerId, trainerData] of trainerMap) {
+      const actual = trainerActualMap.get(trainerId) || 0;
       const achieved = trainerData.totalTarget
         ? (actual / trainerData.totalTarget) * 100
         : 0;
 
       result.push({
         trainerId,
-        trainer: trainerData.trainer, // full trainer info (with branch)
-        totalTarget: trainerData.totalTarget,
-        actual,
+        trainer: trainerData.trainer,
+        target: trainerData.totalTarget,
+        actual: Math.round(actual),
         achieved: +achieved.toFixed(1),
       });
     }
+
+    // Sort by achievement descending and take top 10
     result.sort((a, b) => b.achieved - a.achieved);
-    return result.slice(0, 10);
+    const top10 = result.slice(0, 10);
+
+    // Add ranks
+    top10.forEach((item, index) => (item.rank = index + 1));
+
+    return top10;
   }
 }
