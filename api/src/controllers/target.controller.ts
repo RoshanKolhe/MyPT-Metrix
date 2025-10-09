@@ -24,6 +24,7 @@ import {DepartmentTarget, Target, TrainerTarget} from '../models';
 import {
   DepartmentRepository,
   DepartmentTargetRepository,
+  KpiRepository,
   NotificationRepository,
   TargetRepository,
   TrainerRepository,
@@ -56,6 +57,8 @@ export class TargetController {
     public trainerRepository: TrainerRepository,
     @inject('service.whatsapp.service')
     public whatsAppService: WhatsAppService,
+    @repository(KpiRepository)
+    public kpiRepository: KpiRepository,
   ) {}
 
   @authenticate('jwt')
@@ -721,7 +724,7 @@ export class TargetController {
       // Group by trainer for notifications
       const groupedByTrainer: Record<
         number,
-        {kpiId: number; targetValue: number}[]
+        {kpiId: number; kpiName: string; targetValue: number}[]
       > = {};
       for (const item of result) {
         if (!groupedByTrainer[item.trainerId]) {
@@ -730,12 +733,14 @@ export class TargetController {
         const originalTarget = body.trainerKpiTargets
           .find(t => t.trainerId === item.trainerId)!
           .kpiTargets.find(k => k.kpiId === item.kpiId)!;
+        const kpiDetails = await this.kpiRepository.findById(item.kpiId);
         groupedByTrainer[item.trainerId].push({
           kpiId: item.kpiId,
+          kpiName: kpiDetails.name,
           targetValue: originalTarget.targetValue,
         });
       }
-
+      console.log('groupedByTrainer', groupedByTrainer);
       // Send notifications
       for (const trainerId of Object.keys(groupedByTrainer)) {
         const trainer = await this.trainerRepository.findById(
@@ -749,14 +754,13 @@ export class TargetController {
         }
 
         const kpiLines = groupedByTrainer[Number(trainerId)]
-          .map(k => `KPI ${k.kpiId}: ${k.targetValue}`)
-          .join('\n');
+          .map(k => `${k.kpiName}: ${k.targetValue}`)
+          .join(' ');
 
         const target = await this.targetRepository.findById(targetId);
 
         const payload = {
           phone: `+${trainer.phoneNumber}`,
-          enable_acculync: false,
           media: {
             type: 'media_template',
             lang_code: 'en',
@@ -765,9 +769,8 @@ export class TargetController {
               {text: trainer.firstName || 'Trainer'},
               {text: new Date(target.startDate).toLocaleDateString()},
               {text: new Date(target.endDate).toLocaleDateString()},
-              {text: kpiLines},
+              {text: `KPI - ${kpiLines}`},
             ],
-            header: [{text: '📊 Target Assignment'}],
           },
         };
 
@@ -777,7 +780,7 @@ export class TargetController {
           console.log(`response`, JSON.stringify(response));
         } catch (err) {
           console.error(
-            `❌ Failed to send notification to trainer ${trainerId}`,
+            `Failed to send notification to trainer ${trainerId}`,
             err,
           );
         }
