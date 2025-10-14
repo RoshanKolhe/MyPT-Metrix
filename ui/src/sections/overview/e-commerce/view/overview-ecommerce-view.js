@@ -19,8 +19,8 @@ import {
   useGetPtSalesRank,
 } from 'src/api/user';
 import { fShortenNumber } from 'src/utils/format-number';
-import { Box } from '@mui/material';
-import { useState } from 'react';
+import { Box, CircularProgress, LinearProgress } from '@mui/material';
+import { useState, useEffect } from 'react';
 import { useAuthContext } from 'src/auth/hooks';
 import { useGetBranchsWithFilter } from 'src/api/branch';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
@@ -60,6 +60,17 @@ export default function OverviewEcommerceView() {
   });
 
   const [showFilters, setShowFilters] = useState(false);
+  const [shouldLoadData, setShouldLoadData] = useState(false);
+
+  // Defer API calls until component is mounted
+  useEffect(() => {
+    // Small delay to ensure page renders first
+    const timer = setTimeout(() => {
+      setShouldLoadData(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const queryString = [
     filters.kpis?.length ? `kpiIds=${filters.kpis.map((k) => k.id).join(',')}` : '',
@@ -72,25 +83,40 @@ export default function OverviewEcommerceView() {
     .filter(Boolean)
     .join('&');
 
-  const { dashboardCounts, refreshDashboardSummary } = useGetDashboradSummary(queryString);
-  const { conductionDashboardCounts, refreshDashboardConductionSummary } =
-    useGetDashboradConductionSummary(queryString);
-  const { dashboradChartData = {}, refreshDashboradChartData } =
-    useGetDashboradChartData(queryString);
-  const { dashboradMonthlyData = {}, refreshDashboradMonthlyData } = useGetDashboradMonthlyData(
-    `${queryString}&day=${filters.day}`
+  // Conditionally call hooks - only when shouldLoadData is true
+  const { dashboardCounts, refreshDashboardSummary } = useGetDashboradSummary(
+    shouldLoadData ? queryString : null
   );
-  const { dashboradConductionsData = {}, refreshDashboradConductionsData } =
-    useGetDashboradConductionsData(queryString);
+  const { conductionDashboardCounts, refreshDashboardConductionSummary } =
+    useGetDashboradConductionSummary(shouldLoadData ? queryString : null);
+  const {
+    dashboradChartData = {},
+    refreshDashboradChartData,
+    isLoadingDashboradChartData,
+  } = useGetDashboradChartData(shouldLoadData ? queryString : null);
+  const {
+    dashboradMonthlyData = {},
+    refreshDashboradMonthlyData,
+    isLoadingDashboradMonthlyData,
+  } = useGetDashboradMonthlyData(shouldLoadData ? `${queryString}&day=${filters.day}` : null);
+  const {
+    dashboradConductionsData = {},
+    refreshDashboradConductionsData,
+    isLoadingConductionsData,
+  } = useGetDashboradConductionsData(shouldLoadData ? queryString : null);
   const { dashboradMaleToFemaleRatioData = {}, refreshDashboradMaleToFemaleRatio } =
-    useGetDashboradMaleToFemaleRatio(queryString);
+    useGetDashboradMaleToFemaleRatio(shouldLoadData ? queryString : null);
   const { dashboradPtsVsMembershipRatioData = {}, refreshDashboradPtsVsMembershipRatio } =
-    useGetDashboradPtsVsMembershipRatio(queryString);
+    useGetDashboradPtsVsMembershipRatio(shouldLoadData ? queryString : null);
   const { dashboardMemberStatistics = {}, refreshDashboradMemberStatistics } =
-    useGetDashboradMemberStatistics(queryString);
-  const { dashboardPtSalesRank, isLoading } = useGetPtSalesRank(queryString);
-  const { dashboardPtConductionsRank } = useGetPtConductionsRank(queryString);
-  const { dashboardPtRanks } = useGetPtRanks(queryString);
+    useGetDashboradMemberStatistics(shouldLoadData ? queryString : null);
+  const { dashboardPtSalesRank, isLoading } = useGetPtSalesRank(
+    shouldLoadData ? queryString : null
+  );
+  const { dashboardPtConductionsRank } = useGetPtConductionsRank(
+    shouldLoadData ? queryString : null
+  );
+  const { dashboardPtRanks } = useGetPtRanks(shouldLoadData ? queryString : null);
 
   const rawFilter = {
     where: {
@@ -100,7 +126,9 @@ export default function OverviewEcommerceView() {
 
   const encodedFilter = `filter=${encodeURIComponent(JSON.stringify(rawFilter))}`;
 
-  const { filteredbranches: branches } = useGetBranchsWithFilter(encodedFilter);
+  const { filteredbranches: branches, filteredbranchesLoading } = useGetBranchsWithFilter(
+    shouldLoadData ? encodedFilter : null
+  );
 
   const theme = useTheme();
 
@@ -142,6 +170,27 @@ export default function OverviewEcommerceView() {
     refreshDashboradMemberStatistics(updatedQueryString);
   };
 
+  // Show initial loading state
+  if (!shouldLoadData) {
+    return (
+      <Container maxWidth={settings.themeStretch ? false : 'xl'}>
+        <Box
+          sx={{
+            px: 5,
+            width: 1,
+            flexGrow: 1,
+            // minHeight: 1,
+            minHeight: '80vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <CircularProgress color="inherit" sx={{ width: 1, maxWidth: 360 }} />
+        </Box>
+      </Container>
+    );
+  }
   return (
     <Container maxWidth={settings.themeStretch ? false : 'xl'}>
       {isSuperOrAdmin ? (
@@ -232,22 +281,34 @@ export default function OverviewEcommerceView() {
             </Grid>
 
             <Grid xs={12} md={12} lg={12}>
-              <EcommerceMonthlySales
-                title="Revenue (Month-on-Month, Last 13 Months)"
-                dashboradChartData={dashboradMonthlyData}
-                filters={filters}
-                setFilters={setFilters}
-                refreshDashboradMonthlyData={refreshDashboradMonthlyData}
-              />
+              {isLoadingDashboradMonthlyData ? (
+                <Box display="flex" alignItems="center" justifyContent="center" height={364}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <EcommerceMonthlySales
+                  title="Revenue (Month-on-Month, Last 13 Months)"
+                  dashboradChartData={dashboradMonthlyData}
+                  filters={filters}
+                  setFilters={setFilters}
+                  refreshDashboradMonthlyData={refreshDashboradMonthlyData}
+                />
+              )}
             </Grid>
 
             <Grid xs={12} md={12} lg={12}>
-              <EcommerceYearlySales
-                title="Daily KPI Sales"
-                subheader="Tracks daily PT & Membership client additions over time"
-                chart={[]}
-                dashboradChartData={dashboradChartData}
-              />
+              {isLoadingDashboradChartData ? (
+                <Box display="flex" alignItems="center" justifyContent="center" height={364}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <EcommerceYearlySales
+                  title="Daily KPI Sales"
+                  subheader="Tracks daily PT & Membership client additions over time"
+                  chart={[]}
+                  dashboradChartData={dashboradChartData}
+                />
+              )}
             </Grid>
 
             <Grid xs={12} md={6} lg={4}>
@@ -273,20 +334,32 @@ export default function OverviewEcommerceView() {
             </Grid>
 
             <Grid xs={12} md={12} lg={6}>
-              <EcommerceTargetForecasting
-                title="12-Month Sales Performance"
-                branch={filters.branch}
-              />
+              {filteredbranchesLoading ? (
+                <Box display="flex" alignItems="center" justifyContent="center" height={364}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <EcommerceTargetForecasting
+                  title="12-Month Sales Performance"
+                  branch={filters.branch}
+                />
+              )}
             </Grid>
 
             <Grid xs={12} md={12} lg={12}>
-              <EcommerceYearlyConductions
-                title="Daily Conductions"
-                subheader="Tracks daily conductions over time"
-                chart={[]}
-                filterValues={filters}
-                dashboradConductionsData={dashboradConductionsData}
-              />
+              {isLoadingConductionsData ? (
+                <Box display="flex" alignItems="center" justifyContent="center" height={364}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <EcommerceYearlyConductions
+                  title="Daily Conductions"
+                  subheader="Tracks daily conductions over time"
+                  chart={[]}
+                  filterValues={filters}
+                  dashboradConductionsData={dashboradConductionsData}
+                />
+              )}
             </Grid>
 
             {/* <Grid xs={12} md={6} lg={8}>

@@ -142,7 +142,7 @@ export function useGetDashboradChartData(filter) {
 
   return {
     dashboradChartData: data || [],
-    isLoading,
+    isLoadingDashboradChartData: isLoading,
     error,
     isValidating,
     refreshDashboradChartData,
@@ -157,7 +157,7 @@ export function useGetDashboradMonthlyData(filter) {
     URL = endpoints.user.getMonthlyData;
   }
 
-  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher,);
 
   const refreshDashboradMonthlyData = (newFilter = filter) => {
     const newURL = newFilter
@@ -169,7 +169,7 @@ export function useGetDashboradMonthlyData(filter) {
 
   return {
     dashboradMonthlyData: data || [],
-    isLoading,
+    isLoadingDashboradMonthlyData: isLoading,
     error,
     isValidating,
     refreshDashboradMonthlyData,
@@ -196,7 +196,7 @@ export function useGetDashboradConductionsData(filter) {
 
   return {
     dashboradConductionsData: data || [],
-    isLoading,
+    isLoadingConductionsData: isLoading,
     error,
     isValidating,
     refreshDashboradConductionsData,
