@@ -5,8 +5,7 @@ import {
   HasOneRepositoryFactory,
   BelongsToAccessor,
   Filter,
-  Where,
-} from '@loopback/repository';
+  Where, HasManyRepositoryFactory} from '@loopback/repository';
 import { MyptMetrixDataSource } from '../datasources';
 import {
   Sales,
@@ -16,8 +15,7 @@ import {
   Branch,
   Department,
   User,
-  Kpi,
-} from '../models';
+  Kpi, Payment} from '../models';
 import { TimeStampRepositoryMixin } from '../mixins/timestamp-repository-mixin';
 import { MembershipDetailsRepository } from './membership-details.repository';
 import { TrainerRepository } from './trainer.repository';
@@ -25,6 +23,7 @@ import { BranchRepository } from './branch.repository';
 import { DepartmentRepository } from './department.repository';
 import { UserRepository } from './user.repository';
 import { KpiRepository } from './kpi.repository';
+import {PaymentRepository} from './payment.repository';
 
 export class SalesRepository extends TimeStampRepositoryMixin<
   Sales,
@@ -43,6 +42,8 @@ export class SalesRepository extends TimeStampRepositoryMixin<
   public readonly deletedByUser: BelongsToAccessor<User, typeof Sales.prototype.id>;
   public readonly kpi: BelongsToAccessor<Kpi, typeof Sales.prototype.id>;
 
+  public readonly payments: HasManyRepositoryFactory<Payment, typeof Sales.prototype.id>;
+
   constructor(
     @inject('datasources.myptMetrix') dataSource: MyptMetrixDataSource,
     @repository.getter('MembershipDetailsRepository')
@@ -56,9 +57,11 @@ export class SalesRepository extends TimeStampRepositoryMixin<
     @repository.getter('UserRepository')
     protected userRepositoryGetter: Getter<UserRepository>,
     @repository.getter('KpiRepository')
-    protected kpiRepositoryGetter: Getter<KpiRepository>,
+    protected kpiRepositoryGetter: Getter<KpiRepository>, @repository.getter('PaymentRepository') protected paymentRepositoryGetter: Getter<PaymentRepository>,
   ) {
     super(Sales, dataSource);
+    this.payments = this.createHasManyRepositoryFactoryFor('payments', paymentRepositoryGetter,);
+    this.registerInclusionResolver('payments', this.payments.inclusionResolver);
 
     // Relations
     this.kpi = this.createBelongsToAccessorFor('kpi', kpiRepositoryGetter);

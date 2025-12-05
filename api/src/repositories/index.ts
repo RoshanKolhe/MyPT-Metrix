@@ -14,3 +14,4 @@ export * from './sales.repository';
 export * from './conduction.repository';
 export * from './notification.repository';
 export * from './department-trainer.repository';
+export * from './payment.repository';

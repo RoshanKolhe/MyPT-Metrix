@@ -37,6 +37,9 @@ import AnalyticsWidgetSummary from '../analytics-widget-summary';
 import EcommercePtsVsMembership from '../ecommerce-pts-vs-membership';
 import EcommerceMonthlySales from '../ecommerce-month-wise-sales';
 import { TrainerPerformanceView } from '../../trainer-performance/view';
+import EcommerceRevenueByPayment from '../ecommerce-revenue-by-payment';
+import EcommerceCategoryBreakdown from '../ecommerce-category-breakdown';
+import BranchWiseAnalytics from '../branch-wise-analytics';
 
 // ----------------------------------------------------------------------
 
@@ -280,7 +283,11 @@ export default function OverviewEcommerceView() {
               />
             </Grid>
 
-            <Grid xs={12} md={12} lg={12}>
+            <Grid xs={12} >
+              <BranchWiseAnalytics />
+            </Grid>
+
+            {/* <Grid xs={12} md={12} lg={12}>
               {isLoadingDashboradMonthlyData ? (
                 <Box display="flex" alignItems="center" justifyContent="center" height={364}>
                   <CircularProgress />
@@ -294,9 +301,9 @@ export default function OverviewEcommerceView() {
                   refreshDashboradMonthlyData={refreshDashboradMonthlyData}
                 />
               )}
-            </Grid>
+            </Grid> */}
 
-            <Grid xs={12} md={12} lg={12}>
+            {/* <Grid xs={12} md={12} lg={12}>
               {isLoadingDashboradChartData ? (
                 <Box display="flex" alignItems="center" justifyContent="center" height={364}>
                   <CircularProgress />
@@ -309,7 +316,7 @@ export default function OverviewEcommerceView() {
                   dashboradChartData={dashboradChartData}
                 />
               )}
-            </Grid>
+            </Grid> */}
 
             <Grid xs={12} md={6} lg={4}>
               <EcommerceSaleByGender
@@ -330,6 +337,49 @@ export default function OverviewEcommerceView() {
               />
             </Grid>
             <Grid xs={12} md={6} lg={6}>
+              <EcommerceRevenueByPayment
+                title="Revenue by Payment Mode"
+                subheader="Payment method breakdown and digital adoption"
+                chart={{
+                  series: [
+                    { label: 'Cash', value: 4200, transactionCount: 12, percentage: 20 },
+                    { label: 'Card', value: 8000, transactionCount: 30, percentage: 50 },
+                    { label: 'Online', value: 3800, transactionCount: 18, percentage: 30 },
+                  ],
+                  colors: [
+                    '#6BD66B', // Cash
+                    '#29C3D2', // Card
+                    '#A48CFF', // Tabby
+                    '#F4C363', // Tamara
+                    '#8BE4D4', // Bank Transfer
+                    '#A0A0A0', // Others
+                  ],
+                }}
+              />
+            </Grid>
+            <Grid xs={12} md={6} lg={6}>
+              <EcommerceCategoryBreakdown
+                title="Category Breakdown"
+                subheader="Revenue distribution by sales type"
+                chart={{
+                  series: [
+                    { label: 'PT Sales', value: 4200, transactionCount: 12, percentage: 20 },
+                    { label: 'Card', value: 8000, transactionCount: 30, percentage: 50 },
+                    { label: 'Online', value: 3800, transactionCount: 18, percentage: 30 },
+                  ],
+                  colors: [
+                    '#6BD66B', // Cash
+                    '#29C3D2', // Card
+                    '#A48CFF', // Tabby
+                    '#F4C363', // Tamara
+                    '#8BE4D4', // Bank Transfer
+                    '#A0A0A0', // Others
+                  ],
+                }}
+              />
+            </Grid>
+
+            <Grid xs={12} md={6} lg={6}>
               <CountrySalesLeaderboardListView filter={queryString} />
             </Grid>
 
@@ -346,7 +396,7 @@ export default function OverviewEcommerceView() {
               )}
             </Grid>
 
-            <Grid xs={12} md={12} lg={12}>
+            {/* <Grid xs={12} md={12} lg={12}>
               {isLoadingConductionsData ? (
                 <Box display="flex" alignItems="center" justifyContent="center" height={364}>
                   <CircularProgress />
@@ -360,7 +410,7 @@ export default function OverviewEcommerceView() {
                   dashboradConductionsData={dashboradConductionsData}
                 />
               )}
-            </Grid>
+            </Grid> */}
 
             {/* <Grid xs={12} md={6} lg={8}>
               <EcommerceSalesOverview title="Sales Overview" data={_ecommerceSalesOverview} />

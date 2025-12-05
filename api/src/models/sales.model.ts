@@ -1,10 +1,11 @@
-import {Entity, model, property, hasOne, belongsTo} from '@loopback/repository';
+import {Entity, model, property, hasOne, belongsTo, hasMany} from '@loopback/repository';
 import {MembershipDetails} from './membership-details.model';
 import {Trainer} from './trainer.model';
 import {Branch} from './branch.model';
 import {Department} from './department.model';
 import {User} from './user.model';
 import {Kpi} from './kpi.model';
+import {Payment} from './payment.model';
 
 @model()
 export class Sales extends Entity {
@@ -104,6 +105,9 @@ export class Sales extends Entity {
 
   @belongsTo(() => Kpi)
   kpiId: number;
+
+  @hasMany(() => Payment)
+  payments: Payment[];
 
   constructor(data?: Partial<Sales>) {
     super(data);

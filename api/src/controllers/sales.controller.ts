@@ -24,6 +24,7 @@ import {
 } from '@loopback/rest';
 import {MembershipDetails, Sales} from '../models';
 import {
+  PaymentRepository,
   SalesRepository,
   TrainerRepository,
   UserRepository,
@@ -47,6 +48,8 @@ export class SalesController {
     public userRepository: UserRepository,
     @repository(TrainerRepository)
     public trainerRepository: TrainerRepository,
+    @repository(PaymentRepository)
+    public paymentRepository: PaymentRepository,
   ) {}
 
   @authenticate({
@@ -94,6 +97,19 @@ export class SalesController {
         await this.salesRepository
           .membershipDetails(createdSale.id)
           .create(membershipDetails, {transaction: tx});
+      }
+
+      if (salesFields?.paymentTypes?.length) {
+        for (const p of salesFields?.paymentTypes as any[]) {
+          await this.salesRepository.payments(createdSale.id).create(
+            {
+              paymentMode: p.paymentMode,
+              paymentReceiptNumber: p.paymentReceiptNumber,
+              amount: p.amount,
+            },
+            {transaction: tx},
+          );
+        }
       }
 
       await tx.commit();
@@ -208,6 +224,7 @@ export class SalesController {
         {relation: 'trainer'},
         {relation: 'membershipDetails', scope: membershipScope},
         {relation: 'kpi'},
+        {relation: 'payments'},
       ],
     });
 
@@ -305,6 +322,7 @@ export class SalesController {
         {relation: 'trainer'},
         {relation: 'membershipDetails'},
         {relation: 'kpi'},
+        {relation: 'payments'},
       ],
     });
   }
@@ -339,10 +357,15 @@ export class SalesController {
     })
     sales: Partial<Sales> & {membershipDetails?: Partial<MembershipDetails>},
   ): Promise<void> {
+    const repo = new DefaultTransactionalRepository(Sales, this.dataSource);
+    const tx = await repo.beginTransaction(IsolationLevel.READ_COMMITTED);
+
     // 1. Destructure membershipDetails from sales
     const {membershipDetails, ...salesFields} = sales;
 
-    await this.salesRepository.updateById(id, salesFields);
+    await this.salesRepository.updateById(id, salesFields, {
+      transaction: tx,
+    });
 
     if (membershipDetails) {
       const existingMembership = await this.salesRepository
@@ -353,11 +376,31 @@ export class SalesController {
       if (existingMembership) {
         await this.salesRepository
           .membershipDetails(id)
-          .patch(membershipDetails);
+          .patch(membershipDetails, {transaction: tx});
       } else {
         await this.salesRepository
           .membershipDetails(id)
-          .create(membershipDetails);
+          .create(membershipDetails, {transaction: tx});
+      }
+      if (salesFields?.paymentTypes) {
+        // Delete old payments safely
+        await this.salesRepository
+          .payments(id)
+          .delete(undefined, {transaction: tx});
+
+        // Insert new payments
+        for (const p of salesFields?.paymentTypes as any[]) {
+          await this.salesRepository.payments(id).create(
+            {
+              paymentMode: p.paymentMode,
+              paymentReceiptNumber: p.paymentReceiptNumber,
+              amount: p.amount,
+            },
+            {transaction: tx},
+          );
+        }
+
+        await tx.commit();
       }
     }
   }
@@ -701,7 +744,41 @@ export class SalesController {
                   .membershipDetails(createdSale.id)
                   .create(membershipDetails, {transaction: tx});
               }
+              if (relatedPayments?.length) {
+                for (const p of relatedPayments) {
+                  try {
+                    // Validate required fields
+                    if (
+                      !p.amount ||
+                      !p.paymentMode ||
+                      !p.paymentReceiptNumber
+                    ) {
+                      console.warn(
+                        `Skipping invalid payment for SR: ${sale.srNo}`,
+                        p,
+                      );
+                      continue;
+                    }
 
+                    await this.paymentRepository.create(
+                      {
+                        salesId: createdSale.id,
+                        amount: p.amount,
+                        paymentMode: p.paymentMode,
+                        paymentReceiptNumber: p.paymentReceiptNumber,
+                        createdAt: new Date(),
+                      },
+                      {transaction: tx},
+                    );
+                  } catch (payErr) {
+                    console.error(
+                      `Skipping payment for sale SR: ${sale.srNo}:`,
+                      payErr.message,
+                    );
+                    continue;
+                  }
+                }
+              }
               await tx.commit();
               importedCount++;
             } catch (recordErr) {
@@ -825,4 +902,68 @@ export class SalesController {
 
     return true;
   }
+
+  @post('/migrate/sales-payment-types')
+  @response(200, {
+    description: 'Migration Completed',
+  })
+  async migratePayments(): Promise<any> {
+    const salesList = await this.salesRepository.find();
+
+    let migratedCount = 0;
+    let skippedCount = 0;
+
+    const skippedRecords: any[] = [];
+    const failedSalesIds = new Set<number | undefined>(); // <-- to track unique failed sales IDs
+
+    for (const sale of salesList) {
+      const paymentTypes = sale.paymentTypes ?? [];
+
+      if (!paymentTypes.length) continue;
+
+      for (const p of paymentTypes as any[]) {
+        try {
+          // Manual validation check
+          if (!p.paymentMode || !p.paymentReceiptNumber || p.amount == null) {
+            skippedCount++;
+            skippedRecords.push({
+              saleId: sale.id,
+              reason: 'Missing required fields',
+              payment: p,
+            });
+            failedSalesIds.add(sale.id); // Track sale ID
+            continue;
+          }
+
+          // Attempt insert
+          await this.paymentRepository.create({
+            paymentMode: p.paymentMode,
+            paymentReceiptNumber: p.paymentReceiptNumber,
+            amount: p.amount,
+            salesId: sale.id,
+          });
+
+          migratedCount++;
+        } catch (err) {
+          skippedCount++;
+          skippedRecords.push({
+            saleId: sale.id,
+            error: err.message ?? err,
+            payment: p,
+          });
+          failedSalesIds.add(sale.id);
+        }
+      }
+    }
+
+    return {
+      message: 'Migration completed (some records skipped)',
+      paymentsMigrated: migratedCount,
+      paymentsSkipped: skippedCount,
+      failedSalesIds: Array.from(failedSalesIds), // <-- return IDs here
+      skippedRecords,
+    };
+  }
+
+  
 }
