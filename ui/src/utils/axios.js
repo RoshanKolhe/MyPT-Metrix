@@ -55,6 +55,8 @@ export const endpoints = {
     filterList: (filter) => `/users/list?${filter}`,
     filterNotificationList: (filter) => `/notifications?${filter}`,
     details: (id) => `/users/${id}`,
+  },
+  dashboard: {
     getFilteredDashboradSummary: (filter) => `/dashboard/summary?${filter}`,
     getFilteredChartData: (filter) => `/clients/chart-data?${filter}`,
     getFilteredMonthlyData: (filter) => `/dashboard/monthly-revenue?${filter}`,
@@ -74,9 +76,10 @@ export const endpoints = {
     getPtConductions: (filter) => `/leaderboard/top-conductions`,
     getFilterPtRanks: (filter) => `/leaderboard/top-ranks?${filter}`,
     getPtRanks: (filter) => `/leaderboard/top-conductions`,
-
     getFilteredConductionDashboradSummary: (filter) => `/member-conduction-stats?${filter}`,
     getConductionDashboradSummary: `/member-conduction-stats'`,
+    getRevenueByPaymentMode: (filter) => `/payments/summary?${filter}`,
+    getKpiSummary: (filter) => `/sales/kpi-summary?${filter}`,
   },
   staff: {
     list: '/trainers',

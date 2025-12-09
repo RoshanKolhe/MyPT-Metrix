@@ -24,6 +24,7 @@ import {
 } from '@loopback/rest';
 import {MembershipDetails, Sales} from '../models';
 import {
+  MembershipDetailsRepository,
   PaymentRepository,
   SalesRepository,
   TrainerRepository,
@@ -38,12 +39,27 @@ import ExcelJS, {Workbook} from 'exceljs';
 import {Request as ExpressRequest} from 'express';
 import multer from 'multer';
 
+const PAYMENT_OPTIONS = [
+  {value: 'viya_app', label: 'ViyaApp Payment'},
+  {value: 'mypt', label: 'MyPT App Payment'},
+  {value: 'cash', label: 'Cash'},
+  {value: 'pos', label: 'POS'},
+  {value: 'bank', label: 'Bank Transfer'},
+  {value: 'link', label: 'Payment Link'},
+  {value: 'tabby', label: 'Tabby'},
+  {value: 'tamara', label: 'Tamara'},
+  {value: 'cheque', label: 'Cheque'},
+  {value: 'atm', label: 'Bank/ATM Deposit'},
+];
+
 export class SalesController {
   constructor(
     @inject('datasources.myptMetrix')
     public dataSource: MyptMetrixDataSource,
     @repository(SalesRepository)
     public salesRepository: SalesRepository,
+    @repository(MembershipDetailsRepository)
+    public membershipDetailsRepository: MembershipDetailsRepository,
     @repository(UserRepository)
     public userRepository: UserRepository,
     @repository(TrainerRepository)
@@ -903,6 +919,7 @@ export class SalesController {
     return true;
   }
 
+  @authenticate('jwt')
   @post('/migrate/sales-payment-types')
   @response(200, {
     description: 'Migration Completed',
@@ -965,5 +982,178 @@ export class SalesController {
     };
   }
 
-  
+  @authenticate('jwt')
+  @get('/payments/summary')
+  @response(200, {
+    description: 'Payment summary by payment mode',
+  })
+  async getPaymentSummary(
+    @param.query.number('branchId') branchId?: number,
+    @param.query.number('departmentId') departmentId?: number,
+    @param.query.string('kpiIds') kpiIdsStr?: string,
+    @param.query.string('startDate') startDateStr?: string,
+    @param.query.string('endDate') endDateStr?: string,
+  ) {
+    const kpiIds = kpiIdsStr
+      ? kpiIdsStr
+          .split(',')
+          .map(id => parseInt(id.trim(), 10))
+          .filter(Boolean)
+      : [];
+
+    let saleIds: number[] = [];
+
+    if (startDateStr && endDateStr) {
+      const start = new Date(startDateStr);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(endDateStr);
+      end.setHours(23, 59, 59, 999);
+
+      const memberships = await this.membershipDetailsRepository.find({
+        where: {
+          purchaseDate: {between: [start, end]},
+        },
+      });
+
+      saleIds = memberships.map(m => m.salesId).filter(Boolean);
+    }
+
+    if (!saleIds.length) {
+      return {message: 'No sales in date range', data: []};
+    }
+
+    const saleWhere: any = {id: {inq: saleIds}};
+
+    if (branchId) saleWhere.branchId = branchId;
+    if (departmentId) saleWhere.departmentId = departmentId;
+    if (kpiIds.length) saleWhere.kpiId = {inq: kpiIds};
+
+    const filteredSales = await this.salesRepository.find({where: saleWhere});
+
+    const finalSaleIds = filteredSales
+      .map(s => s.id)
+      .filter((id): id is number => typeof id === 'number');
+
+    if (!finalSaleIds.length) {
+      return {message: 'No sales match filters', data: []};
+    }
+
+    const payments = await this.paymentRepository.find({
+      where: {
+        salesId: {inq: finalSaleIds},
+        isDeleted: false,
+      },
+    });
+
+    const summaryMap: any = {};
+
+    for (const p of payments) {
+      if (!summaryMap[p.paymentMode]) {
+        summaryMap[p.paymentMode] = {
+          label: p.paymentMode,
+          value: 0,
+          transactionCount: 0,
+        };
+      }
+      summaryMap[p.paymentMode].value += p.amount;
+      summaryMap[p.paymentMode].transactionCount += 1;
+    }
+
+    const summary = Object.values(summaryMap);
+
+    const totalValue = summary.reduce(
+      (sum: number, item: any) => sum + item.value,
+      0,
+    );
+
+    const finalSummary = summary.map((item: any) => ({
+      ...item,
+      percentage: totalValue
+        ? Number(((item.value / totalValue) * 100).toFixed(2))
+        : 0,
+    }));
+
+    return {
+      totalPayments: payments.length,
+      saleCount: finalSaleIds.length,
+      summary: finalSummary,
+      totalValue,
+    };
+  }
+
+  @authenticate('jwt')
+  @get('/sales/kpi-summary')
+  @response(200, {
+    description: 'Sales percentage summary by KPI name',
+  })
+  async getKpiSummary(
+    @param.query.number('branchId') branchId?: number,
+    @param.query.number('departmentId') departmentId?: number,
+    @param.query.string('startDate') startDateStr?: string,
+    @param.query.string('endDate') endDateStr?: string,
+  ) {
+    let saleIds: number[] = [];
+
+    if (startDateStr && endDateStr) {
+      const start = new Date(startDateStr);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(endDateStr);
+      end.setHours(23, 59, 59, 999);
+
+      const memberships = await this.membershipDetailsRepository.find({
+        where: {
+          purchaseDate: {between: [start, end]},
+        },
+      });
+
+      saleIds = memberships.map(m => m.salesId).filter(Boolean);
+
+      if (!saleIds.length) {
+        return {message: 'No sales in date range', summary: []};
+      }
+    }
+
+    const saleWhere: any = {
+      isDeleted: false,
+    };
+
+    if (saleIds.length) saleWhere.id = {inq: saleIds};
+    if (branchId) saleWhere.branchId = branchId;
+    if (departmentId) saleWhere.departmentId = departmentId;
+
+    const sales: any = await this.salesRepository.find({
+      where: saleWhere,
+      include: [{relation: 'kpi'}],
+    });
+
+    if (!sales.length) {
+      return {message: 'No sales match filters', summary: []};
+    }
+
+    const summaryMap: Record<string, {label: string; count: number}> = {};
+
+    for (const sale of sales) {
+      const kpiName = sale.kpi?.name ?? 'Unknown KPI';
+
+      if (!summaryMap[kpiName]) {
+        summaryMap[kpiName] = {label: kpiName, count: 0};
+      }
+
+      summaryMap[kpiName].count++;
+    }
+
+    const totalSales = sales.length;
+
+    const summary = Object.values(summaryMap).map(item => ({
+      label: item.label,
+      percentage: Number(((item.count / totalSales) * 100).toFixed(2)),
+    }));
+
+    return {
+      totalSales,
+      summary,
+    };
+  }
 }

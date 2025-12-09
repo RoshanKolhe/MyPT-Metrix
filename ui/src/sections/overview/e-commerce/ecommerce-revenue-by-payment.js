@@ -120,7 +120,7 @@ export default function EcommerceRevenueByPayment({ title, subheader, chart, ...
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                mb: 2.5,
+                mb: '5px',
               }}
             >
               {/* Left: dot + label */}

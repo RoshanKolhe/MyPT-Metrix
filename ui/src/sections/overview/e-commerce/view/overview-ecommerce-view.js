@@ -14,10 +14,12 @@ import {
   useGetDashboradMonthlyData,
   useGetDashboradPtsVsMembershipRatio,
   useGetDashboradSummary,
+  useGetDashobardKpiSummary,
+  useGetDashobardRevenueByPaymentMode,
   useGetPtConductionsRank,
   useGetPtRanks,
   useGetPtSalesRank,
-} from 'src/api/user';
+} from 'src/api/dashboard';
 import { fShortenNumber } from 'src/utils/format-number';
 import { Box, CircularProgress, LinearProgress } from '@mui/material';
 import { useState, useEffect } from 'react';
@@ -120,6 +122,11 @@ export default function OverviewEcommerceView() {
     shouldLoadData ? queryString : null
   );
   const { dashboardPtRanks } = useGetPtRanks(shouldLoadData ? queryString : null);
+  const { dashboardRevenueByPaymentMode } = useGetDashobardRevenueByPaymentMode(
+    shouldLoadData ? queryString : null
+  );
+  const { dashboardKpisummary } = useGetDashobardKpiSummary(shouldLoadData ? queryString : null);
+  console.log('dashboardKpisummary', dashboardKpisummary);
 
   const rawFilter = {
     where: {
@@ -283,7 +290,7 @@ export default function OverviewEcommerceView() {
               />
             </Grid>
 
-            <Grid xs={12} >
+            <Grid xs={12}>
               <BranchWiseAnalytics />
             </Grid>
 
@@ -341,18 +348,18 @@ export default function OverviewEcommerceView() {
                 title="Revenue by Payment Mode"
                 subheader="Payment method breakdown and digital adoption"
                 chart={{
-                  series: [
-                    { label: 'Cash', value: 4200, transactionCount: 12, percentage: 20 },
-                    { label: 'Card', value: 8000, transactionCount: 30, percentage: 50 },
-                    { label: 'Online', value: 3800, transactionCount: 18, percentage: 30 },
-                  ],
+                  series: dashboardRevenueByPaymentMode.summary || [],
                   colors: [
-                    '#6BD66B', // Cash
-                    '#29C3D2', // Card
-                    '#A48CFF', // Tabby
-                    '#F4C363', // Tamara
-                    '#8BE4D4', // Bank Transfer
-                    '#A0A0A0', // Others
+                    '#4B89FF', // viya_app
+                    '#FF8F6B', // mypt
+                    '#6BD66B', // cash
+                    '#29C3D2', // pos
+                    '#8BE4D4', // bank
+                    '#FFB86B', // link
+                    '#A48CFF', // tabby
+                    '#F4C363', // tamara
+                    '#9D6BFF', // cheque
+                    '#FF6BCB', // atm
                   ],
                 }}
               />
@@ -362,19 +369,7 @@ export default function OverviewEcommerceView() {
                 title="Category Breakdown"
                 subheader="Revenue distribution by sales type"
                 chart={{
-                  series: [
-                    { label: 'PT Sales', value: 4200, transactionCount: 12, percentage: 20 },
-                    { label: 'Card', value: 8000, transactionCount: 30, percentage: 50 },
-                    { label: 'Online', value: 3800, transactionCount: 18, percentage: 30 },
-                  ],
-                  colors: [
-                    '#6BD66B', // Cash
-                    '#29C3D2', // Card
-                    '#A48CFF', // Tabby
-                    '#F4C363', // Tamara
-                    '#8BE4D4', // Bank Transfer
-                    '#A0A0A0', // Others
-                  ],
+                  series: dashboardKpisummary.summary || [],
                 }}
               />
             </Grid>

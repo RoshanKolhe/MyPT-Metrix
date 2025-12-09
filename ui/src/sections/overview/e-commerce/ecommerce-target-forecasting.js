@@ -23,7 +23,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { endOfMonth, format, startOfMonth } from 'date-fns';
 import Chart, { useChart } from 'src/components/chart';
-import { useGetDashboradChartData, useGetDashboradForecastingData } from 'src/api/user';
+import { useGetDashboradChartData, useGetDashboradForecastingData } from 'src/api/dashboard';
 import Iconify from 'src/components/iconify';
 
 export default function EcommerceTargetForecasting({

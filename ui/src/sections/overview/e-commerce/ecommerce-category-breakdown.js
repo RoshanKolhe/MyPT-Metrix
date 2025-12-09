@@ -36,9 +36,9 @@ const StyledChart = styled(Chart)(({ theme }) => ({
 export default function EcommerceCategoryBreakdown({ title, subheader, chart, ...other }) {
   const theme = useTheme();
 
-  const { colors, series, options } = chart;
-
-  const chartSeries = series.map((i) => i.value);
+  const { series, options } = chart;
+  console.log('series', series);
+  const chartSeries = series.map((i) => i.percentage);
 
   const chartOptions = useChart({
     chart: {
@@ -46,7 +46,6 @@ export default function EcommerceCategoryBreakdown({ title, subheader, chart, ..
         enabled: true,
       },
     },
-    colors,
     labels: series.map((i) => i.label),
     stroke: { colors: [theme.palette.background.paper] },
     legend: {
@@ -65,8 +64,8 @@ export default function EcommerceCategoryBreakdown({ title, subheader, chart, ..
     plotOptions: {
       pie: {
         donut: {
-          size: '85%', // bigger circle
-          width: 100, // 👈 THICKER RING
+          size: '85%',
+          width: 100,
           labels: {
             show: true,
             value: { formatter: (value) => fNumber(value) },
@@ -120,7 +119,7 @@ export default function EcommerceCategoryBreakdown({ title, subheader, chart, ..
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                mb: 2.5,
+                mb: '5px',
               }}
             >
               {/* Left: dot + label */}
@@ -130,7 +129,6 @@ export default function EcommerceCategoryBreakdown({ title, subheader, chart, ..
                     width: 12,
                     height: 12,
                     borderRadius: '50%',
-                    bgcolor: colors[idx],
                   }}
                 />
                 <Stack>
