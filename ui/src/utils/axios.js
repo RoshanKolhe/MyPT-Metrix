@@ -80,6 +80,7 @@ export const endpoints = {
     getConductionDashboradSummary: `/member-conduction-stats'`,
     getRevenueByPaymentMode: (filter) => `/payments/summary?${filter}`,
     getKpiSummary: (filter) => `/sales/kpi-summary?${filter}`,
+    getBranchWiseAnalytics: (filter) => `/dashboard/branch-wise-analytics?${filter}`,
   },
   staff: {
     list: '/trainers',

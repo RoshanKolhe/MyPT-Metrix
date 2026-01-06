@@ -19,6 +19,7 @@ import {
   useGetPtConductionsRank,
   useGetPtRanks,
   useGetPtSalesRank,
+  useGetBranchWiseAnalytics,
 } from 'src/api/dashboard';
 import { fShortenNumber } from 'src/utils/format-number';
 import { Box, CircularProgress, LinearProgress } from '@mui/material';
@@ -88,6 +89,14 @@ export default function OverviewEcommerceView() {
     .filter(Boolean)
     .join('&');
 
+  // Branch wise analytics only needs startDate and endDate
+  const branchAnalyticsQueryString = [
+    filters.startDate ? `startDate=${format(new Date(filters.startDate), 'yyyy-MM-dd')}` : '',
+    filters.endDate ? `endDate=${format(new Date(filters.endDate), 'yyyy-MM-dd')}` : '',
+  ]
+    .filter(Boolean)
+    .join('&');
+
   // Conditionally call hooks - only when shouldLoadData is true
   const { dashboardCounts, refreshDashboardSummary } = useGetDashboradSummary(
     shouldLoadData ? queryString : null
@@ -127,6 +136,12 @@ export default function OverviewEcommerceView() {
   );
   const { dashboardKpisummary } = useGetDashobardKpiSummary(shouldLoadData ? queryString : null);
   console.log('dashboardKpisummary', dashboardKpisummary);
+
+  const {
+    branchWiseAnalytics,
+    isLoadingBranchWiseAnalytics,
+    refreshBranchWiseAnalytics,
+  } = useGetBranchWiseAnalytics(shouldLoadData ? branchAnalyticsQueryString : null);
 
   const rawFilter = {
     where: {
@@ -291,7 +306,10 @@ export default function OverviewEcommerceView() {
             </Grid>
 
             <Grid xs={12}>
-              <BranchWiseAnalytics />
+              <BranchWiseAnalytics
+                branches={branchWiseAnalytics}
+                isLoading={isLoadingBranchWiseAnalytics}
+              />
             </Grid>
 
             {/* <Grid xs={12} md={12} lg={12}>

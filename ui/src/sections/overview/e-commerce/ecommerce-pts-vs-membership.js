@@ -7,8 +7,6 @@ import Card from '@mui/material/Card';
 import { fNumber } from 'src/utils/format-number';
 // components
 import Chart, { useChart } from 'src/components/chart';
-import { useGetDashboradMaleToFemaleRatio } from 'src/api/user';
-import { endOfMonth, format, startOfMonth } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
 import { Box, Divider } from '@mui/material';
 

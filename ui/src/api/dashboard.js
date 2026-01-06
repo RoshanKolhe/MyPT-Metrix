@@ -365,3 +365,25 @@ export function useGetDashobardKpiSummary(filter) {
     refreshDashboardKpiSummary,
   };
 }
+
+export function useGetBranchWiseAnalytics(filter) {
+  const URL = filter ? endpoints.dashboard.getBranchWiseAnalytics(filter) : null;
+
+  const { data, isLoading, error, isValidating, mutate } = useSWR(URL, fetcher);
+
+  const refreshBranchWiseAnalytics = (newFilter = filter) => {
+    const newURL = newFilter
+      ? endpoints.dashboard.getBranchWiseAnalytics(newFilter)
+      : null;
+
+    mutate(newURL); // trigger re-fetch for new URL
+  };
+
+  return {
+    branchWiseAnalytics: data || [],
+    isLoadingBranchWiseAnalytics: isLoading,
+    error,
+    isValidating,
+    refreshBranchWiseAnalytics,
+  };
+}

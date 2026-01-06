@@ -1,19 +1,12 @@
 import PropTypes from 'prop-types';
 // @mui
-import { alpha, useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-// theme
-import { bgGradient } from 'src/theme/css';
-// utils
-import { fNumber } from 'src/utils/format-number';
-import { Card, Grid, LinearProgress } from '@mui/material';
-// theme
+import { Card, Grid, LinearProgress, CircularProgress } from '@mui/material';
 
 // ----------------------------------------------------------------------
 
-export default function BranchWiseAnalytics({
+function BranchWiseAnalyticsCard({
   title = 'DSO',
   status = 'Behind',
   statusColor = '#FFC107',
@@ -27,8 +20,8 @@ export default function BranchWiseAnalytics({
   topCategory = 'PT Sales',
   contribution = 18.2,
 }) {
-  const revenuePercent = Math.round((revenueAmount / revenueTarget) * 100);
-  const ptPercent = Math.round((ptCount / conductionCount) * 100);
+  const revenuePercent = revenueTarget > 0 ? Math.round((revenueAmount / revenueTarget) * 100) : 0;
+  const ptPercent = conductionCount > 0 ? Math.round((ptCount / conductionCount) * 100) : 0;
 
   return (
     <Card
@@ -72,7 +65,7 @@ export default function BranchWiseAnalytics({
 
           <LinearProgress
             variant="determinate"
-            value={revenuePercent}
+            value={Math.min(revenuePercent, 100)}
             sx={{
               mt: 1,
               height: 6,
@@ -109,7 +102,7 @@ export default function BranchWiseAnalytics({
 
           <LinearProgress
             variant="determinate"
-            value={ptPercent}
+            value={Math.min(ptPercent, 100)}
             sx={{
               mt: 1,
               height: 6,
@@ -143,7 +136,7 @@ export default function BranchWiseAnalytics({
   );
 }
 
-BranchWiseAnalytics.propTypes = {
+BranchWiseAnalyticsCard.propTypes = {
   title: PropTypes.string.isRequired,
   status: PropTypes.string.isRequired,
   statusColor: PropTypes.string, // optional, default can be provided
@@ -156,4 +149,68 @@ BranchWiseAnalytics.propTypes = {
 
   topCategory: PropTypes.string.isRequired,
   contribution: PropTypes.number.isRequired,
+};
+
+// ----------------------------------------------------------------------
+
+export default function BranchWiseAnalytics({ branches = [], isLoading = false }) {
+  if (isLoading) {
+    return (
+      <Box display="flex" alignItems="center" justifyContent="center" sx={{ py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!branches || branches.length === 0) {
+    return (
+      <Box sx={{ py: 4, textAlign: 'center' }}>
+        <Typography variant="body2" sx={{ opacity: 0.7 }}>
+          No branch data available
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Typography variant="h6" sx={{ mb: 3 }}>
+        Branch Wise Analytics
+      </Typography>
+      <Grid container spacing={2}>
+        {branches.map((branch, index) => (
+          <Grid item key={branch.title || index}>
+            <BranchWiseAnalyticsCard
+              title={branch.title}
+              status={branch.status}
+              statusColor={branch.statusColor}
+              revenueAmount={branch.revenueAmount}
+              revenueTarget={branch.revenueTarget}
+              ptCount={branch.ptCount}
+              conductionCount={branch.conductionCount}
+              topCategory={branch.topCategory}
+              contribution={branch.contribution}
+            />
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+}
+
+BranchWiseAnalytics.propTypes = {
+  branches: PropTypes.arrayOf(
+    PropTypes.shape({
+      title: PropTypes.string.isRequired,
+      status: PropTypes.string.isRequired,
+      statusColor: PropTypes.string,
+      revenueAmount: PropTypes.number.isRequired,
+      revenueTarget: PropTypes.number.isRequired,
+      ptCount: PropTypes.number.isRequired,
+      conductionCount: PropTypes.number.isRequired,
+      topCategory: PropTypes.string.isRequired,
+      contribution: PropTypes.number.isRequired,
+    })
+  ),
+  isLoading: PropTypes.bool,
 };

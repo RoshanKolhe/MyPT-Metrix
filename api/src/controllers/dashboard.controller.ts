@@ -2,6 +2,7 @@
 
 import {repository} from '@loopback/repository';
 import {
+  BranchRepository,
   ConductionRepository,
   MembershipDetailsRepository,
   SalesRepository,
@@ -49,6 +50,8 @@ export class DashboardController {
     public targetRepository: TargetRepository,
     @repository(ConductionRepository)
     public conductionRepository: ConductionRepository,
+    @repository(BranchRepository)
+    public branchRepository: BranchRepository,
   ) {}
 
   @authenticate({
@@ -1776,5 +1779,206 @@ export class DashboardController {
     top10.forEach((item, index) => (item.rank = index + 1));
 
     return top10;
+  }
+
+  @authenticate({
+    strategy: 'jwt',
+  })
+  @get('/dashboard/branch-wise-analytics')
+  @response(200, {
+    description: 'Branch-wise analytics with revenue, PT conductions, targets, and top category',
+  })
+  async getBranchWiseAnalytics(
+    @param.query.string('startDate') startDateStr: string,
+    @param.query.string('endDate') endDateStr: string,
+  ): Promise<any[]> {
+    if (!startDateStr || !endDateStr) {
+      throw new HttpErrors.BadRequest('startDate and endDate are required.');
+    }
+
+    const startDate = new Date(startDateStr);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(endDateStr);
+    endDate.setHours(23, 59, 59, 999);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new HttpErrors.BadRequest('Invalid date format.');
+    }
+
+    // PTC ID is hardcoded as 17
+    const PTC_KPI_ID = 17;
+
+    // Fetch all active branches
+    const branches = await this.branchRepository.find({
+      where: {
+        isDeleted: false,
+        isActive: true,
+      },
+    });
+
+    // Fetch all membership details in date range
+    const memberships = await this.membershipDetailsRepository.find({
+      where: {
+        purchaseDate: {between: [startDate, endDate]},
+      },
+    });
+
+    const saleIds = memberships.map(m => m.salesId).filter(Boolean) as number[];
+
+    // Fetch all sales with membership details and KPI info
+    const allSales: any[] = saleIds.length > 0
+      ? await this.salesRepository.find({
+          where: {
+            isDeleted: false,
+            id: {inq: saleIds},
+          },
+          include: [{relation: 'membershipDetails'}, {relation: 'kpi'}],
+        })
+      : [];
+
+    // Calculate total revenue across all branches for contribution calculation
+    const totalRevenue = allSales.reduce(
+      (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
+      0,
+    );
+
+    // Fetch all targets for the date range
+    const allTargets = await this.targetRepository.find({
+      where: {
+        startDate: {lte: format(endDate, 'yyyy-MM-dd')},
+        endDate: {gte: format(startDate, 'yyyy-MM-dd')},
+        isDeleted: false,
+      },
+      include: [
+        {
+          relation: 'departmentTargets',
+          scope: {
+            where: {isDeleted: false},
+            include: [
+              {
+                relation: 'trainerTargets',
+                scope: {
+                  where: {isDeleted: false},
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    // Fetch all PT conductions in date range
+    const allConductions = await this.conductionRepository.find({
+      where: {
+        conductionDate: {between: [startDate, endDate]},
+        kpiId: PTC_KPI_ID,
+        isDeleted: false,
+      },
+    });
+
+    const result: any[] = [];
+
+    for (const branch of branches) {
+      // Filter sales for this branch
+      const branchSales = allSales.filter(s => s.branchId === branch.id);
+
+      // Calculate revenue for this branch
+      const revenueAmount = branchSales.reduce(
+        (sum, s) => sum + (s.membershipDetails?.discountedPrice || 0),
+        0,
+      );
+
+      // Get revenue target for this branch
+      const branchTargets = allTargets.filter(t => t.branchId === branch.id);
+      const revenueTarget = branchTargets.reduce(
+        (sum, t) => sum + (t.targetValue || 0),
+        0,
+      );
+
+      // Calculate PT conductions target (sum of trainer targets with kpiId 17)
+      let ptConductionTarget = 0;
+      for (const target of branchTargets) {
+        if (target.departmentTargets) {
+          for (const deptTarget of target.departmentTargets) {
+            if (deptTarget.trainerTargets) {
+              for (const trainerTarget of deptTarget.trainerTargets) {
+                if (trainerTarget.kpiId === PTC_KPI_ID) {
+                  ptConductionTarget += trainerTarget.targetValue || 0;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Calculate actual PT conductions for this branch
+      const branchConductions = allConductions.filter(c => c.branchId === branch.id);
+      const ptCount = branchConductions.reduce(
+        (sum, c) => sum + (c.conductions || 0),
+        0,
+      );
+
+      // Determine status based on revenue achievement
+      const revenuePercent = revenueTarget > 0 ? (revenueAmount / revenueTarget) * 100 : 0;
+      let status = 'Behind';
+      let statusColor = '#FFC107'; // Yellow/Orange for Behind
+
+      if (revenuePercent >= 100) {
+        status = 'On Track';
+        statusColor = '#4CAF50'; // Green for On Track
+      } else if (revenuePercent >= 90) {
+        status = 'Behind';
+        statusColor = '#FFC107'; // Yellow for Behind
+      } else {
+        status = 'Behind';
+        statusColor = '#F44336'; // Red for significantly behind
+      }
+
+      // Find top category (KPI) by revenue for this branch
+      const kpiRevenueMap = new Map<number, {name: string; revenue: number}>();
+      for (const sale of branchSales) {
+        const kpiId = sale.kpiId;
+        const kpiName = sale.kpi?.name || 'Unknown';
+        const revenue = sale.membershipDetails?.discountedPrice || 0;
+
+        if (!kpiRevenueMap.has(kpiId)) {
+          kpiRevenueMap.set(kpiId, {name: kpiName, revenue: 0});
+        }
+        const kpiData = kpiRevenueMap.get(kpiId)!;
+        kpiData.revenue += revenue;
+      }
+
+      // Get top category
+      let topCategory = 'N/A';
+      let topCategoryRevenue = 0;
+      for (const [kpiId, kpiData] of kpiRevenueMap) {
+        if (kpiData.revenue > topCategoryRevenue) {
+          topCategoryRevenue = kpiData.revenue;
+          topCategory = kpiData.name;
+        }
+      }
+
+      // Calculate contribution percentage
+      const contribution = totalRevenue > 0
+        ? parseFloat(((revenueAmount / totalRevenue) * 100).toFixed(1))
+        : 0;
+
+      result.push({
+        title: branch.name,
+        status,
+        statusColor,
+        revenueAmount: Math.round(revenueAmount),
+        revenueTarget: Math.round(revenueTarget),
+        ptCount: Math.round(ptCount),
+        conductionCount: Math.round(ptConductionTarget),
+        topCategory,
+        contribution,
+      });
+    }
+
+    // Sort by revenue amount descending
+    result.sort((a, b) => b.revenueAmount - a.revenueAmount);
+
+    return result;
   }
 }

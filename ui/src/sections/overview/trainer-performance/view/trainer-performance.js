@@ -1,6 +1,5 @@
 import { Container, Grid, Typography } from '@mui/material';
 import { useSettingsContext } from 'src/components/settings';
-import { useGetPtSalesRank } from 'src/api/user';
 import PropTypes from 'prop-types';
 import PTSales from '../pt-sales';
 import PTConductions from '../pt-conductions';
